@@ -1,0 +1,15 @@
+{
+  "name": "taina-mini-crm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TAINA — мини-CRM для заявок с сайта (приём заявки, лог в Google Sheets, уведомления в Telegram, напоминания)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node test/run.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "googleapis": "^140.0.1"
+  }
+}
