@@ -1,6 +1,7 @@
 const express = require('express');
 const { parseNetlifyLead } = require('./src/lead');
 const { appendLead } = require('./src/sheets');
+const { notifyNewLead } = require('./src/telegram');
 
 const app = express();
 app.use(express.json());
@@ -35,6 +36,15 @@ app.post('/webhook/netlify-lead', async (req, res) => {
   }
 
   console.log('Новая заявка записана:', lead.name || lead.email || lead.phone || '(без контакта)');
+
+  // Заявка уже в таблице — это главное. Если Telegram недоступен,
+  // запрос всё равно считаем успешным, просто логируем ошибку.
+  try {
+    await notifyNewLead(lead);
+  } catch (err) {
+    console.error('Ошибка отправки уведомления в Telegram:', err.message);
+  }
+
   return res.status(200).json({ ok: true });
 });
 
