@@ -1,7 +1,13 @@
 /**
  * Достаёт данные заявки из payload, который присылает Netlify Forms
- * через Outgoing Webhook. Формат Netlify:
- * { form_name, data: { <поля формы> }, ... }
+ * через Outgoing Webhook. Реальный формат Netlify оборачивает всё
+ * в ключ payload:
+ * { payload: { form_name, data: { <поля формы> }, ... }, site_url, created_at }
+ *
+ * Раньше код ждал form_name/data на верхнем уровне body — из-за этого
+ * реальные заявки с сайта приходили бы пустыми. Поддерживаем оба варианта
+ * (с обёрткой payload и без неё), чтобы не сломать ничего, если формат
+ * webhook когда-то отличается.
  *
  * Названия полей формы могут отличаться регистром/языком —
  * поэтому проверяем несколько вариантов написания.
@@ -16,14 +22,15 @@ function pick(data, names) {
 }
 
 function parseNetlifyLead(body) {
-  const data = (body && body.data) || {};
+  const payload = (body && body.payload) || body || {};
+  const data = payload.data || {};
 
   const lead = {
     name: pick(data, ['name', 'Name', 'имя', 'Имя']),
     email: pick(data, ['email', 'Email', 'почта', 'Почта']),
     phone: pick(data, ['phone', 'Phone', 'телефон', 'Телефон']),
     message: pick(data, ['message', 'Message', 'сообщение', 'Сообщение', 'комментарий']),
-    form_name: (body && body.form_name) || '',
+    form_name: payload.form_name || '',
   };
 
   // Некоторые формы дают одно общее поле "Контакт" (телефон/почта/Telegram

@@ -88,4 +88,27 @@ const { formatLeadMessage } = require('../src/telegram');
   console.log('OK: экранирование HTML-спецсимволов');
 }
 
+// 7. Реальный формат Netlify Outgoing Webhook — всё обёрнуто в payload.
+// Без этой обёртки заявки с настоящего сайта приходили бы пустыми.
+{
+  const realNetlifyBody = {
+    payload: {
+      form_name: 'taina-diagnostic',
+      data: {
+        name: 'Ольга Смирнова',
+        contact: '+7 916 000-11-22',
+        message: 'Сеть из 3 клиник, интересует автоматизация записи',
+      },
+      created_at: '2026-09-14T10:00:00.000Z',
+      site_url: 'https://taina.netlify.app',
+    },
+  };
+  const lead = parseNetlifyLead(realNetlifyBody);
+  assert.strictEqual(lead.name, 'Ольга Смирнова');
+  assert.strictEqual(lead.phone, '+7 916 000-11-22');
+  assert.strictEqual(lead.form_name, 'taina-diagnostic');
+  assert.strictEqual(lead.message, 'Сеть из 3 клиник, интересует автоматизация записи');
+  console.log('OK: разбор реального формата Netlify (обёртка payload)');
+}
+
 console.log('\nВсе проверки пройдены.');
