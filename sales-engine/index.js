@@ -1,5 +1,7 @@
 const express = require('express');
+const cron = require('node-cron');
 const { runPipeline } = require('./src/pipeline');
+const { runFollowUpCheck } = require('./src/followup');
 const sheets = require('./src/sheets');
 const telegram = require('./src/telegram');
 
@@ -11,6 +13,8 @@ const PORT = process.env.PORT || 3000;
 const APP_USERNAME = process.env.APP_USERNAME || '';
 const APP_PASSWORD = process.env.APP_PASSWORD || '';
 const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || '';
+// По умолчанию — каждый день в 10:00 по времени сервера (Amvera — обычно МСК).
+const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '0 10 * * *';
 
 app.get('/health', (req, res) => res.status(200).json({ ok: true }));
 
@@ -62,6 +66,13 @@ app.get('/', requireAuth, (req, res) => {
     </label>
     <button type="submit">Найти лидов</button>
   </form>
+
+  <hr style="margin-top: 40px; border: none; border-top: 1px solid #eee;">
+  <p class="hint">Follow-up лидам без ответа обычно проверяется само раз в день.
+  Кнопка ниже — чтобы проверить прямо сейчас, не дожидаясь расписания (удобно для теста).</p>
+  <form method="POST" action="/followup/run">
+    <button type="submit" style="background:#555;">🔁 Проверить follow-up сейчас</button>
+  </form>
 </body>
 </html>`);
 });
@@ -92,6 +103,20 @@ app.post('/run', requireAuth, (req, res) => {
   });
 });
 
+app.post('/followup/run', requireAuth, (req, res) => {
+  res.status(200).send(`<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Запущено</title></head>
+<body style="font-family: system-ui, sans-serif; max-width: 480px; margin: 60px auto; padding: 0 16px;">
+<h2>Проверка follow-up запущена ✅</h2>
+<p>Если есть лиды без ответа дольше положенного срока — их черновики придут в Telegram.</p>
+<p><a href="/">← Назад</a></p>
+</body></html>`);
+
+  runFollowUpCheck().catch((err) => {
+    console.error('[sales-engine] Необработанная ошибка проверки follow-up:', err);
+  });
+});
+
 // Вебхук Telegram — сюда прилетают нажатия кнопок на карточках лидов.
 app.post('/telegram/webhook', async (req, res) => {
   if (TELEGRAM_WEBHOOK_SECRET) {
@@ -112,8 +137,11 @@ app.post('/telegram/webhook', async (req, res) => {
   const [action, id] = String(callback.data || '').split(':');
   if (!id) return;
 
+  // "Одобрить" сразу переводит лида в "Отправлено" — это старт отсчёта
+  // до follow-up. Предполагается, что вы копируете текст и отправляете
+  // его в ближайшее время после нажатия (см. README, раздел "Воронка").
   const statusMap = {
-    approve: 'Одобрено',
+    approve: 'Отправлено',
     reject: 'Отклонён',
     edit: 'Нужна правка',
   };
@@ -121,7 +149,9 @@ app.post('/telegram/webhook', async (req, res) => {
   if (!statusLabel) return;
 
   try {
-    const updated = await sheets.updateStatus(id, statusLabel);
+    const updated = action === 'approve'
+      ? await sheets.markApproved(id)
+      : await sheets.updateStatus(id, statusLabel);
     if (!updated) {
       await telegram.answerCallbackQuery(callback.id, 'Лид не найден в таблице — возможно, удалён');
       return;
@@ -151,6 +181,16 @@ app.post('/telegram/webhook', async (req, res) => {
   }
 });
 
+// "Воронка, по которой сервис сам идёт": раз в день без вашего участия
+// проверяет лидов без ответа и готовит follow-up-черновики (не отправляет).
+cron.schedule(CRON_SCHEDULE, () => {
+  console.log('[sales-engine] Запуск плановой проверки follow-up по расписанию');
+  runFollowUpCheck().catch((err) => {
+    console.error('[sales-engine] Ошибка плановой проверки follow-up:', err);
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`TAINA Sales Engine запущен, слушаю порт ${PORT}`);
+  console.log(`Follow-up по расписанию: "${CRON_SCHEDULE}"`);
 });

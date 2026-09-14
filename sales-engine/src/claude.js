@@ -38,6 +38,12 @@ const MessageSchema = z.object({
     .describe('Готовое персонализированное сообщение для отправки, на русском'),
 });
 
+const FollowUpSchema = z.object({
+  message: z
+    .string()
+    .describe('Короткое follow-up сообщение на русском — без повтора всей первой презентации'),
+});
+
 const ANALYSIS_SYSTEM = `Ты — аналитик, который готовит квалификацию бизнес-лидов для TAINA \
 (компания делает AI-ассистентов и автоматизацию бизнес-процессов, в т.ч. на базе RAG).
 
@@ -60,6 +66,16 @@ const MESSAGE_SYSTEM = `Ты пишешь короткое персонализ�
 - БЕЗ обещаний конкретного ROI/экономии в деньгах — данных для этого нет.
 - 3-5 предложений, на русском языке, тон — как будто пишет человек, а не рассылка.
 - Обязательно опирайся на конкретные факты из анализа, а не на общие фразы, подходящие любой компании.`;
+
+const FOLLOWUP_SYSTEM = `Ты пишешь короткое вежливое follow-up сообщение от TAINA — человек не ответил \
+на первое сообщение уже несколько дней.
+
+Требования:
+- НЕ повторяй всю первую презентацию заново — человек её уже видел.
+- Коротко (1-3 предложения), без давления и без "напоминаю в третий раз".
+- Можно добавить небольшую новую деталь/ракурс (например, конкретный пример пользы), а не просто "как дела с моим сообщением".
+- БЕЗ обещаний ROI, БЕЗ агрессивных CTA вроде "жду ответа сегодня".
+- На русском, тон дружелюбный и ненавязчивый — если не актуально, это нормально.`;
 
 async function analyzeCompany({ company, niche, city, siteText, contacts }) {
   const userContent = [
@@ -103,4 +119,26 @@ async function draftMessage({ company, niche, city, facts, hypothesis }) {
   return response.parsed_output;
 }
 
-module.exports = { analyzeCompany, draftMessage };
+async function draftFollowUp({ company, niche, city, facts, hypothesis, originalMessage, followUpNumber, daysSinceContact }) {
+  const userContent = [
+    `Компания: ${company}`,
+    `Ниша: ${niche}`,
+    `Город: ${city}`,
+    `Известные факты: ${facts.join('; ')}`,
+    `Гипотеза о процессах: ${hypothesis}`,
+    `Первое сообщение (уже отправлено, ${daysSinceContact} дн. назад): ${originalMessage}`,
+    `Это follow-up №${followUpNumber}.`,
+  ].join('\n');
+
+  const response = await client.messages.parse({
+    model: MODEL,
+    max_tokens: 1500,
+    system: FOLLOWUP_SYSTEM,
+    output_config: { effort: 'high', format: zodOutputFormat(FollowUpSchema) },
+    messages: [{ role: 'user', content: userContent }],
+  });
+
+  return response.parsed_output;
+}
+
+module.exports = { analyzeCompany, draftMessage, draftFollowUp };

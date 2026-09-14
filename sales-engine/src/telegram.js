@@ -34,8 +34,13 @@ function getChatId() {
  * Собирает текст карточки лида — то, что видит человек в Telegram.
  */
 function formatLeadCard(lead) {
+  const followUpNumber = Number(lead.follow_up_count) || 0;
+  const header = followUpNumber > 0
+    ? `🔁 <b>Follow-up №${followUpNumber}</b> — ${escapeHtml(lead.company)}`
+    : `🎯 <b>Новый лид</b> — score ${lead.score}/100`;
+
   return [
-    `🎯 <b>Новый лид</b> — score ${lead.score}/100`,
+    header,
     '',
     `<b>Компания:</b> ${escapeHtml(lead.company)}`,
     `Ниша: ${escapeHtml(lead.niche)} · Город: ${escapeHtml(lead.city)}`,

@@ -6,6 +6,7 @@ const { computeScore, digitalPresenceCriterion } = require('../src/scoring');
 const { formatLeadCard } = require('../src/telegram');
 const { buildLeadKey } = require('../src/pipeline');
 const { fetchSiteText } = require('../src/siteFetch');
+const { parseAnalysis, daysSince } = require('../src/followup');
 
 // 1. normalizeDomain — убирает протокол и www, приводит к нижнему регистру
 {
@@ -92,7 +93,49 @@ const { fetchSiteText } = require('../src/siteFetch');
   console.log('OK: buildLeadKey');
 }
 
-// 6. fetchSiteText — парсинг HTML в текст (сеть подменяем)
+// 6. parseAnalysis — разбирает обратно строку "Факты: ... | Гипотеза: ..."
+{
+  const parsed = parseAnalysis('Факты: сеть из 5 клиник; много отзывов | Гипотеза: высокая нагрузка на администраторов');
+  assert.deepStrictEqual(parsed.facts, ['сеть из 5 клиник', 'много отзывов']);
+  assert.strictEqual(parsed.hypothesis, 'высокая нагрузка на администраторов');
+  console.log('OK: parseAnalysis');
+}
+{
+  // Битая/пустая строка не должна ронять код
+  const parsed = parseAnalysis('');
+  assert.ok(Array.isArray(parsed.facts));
+  console.log('OK: parseAnalysis — пустая строка не падает');
+}
+
+// 7. daysSince — считает дни корректно
+{
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+  assert.ok(Math.abs(daysSince(threeDaysAgo) - 3) < 0.01);
+  assert.strictEqual(daysSince(''), Infinity);
+  console.log('OK: daysSince');
+}
+
+// 8. formatLeadCard — follow-up карточка показывает отдельный заголовок
+{
+  const followUpLead = {
+    company: 'Клиника Здоровье',
+    niche: 'медицина',
+    city: 'Москва',
+    domain: 'clinic.ru',
+    contacts: '+7 999 000-00-00',
+    follow_up_count: 1,
+    score_reason: 'Прошло 3 дн. без ответа',
+    problem: 'p',
+    solution: 's',
+    message: 'follow-up текст',
+  };
+  const card = formatLeadCard(followUpLead);
+  assert.ok(card.includes('Follow-up №1'));
+  assert.ok(!card.includes('Новый лид'));
+  console.log('OK: formatLeadCard — follow-up заголовок');
+}
+
+// 9. fetchSiteText — парсинг HTML в текст (сеть подменяем)
 {
   (async () => {
     const originalFetch = global.fetch;

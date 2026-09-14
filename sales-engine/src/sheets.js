@@ -5,11 +5,9 @@ const SHEET_NAME = 'Лиды';
 const COLUMNS = [
   'id', 'domain', 'company', 'niche', 'city', 'source', 'contacts',
   'site_summary', 'ai_analysis', 'score', 'score_reason', 'data_confidence',
-  'problem', 'solution', 'message', 'status', 'first_contact_date',
-  'last_status_update', 'notes',
+  'problem', 'solution', 'message', 'status', 'follow_up_count',
+  'first_contact_date', 'last_status_update', 'notes',
 ];
-const STATUS_COL_INDEX = COLUMNS.indexOf('status'); // 15
-const LAST_UPDATE_COL_INDEX = COLUMNS.indexOf('last_status_update'); // 17
 
 function colLetter(index) {
   // 0 -> A, 1 -> B, ... простая реализация, колонок у нас < 26
@@ -48,6 +46,14 @@ function normalizeKey(str) {
   return String(str || '').trim().toLowerCase();
 }
 
+function rowToLead(row) {
+  const lead = {};
+  COLUMNS.forEach((key, i) => {
+    lead[key] = row[i] || '';
+  });
+  return lead;
+}
+
 /**
  * Читает всю таблицу и строит набор ключей для дедапа:
  * домен, если есть, иначе "название|город".
@@ -68,6 +74,20 @@ async function getExistingKeys() {
     else if (company) keys.add(`${company}|${city}`);
   }
   return keys;
+}
+
+/**
+ * Читает все строки таблицы как объекты-лиды (с номером строки —
+ * нужен внутри модуля для точечных обновлений).
+ */
+async function getAllLeads() {
+  const sheets = await getSheetsClient();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: getSheetId(),
+    range: `${SHEET_NAME}!A2:${colLetter(COLUMNS.length - 1)}`,
+  });
+  const rows = res.data.values || [];
+  return rows.map((row, i) => ({ ...rowToLead(row), _row: i + 2 }));
 }
 
 /**
@@ -114,43 +134,67 @@ async function getLeadById(id) {
     range: `${SHEET_NAME}!A${rowNumber}:${colLetter(COLUMNS.length - 1)}${rowNumber}`,
   });
   const row = (res.data.values || [])[0] || [];
-  const lead = {};
-  COLUMNS.forEach((key, i) => {
-    lead[key] = row[i] || '';
-  });
-  return lead;
+  return rowToLead(row);
 }
 
 /**
- * Обновляет статус лида и дату последнего обновления.
+ * Точечно обновляет несколько полей одной строки за один запрос.
+ * fields — объект { имя_колонки: значение }. last_status_update
+ * проставляется автоматически, если не передан явно.
  */
-async function updateStatus(id, status) {
+async function updateFields(id, fields) {
   const rowNumber = await findRowById(id);
   if (!rowNumber) return false;
 
-  const sheets = await getSheetsClient();
-  const statusCell = `${SHEET_NAME}!${colLetter(STATUS_COL_INDEX)}${rowNumber}`;
-  const updateCell = `${SHEET_NAME}!${colLetter(LAST_UPDATE_COL_INDEX)}${rowNumber}`;
+  const toWrite = { last_status_update: new Date().toISOString(), ...fields };
+  const data = Object.entries(toWrite)
+    .filter(([key]) => COLUMNS.includes(key))
+    .map(([key, value]) => ({
+      range: `${SHEET_NAME}!${colLetter(COLUMNS.indexOf(key))}${rowNumber}`,
+      values: [[value]],
+    }));
 
+  if (!data.length) return false;
+
+  const sheets = await getSheetsClient();
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: getSheetId(),
-    requestBody: {
-      valueInputOption: 'USER_ENTERED',
-      data: [
-        { range: statusCell, values: [[status]] },
-        { range: updateCell, values: [[new Date().toISOString()]] },
-      ],
-    },
+    requestBody: { valueInputOption: 'USER_ENTERED', data },
   });
   return true;
+}
+
+/**
+ * Обновляет статус лида (и дату последнего обновления).
+ */
+async function updateStatus(id, status) {
+  return updateFields(id, { status });
+}
+
+/**
+ * Отмечает, что вы одобрили и отправили сообщение: статус "Отправлено",
+ * с этого момента начинается отсчёт до follow-up. first_contact_date
+ * проставляется только один раз — при самом первом одобрении.
+ */
+async function markApproved(id) {
+  const lead = await getLeadById(id);
+  if (!lead) return false;
+  const fields = { status: 'Отправлено' };
+  if (!lead.first_contact_date) {
+    fields.first_contact_date = new Date().toISOString();
+  }
+  return updateFields(id, fields);
 }
 
 module.exports = {
   COLUMNS,
   SHEET_NAME,
   getExistingKeys,
+  getAllLeads,
   appendLead,
   getLeadById,
   updateStatus,
+  updateFields,
+  markApproved,
   normalizeKey,
 };
