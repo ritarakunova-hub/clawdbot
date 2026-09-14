@@ -1,4 +1,4 @@
-const outscraper = require('./outscraper');
+const leadSource = require('./googlePlaces');
 const { fetchSiteText } = require('./siteFetch');
 const claude = require('./claude');
 const { computeScore, digitalPresenceCriterion } = require('./scoring');
@@ -29,14 +29,14 @@ async function runPipeline({ niche, city, limit }) {
 
   let rawResults;
   try {
-    rawResults = await outscraper.searchCompanies(niche, city, limit);
+    rawResults = await leadSource.searchCompanies(niche, city, limit);
   } catch (err) {
-    log(`Ошибка Outscraper: ${err.message}`);
-    await telegram.sendPlainMessage(`⚠️ Прогон остановлен: ошибка поиска лидов (Outscraper).\n${err.message}`);
+    log(`Ошибка поиска лидов: ${err.message}`);
+    await telegram.sendPlainMessage(`⚠️ Прогон остановлен: ошибка поиска лидов (Google Places).\n${err.message}`);
     return;
   }
 
-  log(`Outscraper вернул ${rawResults.length} компаний`);
+  log(`Google Places вернул ${rawResults.length} компаний`);
 
   const existingKeys = await sheets.getExistingKeys();
 
@@ -46,7 +46,7 @@ async function runPipeline({ niche, city, limit }) {
   for (const place of rawResults) {
     if (processed >= limit) break;
 
-    const domain = outscraper.normalizeDomain(place.site);
+    const domain = leadSource.normalizeDomain(place.site);
     const key = buildLeadKey(domain, place.name, city);
 
     if (existingKeys.has(key)) {
@@ -107,7 +107,7 @@ async function runPipeline({ niche, city, limit }) {
       company: place.name || '',
       niche,
       city,
-      source: 'outscraper_google_maps',
+      source: 'google_places_api',
       contacts: place.phone || '',
       site_summary: siteText ? siteText.slice(0, 500) : '',
       ai_analysis: `Факты: ${analysis.facts.join('; ')} | Гипотеза: ${analysis.hypothesis}`,

@@ -88,16 +88,24 @@ base64-строка ключа), просто дайте ему доступ **�
 
 Скопируйте **ID этой таблицы** (из URL, между `/d/` и `/edit`).
 
-### 2. Ключ Outscraper API
+### 2. Ключ Google Places API
 
-Пул для поиска компаний по Google Maps.
+Поиск компаний — через Google Places API, тот же проект в Google Cloud,
+что вы уже создавали для Sheets в шаге 1 (не нужен новый аккаунт).
 
-1. Зарегистрируйтесь на [outscraper.com](https://outscraper.com)
-2. В личном кабинете → **Profile → API Key** — скопируйте ключ
-3. Это и есть `OUTSCRAPER_API_KEY`
+1. В [console.cloud.google.com](https://console.cloud.google.com/) —
+   убедитесь, что выбран тот же проект, где включали Sheets API
+2. В поиске сверху введите **«Places API (New)»** → откройте → **Enable**
+3. Слева: **APIs & Services → Credentials → + Create Credentials → API key**
+4. Скопируется новый ключ — это `GOOGLE_PLACES_API_KEY`
+5. (Рекомендуется, необязательно) Нажмите на созданный ключ → **Restrict key**
+   → в разделе API restrictions выберите **Places API (New)** — так ключ
+   нельзя будет использовать для других API, если утечёт
 
-У Outscraper обычно есть бесплатный пробный лимит запросов — для 10-30
-компаний за прогон должно хватать надолго.
+**Экономика:** для реальных данных (название, адрес) Google всегда
+считает это тарифом Pro — но бесплатный лимit там 5000 запросов в
+месяц. Один прогон TAINA — это 1 запрос. Уложиться в платный порог
+практически невозможно при вашем объёме.
 
 ### 3. Ключ Anthropic (Claude) — это я, но нужен ваш собственный ключ
 
@@ -125,7 +133,7 @@ base64-строка ключа), просто дайте ему доступ **�
 1. Создайте новое приложение на Amvera, подключите репозиторий, папка `sales-engine`
 2. В **«Переменные и секреты»** добавьте (как секреты):
    - `ANTHROPIC_API_KEY`
-   - `OUTSCRAPER_API_KEY`
+   - `GOOGLE_PLACES_API_KEY`
    - `GOOGLE_SHEET_ID`
    - `GOOGLE_SERVICE_ACCOUNT_KEY_BASE64`
    - `TELEGRAM_BOT_TOKEN`
@@ -194,7 +202,7 @@ Claude НЕ придумывает число 0-100 — это ненадёжн�
 cp .env.example .env
 # заполните .env своими значениями
 npm install
-npm test      # проверка логики без реальных API (Claude/Outscraper/Sheets/Telegram)
+npm test      # проверка логики без реальных API (Claude/Google Places/Sheets/Telegram)
 npm start     # http://localhost:3000
 ```
 
@@ -205,6 +213,6 @@ npm start     # http://localhost:3000
 - Автоматическое определение "человек ответил" (сейчас это вы сами
   фиксируете, вписывая статус в таблицу)
 
-Архитектура (отдельные модули `outscraper.js`/`sheets.js`/`telegram.js`)
+Архитектура (отдельные модули `googlePlaces.js`/`sheets.js`/`telegram.js`)
 специально сделана так, чтобы это можно было добавить позже, не
 переписывая всё с нуля.
