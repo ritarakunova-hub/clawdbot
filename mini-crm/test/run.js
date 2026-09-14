@@ -42,6 +42,18 @@ const { formatLeadMessage } = require('../src/telegram');
   console.log('OK: пустой payload обрабатывается без ошибок');
 }
 
+// 3.5. Общее поле "Контакт" (телефон/почта/Telegram одной строкой)
+{
+  const withEmail = parseNetlifyLead({ form_name: 'diagnostic', data: { name: 'Мария', contact: 'maria@example.com' } });
+  assert.strictEqual(withEmail.email, 'maria@example.com');
+  assert.strictEqual(withEmail.phone, '');
+
+  const withPhone = parseNetlifyLead({ form_name: 'diagnostic', data: { Имя: 'Пётр', Контакт: '+79990001122' } });
+  assert.strictEqual(withPhone.phone, '+79990001122');
+  assert.strictEqual(withPhone.email, '');
+  console.log('OK: общее поле "Контакт" раскладывается в email/phone');
+}
+
 // 4. Формирование текста уведомления в Telegram
 {
   const lead = {

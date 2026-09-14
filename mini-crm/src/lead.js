@@ -26,6 +26,19 @@ function parseNetlifyLead(body) {
     form_name: (body && body.form_name) || '',
   };
 
+  // Некоторые формы дают одно общее поле "Контакт" (телефон/почта/Telegram
+  // одной строкой), а не раздельные email/phone. Если раздельных полей
+  // не нашлось — раскладываем "Контакт" по простому признаку (есть "@" —
+  // это похоже на почту, иначе кладём в телефон, там же обычно и Telegram).
+  const generalContact = pick(data, ['contact', 'Contact', 'контакт', 'Контакт']);
+  if (generalContact && !lead.email && !lead.phone) {
+    if (generalContact.includes('@')) {
+      lead.email = generalContact;
+    } else {
+      lead.phone = generalContact;
+    }
+  }
+
   const now = new Date().toISOString();
   lead.received_at = now;
   lead.last_status_update = now;
