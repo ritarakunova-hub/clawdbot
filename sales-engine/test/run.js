@@ -1,7 +1,8 @@
-// Простые проверки без обращения к реальным Outscraper/Claude/Google/Telegram —
+// Простые проверки без обращения к реальным Claude/Google/Telegram —
 // запускаются: npm test
 const assert = require('node:assert');
-const { normalizeDomain } = require('../src/outscraper');
+process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || 'test-key';
+const { normalizeDomain, extractJsonArray } = require('../src/webLeadSearch');
 const { computeScore, digitalPresenceCriterion } = require('../src/scoring');
 const { formatLeadCard } = require('../src/telegram');
 const { buildLeadKey } = require('../src/pipeline');
@@ -135,7 +136,25 @@ const { parseAnalysis, daysSince } = require('../src/followup');
   console.log('OK: formatLeadCard — follow-up заголовок');
 }
 
-// 9. fetchSiteText — парсинг HTML в текст (сеть подменяем)
+// 9. webLeadSearch.extractJsonArray — вытаскивает JSON-массив из текста
+// ответа Claude (текст до/после блока, markdown-разметка не мешают)
+{
+  const text = 'Нашла несколько компаний через поиск.\n```json\n[{"name": "Клиника Здоровье", "site": "https://health-clinic.ru", "phone": "+7 999 000-00-00"}, {"name": "Без сайта", "site": "", "phone": ""}]\n```';
+  const result = extractJsonArray(text);
+  assert.strictEqual(result.length, 2);
+  assert.strictEqual(result[0].name, 'Клиника Здоровье');
+  assert.strictEqual(result[0].site, 'https://health-clinic.ru');
+  assert.strictEqual(result[1].site, '');
+  console.log('OK: extractJsonArray — извлечение JSON из окружающего текста');
+}
+{
+  // Без JSON-блока и без валидного JSON — не должно падать, просто []
+  assert.deepStrictEqual(extractJsonArray('Ничего подходящего не нашла.'), []);
+  assert.deepStrictEqual(extractJsonArray('```json\n{ битый json\n```'), []);
+  console.log('OK: extractJsonArray — отсутствие/битый JSON не падает');
+}
+
+// 10. fetchSiteText — парсинг HTML в текст (сеть подменяем)
 {
   (async () => {
     const originalFetch = global.fetch;
