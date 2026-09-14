@@ -1,7 +1,7 @@
-// Простые проверки без обращения к реальным Google Places/Claude/Sheets/Telegram —
+// Простые проверки без обращения к реальным Outscraper/Claude/Google/Telegram —
 // запускаются: npm test
 const assert = require('node:assert');
-const { normalizeDomain } = require('../src/googlePlaces');
+const { normalizeDomain } = require('../src/outscraper');
 const { computeScore, digitalPresenceCriterion } = require('../src/scoring');
 const { formatLeadCard } = require('../src/telegram');
 const { buildLeadKey } = require('../src/pipeline');
@@ -135,42 +135,10 @@ const { parseAnalysis, daysSince } = require('../src/followup');
   console.log('OK: formatLeadCard — follow-up заголовок');
 }
 
-// 9. googlePlaces.searchCompanies — маппинг ответа Places API в { name, site, phone } (сеть подменяем)
-// 10. fetchSiteText — парсинг HTML в текст (сеть подменяем)
+// 9. fetchSiteText — парсинг HTML в текст (сеть подменяем)
 {
   (async () => {
     const originalFetch = global.fetch;
-
-    // --- 9 ---
-    process.env.GOOGLE_PLACES_API_KEY = 'test-key';
-    global.fetch = async (url, options) => {
-      assert.ok(url.includes('places:searchText'));
-      const body = JSON.parse(options.body);
-      assert.strictEqual(body.textQuery, 'медицинские центры Москва');
-      return {
-        ok: true,
-        json: async () => ({
-          places: [
-            {
-              id: 'place1',
-              displayName: { text: 'Клиника Здоровье' },
-              formattedAddress: 'Москва, ул. Ленина, 1',
-              websiteUri: 'https://health-clinic.ru',
-              nationalPhoneNumber: '+7 999 000-00-00',
-            },
-          ],
-        }),
-      };
-    };
-    const { searchCompanies } = require('../src/googlePlaces');
-    const results = await searchCompanies('медицинские центры', 'Москва', 10);
-    assert.strictEqual(results.length, 1);
-    assert.strictEqual(results[0].name, 'Клиника Здоровье');
-    assert.strictEqual(results[0].site, 'https://health-clinic.ru');
-    assert.strictEqual(results[0].phone, '+7 999 000-00-00');
-    console.log('OK: googlePlaces.searchCompanies — маппинг результата');
-
-    // --- 10 ---
     global.fetch = async () => ({
       ok: true,
       headers: { get: () => 'text/html; charset=utf-8' },
