@@ -282,8 +282,12 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
     const by = lerp(D0.y, 0.05, pm) + Math.sin(tNow * 0.6) * 0.05 * (1 - pz);
     const bz = lerp(D0.z, 3.4, sstep(0.55, 0.96, ps));
     dia.position.set(bx, by, bz);
-    dia.rotation.y = Math.sin(tNow * 0.31) * 0.55 + ptr.sx * 0.5;
-    dia.rotation.x = -ptr.sy * 0.22 + Math.sin(tNow * 0.23) * 0.04;
+    // Меньше амплитуда, чем в исходном прототипе: ромб — плоский символ
+    // (как масть «бубны» в картах), а не вращающийся 3D-камень — если
+    // крутить его сильно, видно грань сзади/спереди, и силуэт перестаёт
+    // читаться как ромб (см. правку по бренд-буку).
+    dia.rotation.y = Math.sin(tNow * 0.31) * 0.16 + ptr.sx * 0.18;
+    dia.rotation.x = -ptr.sy * 0.08 + Math.sin(tNow * 0.23) * 0.02;
     dia.rotation.z = 0;
     diaMaterial.uniforms.uI.value = (0.5 + 0.5 * keyI) * 0.84 * (1 + pz * 0.3);
     (diaEdges.material as THREE.LineBasicMaterial).opacity = 0.7 * keyI;
