@@ -1,3 +1,11 @@
 [build]
   command = "npm run build"
   publish = "dist"
+
+# Сайт пока черновик — запрещаем индексацию на всех ветках/превью,
+# дублирует <meta name="robots" content="noindex"> в Layout.astro.
+# TODO(Этап 14, SEO): убрать этот блок, когда будем готовы к индексации.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex"

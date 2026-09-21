@@ -1,0 +1,153 @@
+---
+import Section from '@/components/Section.astro';
+import Container from '@/components/Container.astro';
+import Button from '@/components/Button.astro';
+import { packages, support, ctaLabel } from '@/content/prices';
+import { faq } from '@/content/faq';
+---
+
+<Section id="packages" label="Пакеты">
+  <Container>
+    <h2>Пакеты</h2>
+    <ul class="grid">
+      {
+        packages.map((pkg) => (
+          <li class:list={['card', { 'card--recommended': pkg.recommended }]}>
+            {pkg.recommended && <p class="badge">Рекомендуем</p>}
+            <h3>{pkg.title}</h3>
+            <p class="price">{pkg.price}</p>
+            <p class="description">{pkg.description}</p>
+            <Button href="#contact" variant={pkg.recommended ? 'solid' : 'outline'} size="sm">
+              {ctaLabel}
+            </Button>
+          </li>
+        ))
+      }
+    </ul>
+
+    <div class="support">
+      <h3>{support.title}</h3>
+      <p class="price">{support.price}</p>
+      <p class="description">{support.description}</p>
+      <Button href="#contact" variant="text" size="sm">
+        {ctaLabel}
+      </Button>
+    </div>
+
+    <div class="faq">
+      <h3>Вопросы</h3>
+      {
+        faq.map((item) => (
+          <details class="faq-item">
+            <summary>{item.question}</summary>
+            <p>{item.answer}</p>
+          </details>
+        ))
+      }
+    </div>
+  </Container>
+</Section>
+
+<style>
+  h2 {
+    font-size: var(--text-2xl);
+  }
+
+  .grid {
+    margin: var(--space-7) 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-5);
+  }
+
+  @media (max-width: 1024px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .card {
+    position: relative;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: flex-start;
+  }
+
+  .card--recommended {
+    border-color: var(--color-gold);
+  }
+
+  .badge {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-gold);
+    font-weight: 600;
+  }
+
+  .card h3,
+  .support h3 {
+    font-size: var(--text-xl);
+  }
+
+  .price {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: var(--text-lg);
+    color: var(--color-gold);
+  }
+
+  .description {
+    color: var(--color-sand);
+  }
+
+  .support {
+    margin-top: var(--space-6);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-line);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .faq {
+    margin-top: var(--space-8);
+  }
+
+  .faq h3 {
+    font-size: var(--text-xl);
+    margin-bottom: var(--space-4);
+  }
+
+  .faq-item {
+    border-top: 1px solid var(--color-line);
+    padding-block: var(--space-4);
+  }
+
+  .faq-item:last-child {
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .faq-item summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .faq-item summary::marker {
+    color: var(--color-gold);
+  }
+
+  .faq-item p {
+    margin-top: var(--space-3);
+    color: var(--color-sand);
+    max-width: var(--measure);
+  }
+</style>

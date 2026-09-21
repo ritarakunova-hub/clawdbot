@@ -1,0 +1,38 @@
+---
+import Section from '@/components/Section.astro';
+import Container from '@/components/Container.astro';
+import { about } from '@/content/copy';
+---
+
+<Section id="about" label={about.title}>
+  <Container>
+    <h2>{about.title}</h2>
+    <div class="text">
+      {about.paragraphs.map((paragraph) => <p class="measure">{paragraph}</p>)}
+      <p class="philosophy measure">«{about.philosophy}»</p>
+    </div>
+  </Container>
+</Section>
+
+<style>
+  h2 {
+    font-size: var(--text-2xl);
+  }
+
+  .text {
+    margin-top: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    font-size: var(--text-lg);
+    color: var(--color-sand);
+  }
+
+  .philosophy {
+    font-family: var(--font-serif);
+    font-style: italic;
+    color: var(--color-ivory);
+    border-left: 2px solid var(--color-gold);
+    padding-left: var(--space-4);
+  }
+</style>

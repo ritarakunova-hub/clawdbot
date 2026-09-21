@@ -29,6 +29,9 @@ const { title, description } = Astro.props;
     <meta name="theme-color" content="#0a0a0b" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    {/* TODO(Этап 14, SEO): сайт ещё черновик — убрать noindex,
+       когда будем готовы к индексации. См. также netlify.toml. */}
+    <meta name="robots" content="noindex, nofollow" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
     <link rel="preload" as="font" type="font/woff2" href={interLatin400} crossorigin="anonymous" />

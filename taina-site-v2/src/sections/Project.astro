@@ -1,0 +1,103 @@
+---
+import Section from '@/components/Section.astro';
+import Container from '@/components/Container.astro';
+import { project, reviewApproved } from '@/content/copy';
+---
+
+<Section id="project" label={project.title}>
+  <Container>
+    <h2>{project.title}</h2>
+    <div class="grid">
+      <article class="card">
+        <h3>{project.case.title}</h3>
+        <p>{project.case.description}</p>
+        <p class="disclaimer">{project.case.disclaimer}</p>
+        {
+          reviewApproved && (
+            <blockquote class="review">
+              <p>«{project.case.review.quote}»</p>
+              <cite>{project.case.review.attribution}</cite>
+            </blockquote>
+          )
+        }
+      </article>
+      <article class="card card--teaser" aria-hidden="true">
+        <p class="teaser">{project.teaser}</p>
+      </article>
+    </div>
+  </Container>
+</Section>
+
+<style>
+  h2 {
+    font-size: var(--text-2xl);
+  }
+
+  .grid {
+    margin-top: var(--space-7);
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-5);
+    align-items: start;
+  }
+
+  @media (max-width: 860px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    padding: var(--space-6);
+  }
+
+  .card h3 {
+    font-size: var(--text-xl);
+    max-width: var(--measure);
+  }
+
+  .card p {
+    margin-top: var(--space-3);
+    color: var(--color-sand);
+    max-width: var(--measure);
+  }
+
+  .disclaimer {
+    font-size: var(--text-sm);
+  }
+
+  .review {
+    margin: var(--space-5) 0 0;
+    padding-left: var(--space-4);
+    border-left: 2px solid var(--color-gold);
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    color: var(--color-ivory);
+  }
+
+  .review cite {
+    display: block;
+    margin-top: var(--space-3);
+    font-family: var(--font-sans);
+    font-style: normal;
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+  }
+
+  .card--teaser {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-style: dashed;
+  }
+
+  .teaser {
+    margin: 0;
+    color: var(--color-sand);
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+  }
+</style>

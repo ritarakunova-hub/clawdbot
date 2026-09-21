@@ -1,0 +1,42 @@
+---
+import Section from '@/components/Section.astro';
+import Container from '@/components/Container.astro';
+import Button from '@/components/Button.astro';
+import { contact } from '@/content/copy';
+---
+
+<Section id="contact" label={contact.title}>
+  <Container>
+    <h2>{contact.title}</h2>
+    <p class="lead measure">{contact.lead}</p>
+    <div class="channels">
+      {
+        // Оба канала равнозначны (CLAUDE.md) — одинаковый вариант кнопки.
+        contact.channels.map((channel) => (
+          <Button href={channel.href} variant="outline">
+            {channel.label}
+          </Button>
+        ))
+      }
+    </div>
+  </Container>
+</Section>
+
+<style>
+  h2 {
+    font-size: var(--text-2xl);
+  }
+
+  .lead {
+    margin-top: var(--space-5);
+    font-size: var(--text-lg);
+    color: var(--color-sand);
+  }
+
+  .channels {
+    margin-top: var(--space-6);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+</style>

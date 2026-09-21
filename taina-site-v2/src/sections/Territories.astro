@@ -1,0 +1,60 @@
+---
+import Section from '@/components/Section.astro';
+import Container from '@/components/Container.astro';
+import { territories } from '@/content/copy';
+---
+
+<Section id="territories" label={territories.title}>
+  <Container>
+    <h2>{territories.title}</h2>
+    <ul class="grid">
+      {
+        territories.items.map((item) => (
+          <li class="card">
+            <h3>{item.title}</h3>
+            <p>{item.text}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </Container>
+</Section>
+
+<style>
+  h2 {
+    font-size: var(--text-2xl);
+  }
+
+  .grid {
+    margin: var(--space-7) 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-5);
+  }
+
+  @media (max-width: 860px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    padding: var(--space-6);
+  }
+
+  .card h3 {
+    font-size: var(--text-xl);
+    color: var(--color-gold);
+  }
+
+  .card p {
+    margin-top: var(--space-3);
+    color: var(--color-sand);
+    font-size: var(--text-base);
+  }
+</style>

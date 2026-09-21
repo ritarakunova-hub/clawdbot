@@ -38,6 +38,12 @@ a {
   text-decoration: none;
 }
 
+/* Контейнер может быть широким (1440px), но строка текста внутри
+   него должна остаться читаемой — не длиннее 65–75 знаков. */
+.measure {
+  max-width: var(--measure);
+}
+
 .skip-link {
   position: absolute;
   top: -100%;

@@ -41,6 +41,9 @@
   --radius-pill: 999px;
   --radius-card: 16px;
 
+  /* Максимальная длина строки для читаемого текста (65–75 знаков) */
+  --measure: 68ch;
+
   /* Высота шапки (с запасом на safe-area-inset-top) — для
      scroll-margin-top у якорных секций */
   --header-height: 112px;
