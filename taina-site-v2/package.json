@@ -14,10 +14,12 @@
   "dependencies": {
     "@fontsource/cormorant-garamond": "^5.3.0",
     "@fontsource/inter": "^5.3.0",
-    "astro": "^7.3.3"
+    "astro": "^7.3.3",
+    "three": "0.147.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
+    "@types/three": "0.147.1",
     "astro-eslint-parser": "^3.1.0",
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",

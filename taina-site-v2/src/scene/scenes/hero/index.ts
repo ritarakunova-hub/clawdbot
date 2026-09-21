@@ -1,0 +1,411 @@
+import * as THREE from 'three';
+import { clamp, smoothstep as sstep, lerp, easeOut as eOut, easeInOut as eInOut, easeBack as eBack } from '@/lib/easing';
+import { createHeroRenderer, Unsupported } from '../../renderer';
+import { createSharedUniforms } from '../../uniforms';
+import { buildSheets } from '../../objects/sheets';
+import { buildDiamond } from '../../objects/diamond';
+import { buildFloor } from '../../objects/floor';
+import { buildDust } from '../../objects/dust';
+import { buildCat } from '../../objects/cat';
+import { buildPostFx } from './postFx';
+
+export interface HeroSceneElements {
+  canvas: HTMLCanvasElement;
+  hero: HTMLElement;
+  stage: HTMLElement;
+  copy: HTMLElement;
+  h1: HTMLElement;
+  cueScroll: HTMLElement;
+  /** Куда падает изображение кота (public/img/cat-eyes.jpg). */
+  catImageUrl: string;
+}
+
+export interface HeroSceneHandle {
+  destroy(): void;
+}
+
+/**
+ * Перенос сцены первого экрана из reference/taina-hero.html как есть —
+ * тот же PRNG для листов, те же тайминги вступления, та же логика
+ * скролла/курсора/адаптивного DPR. Отличия от прототипа исключительно
+ * механические (ESM-модули, TypeScript, DOM передаётся снаружи), сама
+ * анимация не менялась.
+ *
+ * Бросает Unsupported, если WebGL2 недоступен или инициализация упала —
+ * вызывающий код (Hero.astro) ловит это и включает CSS-заглушку ромба.
+ */
+export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
+  const { canvas, hero, stage, copy, h1, cueScroll } = el;
+
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const coarse = matchMedia('(pointer: coarse)').matches;
+  const lowPower = (navigator.hardwareConcurrency || 8) <= 4 || Math.min(innerWidth, innerHeight) < 640;
+
+  function setSweep(v: number) {
+    h1.style.setProperty('--s', v + '%');
+  }
+
+  const renderer = createHeroRenderer(canvas); // бросает Unsupported при неудаче
+
+  const dprMax = lowPower ? 1.5 : 2;
+  let curDpr = dprMax;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dprMax));
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 90);
+  const base = { camZ: 10, portrait: false };
+  const D0 = new THREE.Vector3(1.9, 0.1, 0); // позиция покоя ромба
+  let dScale0 = 1;
+  const catBase = { x: 0.4, y: 2.55 };
+
+  const U = createSharedUniforms();
+
+  // --- объекты сцены (строятся один раз в boot(), после первого layout()) ---
+  let sheets: THREE.Mesh;
+  let dia: THREE.Group;
+  let diaMaterial: THREE.ShaderMaterial;
+  let diaEdges: THREE.LineSegments;
+  let halo: THREE.Group;
+  let haloA: THREE.Mesh;
+  let haloB: THREE.Mesh;
+  let streakH: THREE.Mesh;
+  let streakV: THREE.Mesh;
+  let floor: THREE.Mesh;
+  let dust: THREE.Points;
+  let catMesh: THREE.Mesh;
+  let catMaterial: THREE.ShaderMaterial;
+  let postFx: ReturnType<typeof buildPostFx>;
+
+  function layout() {
+    const w = innerWidth;
+    const h = innerHeight;
+    const a = w / h;
+    base.portrait = a < 0.85;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, curDpr));
+    renderer.setSize(w, h, false);
+    if (postFx) {
+      postFx.composer.setPixelRatio(renderer.getPixelRatio());
+      postFx.composer.setSize(w, h);
+    }
+    camera.aspect = a;
+    U.uPortrait.value = base.portrait ? 1 : 0;
+    const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    if (base.portrait) {
+      base.camZ = 13.4;
+      const hh = tan * base.camZ;
+      const hwp = hh * a;
+      D0.set(-hwp * 0.26, hh * 0.58, 0);
+      dScale0 = 0.5;
+    } else {
+      base.camZ = 10;
+      const hh2 = tan * base.camZ;
+      const hw = hh2 * a;
+      D0.set(clamp(hw * 0.44, 1.2, 3.4), 0.12, 0);
+      dScale0 = clamp(a / 1.6, 0.8, 1.15);
+    }
+    camera.updateProjectionMatrix();
+    if (catMesh) {
+      if (base.portrait) {
+        const d2 = tan * (base.camZ + 7);
+        catBase.x = d2 * a * 0.5;
+        catBase.y = d2 * 0.6;
+        catMesh.position.set(catBase.x, catBase.y, -7);
+        catMesh.scale.setScalar(0.55);
+      } else {
+        const hwc = Math.tan(THREE.MathUtils.degToRad(15)) * 18 * a;
+        catBase.x = hwc * 0.05;
+        catBase.y = 2.55;
+        catMesh.position.set(catBase.x, catBase.y, -8);
+        catMesh.scale.setScalar(1);
+      }
+    }
+    if (dust) (dust.material as THREE.ShaderMaterial).uniforms.uPx.value = renderer.getPixelRatio();
+  }
+
+  // --- ввод ---
+  const ptr = { x: 0, y: 0, sx: 0, sy: 0, last: -1e9, has: false };
+  function onPointerMove(e: PointerEvent) {
+    ptr.x = (e.clientX / innerWidth) * 2 - 1;
+    ptr.y = -((e.clientY / innerHeight) * 2 - 1);
+    ptr.last = performance.now();
+    ptr.has = true;
+  }
+  addEventListener('pointermove', onPointerMove, { passive: true });
+  addEventListener('pointerdown', onPointerMove, { passive: true });
+
+  // --- состояние / цикл ---
+  let t0 = 0;
+  let tNow = 0;
+  let active = true;
+  let introDone = false;
+  let started = false;
+  let ps = 0;
+  let blinkAt = 6;
+  let blinkT = -1;
+  let frames = 0;
+  let acc = 0;
+  let lastTs = 0;
+  let copyShown = false;
+  let sweepStart: number | null = null;
+  let rafId = 0;
+
+  function scrollP(): number {
+    const r = hero.getBoundingClientRect();
+    const total = Math.max(1, r.height - innerHeight);
+    return clamp(-r.top / total, 0, 1);
+  }
+
+  function frame(ts: number) {
+    if (!started) return;
+    if (!active || document.hidden) {
+      lastTs = 0;
+      rafId = requestAnimationFrame(frame);
+      return;
+    }
+    const dt = lastTs ? Math.min((ts - lastTs) / 1000, 0.05) : 0.016;
+    lastTs = ts;
+    tNow = (ts - t0) / 1000;
+    const it = reduce ? 99 : tNow; // время вступления
+
+    const fade = sstep(0, 1.1, it);
+    const spark = sstep(0.2, 0.9, it) * (1 - sstep(0.9, 1.5, it) * 0.55);
+    const dia_s = eBack((it - 0.85) / 1.25);
+    const keyI = eOut((it - 1.0) / 1.6);
+    const streak = eOut((it - 1.0) / 1.7);
+    const reveal = lerp(0, 34, eOut((it - 1.1) / 3.4));
+    if (!copyShown && it > 1.7) {
+      copyShown = true;
+      stage.classList.add('on');
+    }
+    if (sweepStart === null && it > 1.9) sweepStart = it;
+    if (sweepStart !== null && !introDone) {
+      const sp = clamp((it - sweepStart) / 2.3, 0, 1);
+      setSweep(lerp(-25, 130, eInOut(sp)));
+      if (sp >= 1) introDone = true;
+    }
+    if (reduce) {
+      setSweep(130);
+      stage.classList.add('on');
+      introDone = true;
+    }
+
+    const target = reduce ? 0 : scrollP();
+    ps += (target - ps) * (reduce ? 1 : 0.085);
+    const pz = eInOut(ps);
+    const pm = sstep(0.12, 0.72, ps);
+    const pf = sstep(0.84, 0.975, ps);
+
+    const idle = performance.now() - ptr.last > 3200 || !ptr.has || coarse;
+    const ax = Math.sin(tNow * 0.23) * 0.55 + Math.sin(tNow * 0.11 + 1) * 0.25;
+    const ay = Math.sin(tNow * 0.17 + 2) * 0.32;
+    const tx = idle ? ax : ptr.x;
+    const ty = idle ? ay : ptr.y;
+    ptr.sx += (tx - ptr.sx) * (1 - Math.pow(0.001, dt));
+    ptr.sy += (ty - ptr.sy) * (1 - Math.pow(0.001, dt));
+
+    const breath = reduce ? 0 : Math.sin(tNow * 0.5) * 0.02;
+    const push = lerp(1.2, 0, eOut(it / 5.2));
+    camera.position.set(
+      ptr.sx * (reduce ? 0 : 0.32) * (1 - pz),
+      0.1 + ptr.sy * (reduce ? 0 : 0.16) * (1 - pz) + breath,
+      base.camZ + push - pz * (base.camZ - 4.6),
+    );
+    camera.lookAt(0, 0, -2.5);
+    camera.updateMatrixWorld();
+
+    const dScale = Math.max(0.001, dia_s) * dScale0 * (1 + pz * 0.55);
+    dia.scale.setScalar(dScale);
+    const bx = lerp(D0.x, 0, pm);
+    const by = lerp(D0.y, 0.05, pm) + Math.sin(tNow * 0.6) * 0.05 * (1 - pz);
+    const bz = lerp(D0.z, 3.4, sstep(0.55, 0.96, ps));
+    dia.position.set(bx, by, bz);
+    dia.rotation.y = Math.sin(tNow * 0.31) * 0.55 + ptr.sx * 0.5;
+    dia.rotation.x = -ptr.sy * 0.22 + Math.sin(tNow * 0.23) * 0.04;
+    dia.rotation.z = 0;
+    diaMaterial.uniforms.uI.value = (0.5 + 0.5 * keyI) * 0.84 * (1 + pz * 0.3);
+    (diaEdges.material as THREE.LineBasicMaterial).opacity = 0.7 * keyI;
+
+    U.uTime.value = tNow;
+    U.uKeyPos.value.set(bx, by, bz - 0.4);
+    U.uKeyI.value = keyI * (0.5 + pz * 0.45);
+    U.uKeyR.value = 5.4 + pz * 4;
+    U.uReveal.value = reveal + ps * 30;
+
+    camera.getWorldDirection(dir);
+    tmp.set(ptr.sx, ptr.sy, 0.5).unproject(camera).sub(camera.position).normalize();
+    const zPlane = -2.6;
+    const tt = (zPlane - camera.position.z) / tmp.z;
+    U.uCurPos.value.copy(camera.position).addScaledVector(tmp, tt);
+    U.uCurI.value = sstep(3.2, 4.6, it) * 1.2 * (1 - pf);
+
+    halo.position.set(bx, by, bz - 1.0 * dScale - 0.15);
+    halo.quaternion.copy(camera.quaternion);
+    const hs = Math.max(0.001, dScale);
+    (haloA.material as THREE.ShaderMaterial).uniforms.uI.value = (spark * 0.5 + keyI * 0.12) * (1 + pz * 1.4);
+    (haloB.material as THREE.ShaderMaterial).uniforms.uI.value = (spark * 0.8 + keyI * 0.16) * (1 + pz * 1.0);
+    halo.scale.setScalar(0.6 + 0.4 * Math.max(hs, spark) * 1);
+
+    streakH.position.set(bx, by, bz - 1.0 * dScale - 0.2);
+    streakH.quaternion.copy(camera.quaternion);
+    streakV.position.set(bx, by + 0.05, bz - 1.0 * dScale - 0.2);
+    streakV.quaternion.copy(camera.quaternion);
+    streakV.rotateZ(Math.PI / 2);
+    streakH.scale.set(streak * (1 + pz * 0.6) + 0.001, 1, 1);
+    streakV.scale.set(streak * 0.8 + 0.001, 1, 1);
+    (streakH.material as THREE.ShaderMaterial).uniforms.uI.value = (spark * 0.5 + keyI * 0.2) * (1 - pf * 0.3);
+    (streakV.material as THREE.ShaderMaterial).uniforms.uI.value = spark * 0.4 + keyI * 0.13;
+    (floor.material as THREE.ShaderMaterial).uniforms.uI.value = keyI * 0.42 * (1 - pz * 0.7);
+
+    const catIn = sstep(3.9, 5.4, it);
+    const near = Math.exp(-(Math.pow(ptr.sx - 0.05, 2) + Math.pow(ptr.sy - 0.5, 2)) * 2.2) * (idle ? 0 : 1);
+    if (blinkT < 0 && tNow > blinkAt) blinkT = 0;
+    let blink = 0;
+    if (blinkT >= 0) {
+      blinkT += dt;
+      const b = blinkT / 0.28;
+      blink = b < 1 ? Math.sin(b * Math.PI) : 0;
+      if (b >= 1) {
+        blinkT = -1;
+        blinkAt = tNow + 5 + Math.random() * 5;
+      }
+    }
+    catMaterial.uniforms.uVis.value = catIn * (0.7 + 0.5 * near) * (1 - pz * 0.9);
+    catMaterial.uniforms.uBlink.value = blink;
+    catMesh.position.x = catBase.x - ptr.sx * 0.25;
+    catMesh.position.y = catBase.y + ptr.sy * 0.15;
+
+    const co = 1 - sstep(0.02, 0.3, ps);
+    copy.style.opacity = String(co);
+    copy.style.transform = `translate3d(0,${(-ps * 90).toFixed(1)}px,0)`;
+    copy.style.pointerEvents = co < 0.2 ? 'none' : 'auto';
+    cueScroll.style.opacity = String(1 - sstep(0, 0.05, ps));
+
+    postFx.bloom.strength = 0.42 + pz * 0.5 + spark * 0.3;
+    postFx.finalPass.uniforms.uTime.value = tNow;
+    postFx.finalPass.uniforms.uFade.value = fade * (1 - sstep(0.985, 1, ps));
+    postFx.finalPass.uniforms.uFlash.value = pf * (1 - sstep(0.95, 0.995, ps) * 0.0);
+    postFx.composer.render(dt);
+
+    if (it > 5 && !reduce) {
+      acc += dt;
+      frames++;
+      if (frames === 90) {
+        const avg = acc / frames;
+        if (avg > 0.03 && curDpr > 1) {
+          curDpr = Math.max(1, curDpr - 0.5);
+          layout();
+        } else if (avg > 0.04 && curDpr > 0.75) {
+          curDpr = 0.75;
+          layout();
+        }
+        acc = 0;
+        frames = 0;
+      }
+    }
+    rafId = requestAnimationFrame(reduce ? frameOnce : frame);
+  }
+
+  function frameOnce() {
+    /* статика: перерисовка только по resize/scroll — сама сцена уже отрисована. */
+  }
+
+  const tmp = new THREE.Vector3();
+  const dir = new THREE.Vector3();
+
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        active = entry.isIntersecting;
+        if (active && started && !reduce) lastTs = 0;
+      });
+    },
+    { threshold: 0 },
+  );
+  io.observe(hero);
+
+  let resizeTimer = 0;
+  function onResize() {
+    clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(() => {
+      layout();
+      if (reduce) rafId = requestAnimationFrame(() => { started = true; frame(performance.now()); });
+    }, 120);
+  }
+  addEventListener('resize', onResize);
+
+  function onFirstPointerDown() {
+    if (!reduce && (performance.now() - t0) / 1000 < 5) t0 -= 5000;
+  }
+  addEventListener('pointerdown', onFirstPointerDown, { once: true });
+
+  // --- запуск ---
+  const fontsReady = Promise.race([
+    Promise.all([
+      document.fonts.load('italic 500 58px "Cormorant Garamond"'),
+      document.fonts.load('500 16px Inter'),
+    ]).catch(() => undefined),
+    new Promise<void>((resolve) => setTimeout(resolve, 2500)),
+  ]);
+
+  fontsReady.then(() => {
+    layout();
+    const builtSheets = buildSheets(renderer, U, D0, lowPower);
+    sheets = builtSheets.mesh;
+    scene.add(sheets);
+
+    const diamond = buildDiamond(U.uTime);
+    dia = diamond.group;
+    diaMaterial = diamond.material;
+    diaEdges = diamond.edges;
+    halo = diamond.halo;
+    haloA = diamond.haloA;
+    haloB = diamond.haloB;
+    streakH = diamond.streakH;
+    streakV = diamond.streakV;
+    scene.add(dia, halo, streakH, streakV);
+
+    floor = buildFloor(U.uKeyPos);
+    scene.add(floor);
+
+    dust = buildDust(renderer, U, lowPower);
+    scene.add(dust);
+
+    const cat = buildCat(el.catImageUrl);
+    catMesh = cat.mesh;
+    catMaterial = cat.material;
+    scene.add(catMesh);
+
+    postFx = buildPostFx(renderer, scene, camera, lowPower);
+    layout();
+
+    dia.scale.setScalar(0.001);
+    started = true;
+    t0 = performance.now();
+    rafId = requestAnimationFrame(frame);
+
+    if (reduce) {
+      setTimeout(() => {
+        rafId = requestAnimationFrame(() => {
+          frame(performance.now() + 50);
+          frame(performance.now() + 120);
+        });
+      }, 50);
+    }
+  });
+
+  return {
+    destroy() {
+      cancelAnimationFrame(rafId);
+      clearTimeout(resizeTimer);
+      io.disconnect();
+      removeEventListener('pointermove', onPointerMove);
+      removeEventListener('pointerdown', onPointerMove);
+      removeEventListener('pointerdown', onFirstPointerDown);
+      removeEventListener('resize', onResize);
+      postFx?.composer.dispose();
+      renderer.dispose();
+    },
+  };
+}
+
+export { Unsupported };
