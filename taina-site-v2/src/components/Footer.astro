@@ -9,7 +9,28 @@
     <span aria-hidden="true"> · </span>
     <a href="mailto:ritarakunova@gmail.com">ritarakunova@gmail.com</a>
   </p>
+  <button type="button" class="motion-toggle" id="motion-toggle" aria-pressed="false">
+    Остановить анимацию
+  </button>
 </footer>
+
+<script>
+  import { isAnimationStoppedByUser, toggleAnimationStopped } from '@/lib/a11y';
+
+  const button = document.getElementById('motion-toggle');
+  if (button) {
+    const render = () => {
+      const stopped = isAnimationStoppedByUser();
+      button.textContent = stopped ? 'Возобновить анимацию' : 'Остановить анимацию';
+      button.setAttribute('aria-pressed', String(stopped));
+    };
+    render();
+    button.addEventListener('click', () => {
+      toggleAnimationStopped();
+      render();
+    });
+  }
+</script>
 
 <style>
   .footer {
@@ -44,5 +65,26 @@
 
   .contacts a:hover {
     color: var(--color-ivory);
+  }
+
+  .motion-toggle {
+    align-self: flex-start;
+    margin-top: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    font: inherit;
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+    background: transparent;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition:
+      color var(--duration-response) var(--ease-out),
+      border-color var(--duration-response) var(--ease-out);
+  }
+
+  .motion-toggle:hover {
+    color: var(--color-ivory);
+    border-color: var(--color-gold);
   }
 </style>

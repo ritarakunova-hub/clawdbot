@@ -27,6 +27,15 @@ import { hero } from '@/content/copy';
 </section>
 
 <script>
+  // loop.ts/debugOverlay.ts лёгкие (без three.js) — грузим их сразу,
+  // независимо от тяжёлого 3D-чанка сцены. Один цикл на весь сайт,
+  // должен быть готов принимать сцены с самого начала.
+  import { start as startLoop } from '@/scene/loop';
+  import { initDebugOverlay } from '@/scene/debugOverlay';
+
+  startLoop();
+  initDebugOverlay();
+
   // Загружаем 3D только после первого показа текста (он уже отрисован —
   // текст лежит в обычном HTML/CSS выше, без сцены страница выглядит
   // как в Этапе 2) и только после load, чтобы не конкурировать с LCP.

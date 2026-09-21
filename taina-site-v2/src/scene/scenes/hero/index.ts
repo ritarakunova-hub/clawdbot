@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { clamp, smoothstep as sstep, lerp, easeOut as eOut, easeInOut as eInOut, easeBack as eBack } from '@/lib/easing';
+import { isReducedMotion } from '@/lib/a11y';
 import { createHeroRenderer, Unsupported } from '../../renderer';
 import { createSharedUniforms } from '../../uniforms';
 import { buildSheets } from '../../objects/sheets';
@@ -8,6 +9,11 @@ import { buildFloor } from '../../objects/floor';
 import { buildDust } from '../../objects/dust';
 import { buildCat } from '../../objects/cat';
 import { buildPostFx } from './postFx';
+import * as loop from '../../loop';
+import * as scroll from '../../scroll';
+import * as quality from '../../quality';
+
+const SCENE_ID = 'hero';
 
 export interface HeroSceneElements {
   canvas: HTMLCanvasElement;
@@ -25,11 +31,11 @@ export interface HeroSceneHandle {
 }
 
 /**
- * Перенос сцены первого экрана из reference/taina-hero.html как есть —
- * тот же PRNG для листов, те же тайминги вступления, та же логика
- * скролла/курсора/адаптивного DPR. Отличия от прототипа исключительно
- * механические (ESM-модули, TypeScript, DOM передаётся снаружи), сама
- * анимация не менялась.
+ * Перенос сцены первого экрана из reference/taina-hero.html — тот же
+ * PRNG для листов, те же тайминги вступления, поведение курсора и
+ * адаптивный DPR. Отличие от Этапа 3: своего requestAnimationFrame,
+ * логики скролла и адаптивного DPR внутри больше нет — сцена
+ * подключается к общему циклу (loop.ts/scroll.ts/quality.ts).
  *
  * Бросает Unsupported, если WebGL2 недоступен или инициализация упала —
  * вызывающий код (Hero.astro) ловит это и включает CSS-заглушку ромба.
@@ -37,7 +43,6 @@ export interface HeroSceneHandle {
 export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
   const { canvas, hero, stage, copy, h1, cueScroll } = el;
 
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const coarse = matchMedia('(pointer: coarse)').matches;
   const lowPower = (navigator.hardwareConcurrency || 8) <= 4 || Math.min(innerWidth, innerHeight) < 640;
 
@@ -46,12 +51,11 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
   }
 
   const renderer = createHeroRenderer(canvas); // бросает Unsupported при неудаче
+  quality.initQuality({ lowPower, webglAvailable: true });
+  let appliedDpr = quality.getDpr();
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, appliedDpr));
 
-  const dprMax = lowPower ? 1.5 : 2;
-  let curDpr = dprMax;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dprMax));
-
-  const scene = new THREE.Scene();
+  const three = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 90);
   const base = { camZ: 10, portrait: false };
   const D0 = new THREE.Vector3(1.9, 0.1, 0); // позиция покоя ромба
@@ -75,13 +79,14 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
   let catMesh: THREE.Mesh;
   let catMaterial: THREE.ShaderMaterial;
   let postFx: ReturnType<typeof buildPostFx>;
+  let ready = false;
 
   function layout() {
     const w = innerWidth;
     const h = innerHeight;
     const a = w / h;
     base.portrait = a < 0.85;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, curDpr));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality.getDpr()));
     renderer.setSize(w, h, false);
     if (postFx) {
       postFx.composer.setPixelRatio(renderer.getPixelRatio());
@@ -133,39 +138,24 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
   addEventListener('pointermove', onPointerMove, { passive: true });
   addEventListener('pointerdown', onPointerMove, { passive: true });
 
-  // --- состояние / цикл ---
-  let t0 = 0;
+  // --- состояние сцены ---
   let tNow = 0;
-  let active = true;
   let introDone = false;
-  let started = false;
-  let ps = 0;
-  let blinkAt = 6;
-  let blinkT = -1;
-  let frames = 0;
-  let acc = 0;
-  let lastTs = 0;
   let copyShown = false;
   let sweepStart: number | null = null;
-  let rafId = 0;
+  let blinkAt = 6;
+  let blinkT = -1;
 
-  function scrollP(): number {
-    const r = hero.getBoundingClientRect();
-    const total = Math.max(1, r.height - innerHeight);
-    return clamp(-r.top / total, 0, 1);
-  }
+  const tmp = new THREE.Vector3();
+  const dir = new THREE.Vector3();
 
-  function frame(ts: number) {
-    if (!started) return;
-    if (!active || document.hidden) {
-      lastTs = 0;
-      rafId = requestAnimationFrame(frame);
-      return;
-    }
-    const dt = lastTs ? Math.min((ts - lastTs) / 1000, 0.05) : 0.016;
-    lastTs = ts;
-    tNow = (ts - t0) / 1000;
-    const it = reduce ? 99 : tNow; // время вступления
+  /** update(p, dt) — вызывается общим циклом (loop.ts), только пока isNear(). */
+  function update(p: number, dt: number) {
+    if (!ready) return;
+    const reduced = isReducedMotion();
+
+    tNow += dt;
+    const it = reduced ? 99 : tNow; // время вступления
 
     const fade = sstep(0, 1.1, it);
     const spark = sstep(0.2, 0.9, it) * (1 - sstep(0.9, 1.5, it) * 0.55);
@@ -183,14 +173,16 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
       setSweep(lerp(-25, 130, eInOut(sp)));
       if (sp >= 1) introDone = true;
     }
-    if (reduce) {
+    if (reduced) {
       setSweep(130);
       stage.classList.add('on');
       introDone = true;
     }
 
-    const target = reduce ? 0 : scrollP();
-    ps += (target - ps) * (reduce ? 1 : 0.085);
+    // Общий цикл уже отдаёт сглаженный прогресс скролла (scroll.ts,
+    // k = 1 − 0.003^dt). При reduced-motion игнорируем реальный скролл —
+    // сцена держит состояние покоя (ps=0), текст остаётся на месте.
+    const ps = reduced ? 0 : p;
     const pz = eInOut(ps);
     const pm = sstep(0.12, 0.72, ps);
     const pf = sstep(0.84, 0.975, ps);
@@ -203,11 +195,11 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
     ptr.sx += (tx - ptr.sx) * (1 - Math.pow(0.001, dt));
     ptr.sy += (ty - ptr.sy) * (1 - Math.pow(0.001, dt));
 
-    const breath = reduce ? 0 : Math.sin(tNow * 0.5) * 0.02;
+    const breath = reduced ? 0 : Math.sin(tNow * 0.5) * 0.02;
     const push = lerp(1.2, 0, eOut(it / 5.2));
     camera.position.set(
-      ptr.sx * (reduce ? 0 : 0.32) * (1 - pz),
-      0.1 + ptr.sy * (reduce ? 0 : 0.16) * (1 - pz) + breath,
+      ptr.sx * (reduced ? 0 : 0.32) * (1 - pz),
+      0.1 + ptr.sy * (reduced ? 0 : 0.16) * (1 - pz) + breath,
       base.camZ + push - pz * (base.camZ - 4.6),
     );
     camera.lookAt(0, 0, -2.5);
@@ -286,55 +278,33 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
     postFx.finalPass.uniforms.uFlash.value = pf * (1 - sstep(0.95, 0.995, ps) * 0.0);
     postFx.composer.render(dt);
 
-    if (it > 5 && !reduce) {
-      acc += dt;
-      frames++;
-      if (frames === 90) {
-        const avg = acc / frames;
-        if (avg > 0.03 && curDpr > 1) {
-          curDpr = Math.max(1, curDpr - 0.5);
-          layout();
-        } else if (avg > 0.04 && curDpr > 0.75) {
-          curDpr = 0.75;
-          layout();
-        }
-        acc = 0;
-        frames = 0;
-      }
+    // DPR уже пересчитан в quality.ts (общий цикл копит время кадра) —
+    // здесь только замечаем изменение и применяем его к рендереру.
+    const currentDpr = quality.getDpr();
+    if (currentDpr !== appliedDpr) {
+      appliedDpr = currentDpr;
+      layout();
     }
-    rafId = requestAnimationFrame(reduce ? frameOnce : frame);
   }
 
-  function frameOnce() {
-    /* статика: перерисовка только по resize/scroll — сама сцена уже отрисована. */
+  /** isNear(p) — сцена «рядом», пока прогресс не ушёл далеко за её
+   * собственный диапазон (буфер в целую высоту хиро на каждую сторону).
+   * Вне этого диапазона update() не вызывается — рендер сам собой
+   * останавливается, когда hero вне экрана, и просыпается при
+   * возвращении. */
+  function isNear(p: number): boolean {
+    return p > -1 && p < 2;
   }
-
-  const tmp = new THREE.Vector3();
-  const dir = new THREE.Vector3();
-
-  const io = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        active = entry.isIntersecting;
-        if (active && started && !reduce) lastTs = 0;
-      });
-    },
-    { threshold: 0 },
-  );
-  io.observe(hero);
 
   let resizeTimer = 0;
   function onResize() {
     clearTimeout(resizeTimer);
-    resizeTimer = window.setTimeout(() => {
-      layout();
-      if (reduce) rafId = requestAnimationFrame(() => { started = true; frame(performance.now()); });
-    }, 120);
+    resizeTimer = window.setTimeout(layout, 120);
   }
   addEventListener('resize', onResize);
 
   function onFirstPointerDown() {
-    if (!reduce && (performance.now() - t0) / 1000 < 5) t0 -= 5000;
+    if (!isReducedMotion() && tNow < 5) tNow += 5;
   }
   addEventListener('pointerdown', onFirstPointerDown, { once: true });
 
@@ -351,7 +321,7 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
     layout();
     const builtSheets = buildSheets(renderer, U, D0, lowPower);
     sheets = builtSheets.mesh;
-    scene.add(sheets);
+    three.add(sheets);
 
     const diamond = buildDiamond(U.uTime);
     dia = diamond.group;
@@ -362,48 +332,41 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
     haloB = diamond.haloB;
     streakH = diamond.streakH;
     streakV = diamond.streakV;
-    scene.add(dia, halo, streakH, streakV);
+    three.add(dia, halo, streakH, streakV);
 
     floor = buildFloor(U.uKeyPos);
-    scene.add(floor);
+    three.add(floor);
 
     dust = buildDust(renderer, U, lowPower);
-    scene.add(dust);
+    three.add(dust);
 
     const cat = buildCat(el.catImageUrl);
     catMesh = cat.mesh;
     catMaterial = cat.material;
-    scene.add(catMesh);
+    three.add(catMesh);
 
-    postFx = buildPostFx(renderer, scene, camera, lowPower);
+    postFx = buildPostFx(renderer, three, camera, lowPower);
     layout();
 
     dia.scale.setScalar(0.001);
-    started = true;
-    t0 = performance.now();
-    rafId = requestAnimationFrame(frame);
+    ready = true;
 
-    if (reduce) {
-      setTimeout(() => {
-        rafId = requestAnimationFrame(() => {
-          frame(performance.now() + 50);
-          frame(performance.now() + 120);
-        });
-      }, 50);
-    }
+    scroll.registerTarget(SCENE_ID, hero);
+    loop.registerScene({ id: SCENE_ID, update, isNear });
+    loop.start();
   });
 
   return {
     destroy() {
-      cancelAnimationFrame(rafId);
       clearTimeout(resizeTimer);
-      io.disconnect();
       removeEventListener('pointermove', onPointerMove);
       removeEventListener('pointerdown', onPointerMove);
       removeEventListener('pointerdown', onFirstPointerDown);
       removeEventListener('resize', onResize);
+      loop.unregisterScene(SCENE_ID);
+      scroll.unregisterTarget(SCENE_ID);
       postFx?.composer.dispose();
-      disposeSceneContents(scene);
+      disposeSceneContents(three);
       renderer.dispose();
     },
   };
