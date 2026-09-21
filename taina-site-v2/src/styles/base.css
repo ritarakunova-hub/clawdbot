@@ -5,13 +5,21 @@
 }
 
 html {
+  /* Фон задан именно на html (не на body): при пустом фоне html и
+     непустом — на body браузер поднимает фон body на холст страницы
+     (viewport) — это буквально самый нижний слой отрисовки, ниже даже
+     элементов с отрицательным z-index. Так холст 3D-сцен (#scene-gl,
+     z-index:-1, см. Layout.astro) остаётся поверх этого фона и виден,
+     а до его первой отрисовки (или пока сцена ещё грузится) страница
+     не мелькает белым — сразу тёмная. Обычные секции и подвал сами
+     перекрывают холст собственным непрозрачным фоном (Section.astro,
+     Footer.astro); секции со сценой (хиро, «Проявка») — нет. */
   background: var(--color-bg);
   scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
-  background: var(--color-bg);
   color: var(--color-ivory);
   font-family: var(--font-sans);
   font-size: var(--text-base);

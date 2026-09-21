@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { clamp, smoothstep as sstep, lerp, easeOut as eOut, easeInOut as eInOut, easeBack as eBack } from '@/lib/easing';
 import { isReducedMotion } from '@/lib/a11y';
-import { createHeroRenderer, Unsupported } from '../../renderer';
+import { getSharedRenderer, Unsupported, onContextLost, onContextRestored } from '../../canvas';
 import { createSharedUniforms } from '../../uniforms';
 import { buildSheets } from '../../objects/sheets';
 import { buildDiamond } from '../../objects/diamond';
@@ -16,7 +16,6 @@ import * as quality from '../../quality';
 const SCENE_ID = 'hero';
 
 export interface HeroSceneElements {
-  canvas: HTMLCanvasElement;
   hero: HTMLElement;
   stage: HTMLElement;
   copy: HTMLElement;
@@ -33,15 +32,16 @@ export interface HeroSceneHandle {
 /**
  * Перенос сцены первого экрана из reference/taina-hero.html — тот же
  * PRNG для листов, те же тайминги вступления, поведение курсора и
- * адаптивный DPR. Отличие от Этапа 3: своего requestAnimationFrame,
- * логики скролла и адаптивного DPR внутри больше нет — сцена
- * подключается к общему циклу (loop.ts/scroll.ts/quality.ts).
+ * адаптивный DPR. Сцена рисуется в общий холст сайта (canvas.ts) и
+ * подключается к общему циклу (loop.ts) через prepare/dispose/update/
+ * render — цикл сам решает, когда сцена активна (держит скролл),
+ * соседняя (наготове) или далеко (можно освободить GPU-ресурсы).
  *
  * Бросает Unsupported, если WebGL2 недоступен или инициализация упала —
  * вызывающий код (Hero.astro) ловит это и включает CSS-заглушку ромба.
  */
 export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
-  const { canvas, hero, stage, copy, h1, cueScroll } = el;
+  const { hero, stage, copy, h1, cueScroll } = el;
 
   const coarse = matchMedia('(pointer: coarse)').matches;
   const lowPower = (navigator.hardwareConcurrency || 8) <= 4 || Math.min(innerWidth, innerHeight) < 640;
@@ -50,7 +50,7 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
     h1.style.setProperty('--s', v + '%');
   }
 
-  const renderer = createHeroRenderer(canvas); // бросает Unsupported при неудаче
+  const renderer = getSharedRenderer(); // бросает Unsupported при неудаче
   quality.initQuality({ lowPower, webglAvailable: true });
   let appliedDpr = quality.getDpr();
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, appliedDpr));
@@ -64,7 +64,7 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
 
   const U = createSharedUniforms();
 
-  // --- объекты сцены (строятся один раз в boot(), после первого layout()) ---
+  // --- объекты сцены (строятся в build(), вызывается из prepare()) ---
   let sheets: THREE.Mesh;
   let dia: THREE.Group;
   let diaMaterial: THREE.ShaderMaterial;
@@ -78,8 +78,10 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
   let dust: THREE.Points;
   let catMesh: THREE.Mesh;
   let catMaterial: THREE.ShaderMaterial;
-  let postFx: ReturnType<typeof buildPostFx>;
+  let postFx: ReturnType<typeof buildPostFx> | undefined;
   let ready = false;
+  let buildToken = 0;
+  let lastDt = 1 / 60;
 
   function layout() {
     const w = innerWidth;
@@ -149,9 +151,78 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
   const tmp = new THREE.Vector3();
   const dir = new THREE.Vector3();
 
-  /** update(p, dt) — вызывается общим циклом (loop.ts), только пока isNear(). */
+  const fontsReady = Promise.race([
+    Promise.all([
+      document.fonts.load('italic 500 58px "Cormorant Garamond"'),
+      document.fonts.load('500 16px Inter'),
+    ]).catch(() => undefined),
+    new Promise<void>((resolve) => setTimeout(resolve, 2500)),
+  ]);
+
+  /** Строит все Three.js-объекты сцены — вызывается один раз на «сборку». */
+  function build() {
+    layout();
+    const builtSheets = buildSheets(renderer, U, D0, lowPower);
+    sheets = builtSheets.mesh;
+    three.add(sheets);
+
+    const diamond = buildDiamond(U.uTime);
+    dia = diamond.group;
+    diaMaterial = diamond.material;
+    diaEdges = diamond.edges;
+    halo = diamond.halo;
+    haloA = diamond.haloA;
+    haloB = diamond.haloB;
+    streakH = diamond.streakH;
+    streakV = diamond.streakV;
+    three.add(dia, halo, streakH, streakV);
+
+    floor = buildFloor(U.uKeyPos);
+    three.add(floor);
+
+    dust = buildDust(renderer, U, lowPower);
+    three.add(dust);
+
+    const cat = buildCat(el.catImageUrl);
+    catMesh = cat.mesh;
+    catMaterial = cat.material;
+    three.add(catMesh);
+
+    postFx = buildPostFx(renderer, three, camera, lowPower);
+    layout();
+
+    dia.scale.setScalar(0.001);
+  }
+
+  /** prepare() — идемпотентно строит сцену; вызывается циклом (loop.ts),
+   * пока эта сцена активна или соседняя. Тяжёлая сборка ждёт шрифты
+   * (fontsReady), чтобы не ловить FOUT в световом фронте по заголовку. */
+  function prepare() {
+    if (ready) return;
+    const token = ++buildToken;
+    fontsReady.then(() => {
+      if (token !== buildToken) return; // сцену успели освободить (dispose) или пересобрать заново
+      build();
+      ready = true;
+    });
+  }
+
+  /** dispose() — идемпотентно освобождает GPU-ресурсы; вызывается циклом,
+   * когда сцена далеко (не активна и не соседняя). */
+  function dispose() {
+    buildToken++; // отменяет незавершённый build() из prepare(), если он ещё ждал шрифты
+    if (!ready) return;
+    ready = false;
+    postFx?.composer.dispose();
+    postFx = undefined;
+    disposeSceneContents(three);
+    three.clear();
+  }
+
+  /** update(p, dt) — вызывается общим циклом (loop.ts), пока сцена активна или соседняя. */
   function update(p: number, dt: number) {
     if (!ready) return;
+    lastDt = dt;
     const reduced = isReducedMotion();
 
     tNow += dt;
@@ -272,11 +343,12 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
     copy.style.pointerEvents = co < 0.2 ? 'none' : 'auto';
     cueScroll.style.opacity = String(1 - sstep(0, 0.05, ps));
 
-    postFx.bloom.strength = 0.42 + pz * 0.5 + spark * 0.3;
-    postFx.finalPass.uniforms.uTime.value = tNow;
-    postFx.finalPass.uniforms.uFade.value = fade * (1 - sstep(0.985, 1, ps));
-    postFx.finalPass.uniforms.uFlash.value = pf * (1 - sstep(0.95, 0.995, ps) * 0.0);
-    postFx.composer.render(dt);
+    if (postFx) {
+      postFx.bloom.strength = 0.42 + pz * 0.5 + spark * 0.3;
+      postFx.finalPass.uniforms.uTime.value = tNow;
+      postFx.finalPass.uniforms.uFade.value = fade * (1 - sstep(0.985, 1, ps));
+      postFx.finalPass.uniforms.uFlash.value = pf * (1 - sstep(0.95, 0.995, ps) * 0.0);
+    }
 
     // DPR уже пересчитан в quality.ts (общий цикл копит время кадра) —
     // здесь только замечаем изменение и применяем его к рендереру.
@@ -287,13 +359,10 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
     }
   }
 
-  /** isNear(p) — сцена «рядом», пока прогресс не ушёл далеко за её
-   * собственный диапазон (буфер в целую высоту хиро на каждую сторону).
-   * Вне этого диапазона update() не вызывается — рендер сам собой
-   * останавливается, когда hero вне экрана, и просыпается при
-   * возвращении. */
-  function isNear(p: number): boolean {
-    return p > -1 && p < 2;
+  /** render() — вызывается общим циклом только для активной сцены. */
+  function render() {
+    if (!ready || !postFx) return;
+    postFx.composer.render(lastDt);
   }
 
   let resizeTimer = 0;
@@ -308,53 +377,18 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
   }
   addEventListener('pointerdown', onFirstPointerDown, { once: true });
 
-  // --- запуск ---
-  const fontsReady = Promise.race([
-    Promise.all([
-      document.fonts.load('italic 500 58px "Cormorant Garamond"'),
-      document.fonts.load('500 16px Inter'),
-    ]).catch(() => undefined),
-    new Promise<void>((resolve) => setTimeout(resolve, 2500)),
-  ]);
+  // Общий холст — одна точка отказа: если WebGL-контекст теряется,
+  // рисование само остановится (three.js это знает изнутри), но пока
+  // контекст не восстановлен, показываем статичную CSS-заглушку поверх
+  // сцены (тот же приём, что и для отсутствия WebGL2, см. .hero--nogl).
+  // При восстановлении three.js сам перезаливает GPU-ресурсы существующих
+  // объектов при следующем рендере — пересобирать сцену вручную не нужно.
+  const offContextLost = onContextLost(() => hero.classList.add('hero--ctxlost'));
+  const offContextRestored = onContextRestored(() => hero.classList.remove('hero--ctxlost'));
 
-  fontsReady.then(() => {
-    layout();
-    const builtSheets = buildSheets(renderer, U, D0, lowPower);
-    sheets = builtSheets.mesh;
-    three.add(sheets);
-
-    const diamond = buildDiamond(U.uTime);
-    dia = diamond.group;
-    diaMaterial = diamond.material;
-    diaEdges = diamond.edges;
-    halo = diamond.halo;
-    haloA = diamond.haloA;
-    haloB = diamond.haloB;
-    streakH = diamond.streakH;
-    streakV = diamond.streakV;
-    three.add(dia, halo, streakH, streakV);
-
-    floor = buildFloor(U.uKeyPos);
-    three.add(floor);
-
-    dust = buildDust(renderer, U, lowPower);
-    three.add(dust);
-
-    const cat = buildCat(el.catImageUrl);
-    catMesh = cat.mesh;
-    catMaterial = cat.material;
-    three.add(catMesh);
-
-    postFx = buildPostFx(renderer, three, camera, lowPower);
-    layout();
-
-    dia.scale.setScalar(0.001);
-    ready = true;
-
-    scroll.registerTarget(SCENE_ID, hero);
-    loop.registerScene({ id: SCENE_ID, update, isNear });
-    loop.start();
-  });
+  scroll.registerTarget(SCENE_ID, hero);
+  loop.registerScene({ id: SCENE_ID, prepare, dispose, update, render });
+  loop.start();
 
   return {
     destroy() {
@@ -363,11 +397,11 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
       removeEventListener('pointerdown', onPointerMove);
       removeEventListener('pointerdown', onFirstPointerDown);
       removeEventListener('resize', onResize);
+      offContextLost();
+      offContextRestored();
       loop.unregisterScene(SCENE_ID);
       scroll.unregisterTarget(SCENE_ID);
-      postFx?.composer.dispose();
-      disposeSceneContents(three);
-      renderer.dispose();
+      dispose();
     },
   };
 }
@@ -376,9 +410,10 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
  * В прототипе сцена жила на статической странице и никогда не
  * размонтировалась, поэтому очистки там не было. Здесь hero может
  * пережить unmount (переход по SPA-навигации в будущем, hot-reload
- * в dev) — освобождаем геометрии, материалы и текстуры, которые
- * держат материалы в собственных юниформах (их renderer.dispose()
- * сам не находит, в отличие от стандартных .map/.normalMap и т.п.).
+ * в dev, dispose() при уходе далеко вниз по странице) — освобождаем
+ * геометрии, материалы и текстуры, которые держат материалы в
+ * собственных юниформах (их renderer.dispose() сам не находит, в
+ * отличие от стандартных .map/.normalMap и т.п.).
  */
 function disposeSceneContents(scene: THREE.Scene) {
   scene.traverse((obj) => {

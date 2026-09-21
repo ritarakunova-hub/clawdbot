@@ -41,6 +41,7 @@ const { title, description } = Astro.props;
   </head>
   <body id="top">
     <a class="skip-link" href="#main">Перейти к содержимому</a>
+    <canvas id="scene-gl" aria-hidden="true"></canvas>
     <Header />
     <main id="main">
       <slot />
@@ -48,3 +49,22 @@ const { title, description } = Astro.props;
     <Footer />
   </body>
 </html>
+
+<style>
+  #scene-gl {
+    /* Один холст на все 3D-сцены сайта (хиро, «Проявка», ...). z-index: -1
+       без position:relative у html/body/main достаточно, чтобы обычные
+       (не-3D) секции — они в потоке, без своего z-index — рисовались
+       поверх холста, а секции со сценой оставались прозрачными и
+       показывали холст (см. base.css, Section.astro, Footer.astro). */
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    display: block;
+    width: 100%;
+    /* lvh — самая большая высота видимой области, не меняется при
+       скрытии/показе адресной строки на телефоне (в отличие от svh/dvh) —
+       холст не пересоздаётся и не дёргается при скролле на мобильных. */
+    height: 100lvh;
+  }
+</style>

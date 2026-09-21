@@ -63,6 +63,12 @@ export function getSmoothedProgress(id: string): number {
   return targets.get(id)?.smoothed ?? 0;
 }
 
+/** Границы секции в координатах документа — для loop.ts (активная/соседняя сцена). */
+export function getBounds(id: string): { top: number; height: number } | undefined {
+  const target = targets.get(id);
+  return target ? { top: target.top, height: target.height } : undefined;
+}
+
 /**
  * Продвигает сглаживание для всех зарегистрированных целей.
  * k = 1 − 0.003^dt — не зависит от частоты кадров. Вызывается один раз

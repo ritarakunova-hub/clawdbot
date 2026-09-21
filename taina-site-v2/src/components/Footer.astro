@@ -34,6 +34,9 @@
 
 <style>
   .footer {
+    /* html/body/main прозрачные — подвал не 3D-сцена, перекрывает
+       холст сам (см. комментарий в Section.astro). */
+    background: var(--color-bg);
     padding-block: var(--space-7) var(--space-8);
     padding-inline: clamp(20px, 4vw, 56px);
     display: flex;

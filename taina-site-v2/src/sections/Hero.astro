@@ -5,7 +5,6 @@ import { hero } from '@/content/copy';
 
 <section class="hero" id="hero" aria-label="Первый экран">
   <div class="stage" id="hero-stage">
-    <canvas id="hero-gl" aria-hidden="true"></canvas>
     <div class="veil"></div>
     <div class="copy" id="hero-copy">
       <p class="eyebrow">{hero.eyebrow}</p>
@@ -42,16 +41,14 @@ import { hero } from '@/content/copy';
   function boot() {
     const hero = document.getElementById('hero');
     const stage = document.getElementById('hero-stage');
-    const canvas = document.getElementById('hero-gl');
     const copy = document.getElementById('hero-copy');
     const h1 = document.getElementById('hero-h1');
     const cueScroll = document.getElementById('hero-scroll-cue');
-    if (!hero || !stage || !(canvas instanceof HTMLCanvasElement) || !copy || !h1 || !cueScroll) return;
+    if (!hero || !stage || !copy || !h1 || !cueScroll) return;
 
     import('@/scene/scenes/hero')
       .then(({ mountHeroScene }) => {
         mountHeroScene({
-          canvas,
           hero,
           stage,
           copy,
@@ -80,12 +77,9 @@ import { hero } from '@/content/copy';
   .hero {
     position: relative;
     height: 340vh;
-    background: var(--color-bg);
-    /* #main компенсирует высоту шапки padding-top (шапка теперь
-       position:fixed, см. Header.astro) — хиро эту компенсацию
-       отменяет, чтобы сцена шла на весь экран от самого верха, как
-       в прототипе. Шапка при этом прозрачная, пока хиро виден
-       (.header--over-hero), и лежит поверх сцены по z-index. */
+    /* Прозрачный — хиро рисуется в общий холст сайта (#scene-gl,
+       Layout.astro), а не в свой canvas. Фон-заглушка на время загрузки
+       даёт html (base.css), тон совпадает с clearColor рендерера. */
     margin-top: calc(-1 * var(--header-height));
   }
 
@@ -94,15 +88,6 @@ import { hero } from '@/content/copy';
     top: 0;
     height: 100svh;
     overflow: hidden;
-    background: #030304;
-  }
-
-  #hero-gl {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
   }
 
   .veil {
@@ -251,8 +236,11 @@ import { hero } from '@/content/copy';
   }
 
   /* Уровень C/D: WebGL недоступен или сцена упала — статичный красный
-     ромб на CSS вместо canvas, текст остаётся как есть. */
-  .hero--nogl .stage {
+     ромб на CSS вместо canvas, текст остаётся как есть. То же самое —
+     пока общий WebGL-контекст потерян (.hero--ctxlost, см. canvas.ts):
+     нужен свой непрозрачный фон, потому что общий холст сейчас пуст. */
+  .hero--nogl .stage,
+  .hero--ctxlost .stage {
     background:
       radial-gradient(
         60vmax 60vmax at 74% 42%,
@@ -262,7 +250,8 @@ import { hero } from '@/content/copy';
       #030304;
   }
 
-  .hero--nogl .stage::after {
+  .hero--nogl .stage::after,
+  .hero--ctxlost .stage::after {
     content: '';
     position: absolute;
     left: 74%;
