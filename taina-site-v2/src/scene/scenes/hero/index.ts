@@ -403,9 +403,34 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
       removeEventListener('pointerdown', onFirstPointerDown);
       removeEventListener('resize', onResize);
       postFx?.composer.dispose();
+      disposeSceneContents(scene);
       renderer.dispose();
     },
   };
+}
+
+/**
+ * В прототипе сцена жила на статической странице и никогда не
+ * размонтировалась, поэтому очистки там не было. Здесь hero может
+ * пережить unmount (переход по SPA-навигации в будущем, hot-reload
+ * в dev) — освобождаем геометрии, материалы и текстуры, которые
+ * держат материалы в собственных юниформах (их renderer.dispose()
+ * сам не находит, в отличие от стандартных .map/.normalMap и т.п.).
+ */
+function disposeSceneContents(scene: THREE.Scene) {
+  scene.traverse((obj) => {
+    const mesh = obj as Partial<THREE.Mesh & THREE.Points>;
+    mesh.geometry?.dispose();
+    const materials = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
+    for (const material of materials) {
+      if (material instanceof THREE.ShaderMaterial) {
+        for (const uniform of Object.values(material.uniforms)) {
+          if (uniform.value instanceof THREE.Texture) uniform.value.dispose();
+        }
+      }
+      material.dispose();
+    }
+  });
 }
 
 export { Unsupported };

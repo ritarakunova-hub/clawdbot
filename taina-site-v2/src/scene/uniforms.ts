@@ -6,15 +6,15 @@ import * as THREE from 'three';
  * .value в одном месте (кадровый цикл) сразу видно во всех материалах,
  * которые их держат.
  */
-export interface SharedUniforms {
-  uTime: { value: number };
-  uKeyPos: { value: THREE.Vector3 };
-  uKeyI: { value: number };
-  uKeyR: { value: number };
-  uCurPos: { value: THREE.Vector3 };
-  uCurI: { value: number };
-  uReveal: { value: number };
-  uPortrait: { value: number };
+export interface SharedUniforms extends Record<string, THREE.IUniform> {
+  uTime: THREE.IUniform<number>;
+  uKeyPos: THREE.IUniform<THREE.Vector3>;
+  uKeyI: THREE.IUniform<number>;
+  uKeyR: THREE.IUniform<number>;
+  uCurPos: THREE.IUniform<THREE.Vector3>;
+  uCurI: THREE.IUniform<number>;
+  uReveal: THREE.IUniform<number>;
+  uPortrait: THREE.IUniform<number>;
 }
 
 export function createSharedUniforms(): SharedUniforms {

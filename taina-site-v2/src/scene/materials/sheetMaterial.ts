@@ -8,10 +8,7 @@ export function createSheetMaterial(
   uniforms: SharedUniforms,
 ): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    uniforms: Object.assign({ uAtlas: { value: atlas } }, uniforms) as unknown as Record<
-      string,
-      THREE.IUniform
-    >,
+    uniforms: Object.assign({ uAtlas: { value: atlas } }, uniforms),
     side: THREE.DoubleSide,
     vertexShader,
     fragmentShader,

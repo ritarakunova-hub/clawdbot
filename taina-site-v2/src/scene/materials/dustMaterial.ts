@@ -8,10 +8,7 @@ export function createDustMaterial(
   uniforms: SharedUniforms,
 ): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    uniforms: Object.assign({ uPx: { value: pixelRatio } }, uniforms) as unknown as Record<
-      string,
-      THREE.IUniform
-    >,
+    uniforms: Object.assign({ uPx: { value: pixelRatio } }, uniforms),
     transparent: true,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
