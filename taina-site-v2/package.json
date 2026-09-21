@@ -8,9 +8,12 @@
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "contrast": "node scripts/contrast.mjs"
   },
   "dependencies": {
+    "@fontsource/cormorant-garamond": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
     "astro": "^7.3.3"
   },
   "devDependencies": {
@@ -19,6 +22,7 @@
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-astro": "^3.2.1",
+    "fontaine": "^0.8.2",
     "prettier": "^3.9.8",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.70.0"

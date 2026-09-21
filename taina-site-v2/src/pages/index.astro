@@ -1,12 +1,64 @@
 ---
+import Layout from '@/layouts/Layout.astro';
+import Section from '@/components/Section.astro';
+import Container from '@/components/Container.astro';
+import Button from '@/components/Button.astro';
+
+const sections = [
+  { id: 'hero', label: 'Первый экран', title: 'За очевидным всегда есть что-то большее' },
+  { id: 'proyavka', label: 'Проявка', title: 'Проявка' },
+  { id: 'territories', label: 'Три территории', title: 'Три территории' },
+  { id: 'demo', label: 'Демо ассистента', title: 'Демо' },
+  { id: 'project', label: 'Проект', title: 'Проект' },
+  { id: 'behemoth', label: 'Бегемот', title: 'Бегемот' },
+  { id: 'packages', label: 'Пакеты', title: 'Пакеты' },
+  { id: 'about', label: 'О студии', title: 'TAINA' },
+  { id: 'contact', label: 'Контакт', title: 'Контакт' },
+];
 ---
 
-<html lang="ru">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>TAINA STUDIO</title>
-  </head>
-  <body>
-  </body>
-</html>
+<Layout
+  title="TAINA STUDIO — AI и автоматизация для сильного бизнеса"
+  description="AI-ассистенты и автоматизация процессов по документам вашей компании. Если ответа нет, ассистент так и скажет."
+>
+  {
+    sections.map((section, i) => (
+      <Section id={section.id} label={section.label}>
+        <Container>
+          {i === 0 ? <h1>{section.title}</h1> : <h2>{section.title}</h2>}
+          {i === 0 && (
+            <p class="hero-lead">
+              Мы строим AI-ассистентов и автоматизацию, которые находят ответы в документах вашей
+              компании и честно говорят «этого нет в базе», а не выдумывают.
+            </p>
+          )}
+          {i === 0 && (
+            <div class="hero-actions">
+              <Button href="#contact">Заказать AI-аудит</Button>
+              <Button href="#proyavka" variant="text">
+                Как это работает
+              </Button>
+            </div>
+          )}
+        </Container>
+      </Section>
+    ))
+  }
+</Layout>
+
+<style>
+  .hero-lead {
+    margin-top: var(--space-5);
+    max-width: 34rem;
+    font-size: var(--text-lg);
+    color: var(--color-sand);
+  }
+
+  .hero-actions {
+    margin-top: var(--space-6);
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    flex-wrap: wrap;
+  }
+</style>

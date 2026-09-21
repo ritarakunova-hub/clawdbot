@@ -1,0 +1,47 @@
+---
+import '@/styles/tokens.css';
+import '@/styles/fonts.css';
+import '@/styles/base.css';
+import Header from '@/components/Header.astro';
+import Footer from '@/components/Footer.astro';
+
+import interLatin400 from '@fontsource/inter/files/inter-latin-400-normal.woff2?url';
+import interCyrillic400 from '@fontsource/inter/files/inter-cyrillic-400-normal.woff2?url';
+import serifLatin500 from '@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-normal.woff2?url';
+import serifCyrillic500 from '@fontsource/cormorant-garamond/files/cormorant-garamond-cyrillic-500-normal.woff2?url';
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    {/* Литеральное значение — атрибуты <meta> не читают CSS-переменные.
+       Должно совпадать с --color-bg в tokens.css. */}
+    <meta name="theme-color" content="#0a0a0b" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <link rel="preload" as="font" type="font/woff2" href={interLatin400} crossorigin="anonymous" />
+    <link rel="preload" as="font" type="font/woff2" href={interCyrillic400} crossorigin="anonymous" />
+    <link rel="preload" as="font" type="font/woff2" href={serifLatin500} crossorigin="anonymous" />
+    <link rel="preload" as="font" type="font/woff2" href={serifCyrillic500} crossorigin="anonymous" />
+  </head>
+  <body id="top">
+    <a class="skip-link" href="#main">Перейти к содержимому</a>
+    <Header />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

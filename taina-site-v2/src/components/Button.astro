@@ -1,0 +1,83 @@
+---
+interface Props {
+  href: string;
+  variant?: 'solid' | 'outline' | 'text';
+  size?: 'md' | 'sm';
+  class?: string;
+}
+
+const { href, variant = 'solid', size = 'md', class: className } = Astro.props;
+---
+
+<a href={href} class:list={['btn', `btn--${variant}`, `btn--${size}`, className]}>
+  <slot />
+</a>
+
+<style>
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    padding: 0 var(--space-6);
+    border-radius: var(--radius-pill);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: var(--text-base);
+    border: 1px solid transparent;
+    white-space: nowrap;
+    transition:
+      background var(--duration-response) var(--ease-out),
+      color var(--duration-response) var(--ease-out),
+      box-shadow var(--duration-response) var(--ease-out),
+      transform var(--duration-response) var(--ease-out);
+  }
+
+  .btn--solid {
+    background: var(--color-gold);
+    color: var(--color-bg);
+  }
+
+  .btn--solid:hover {
+    box-shadow:
+      0 0 34px 2px color-mix(in srgb, var(--color-ruby) 42%, transparent),
+      0 0 0 1px color-mix(in srgb, var(--color-ruby) 60%, transparent);
+    transform: translateY(-1px);
+  }
+
+  .btn--outline {
+    background: transparent;
+    color: var(--color-gold);
+    border-color: var(--color-gold);
+  }
+
+  .btn--outline:hover {
+    background: var(--color-gold);
+    color: var(--color-bg);
+  }
+
+  .btn--text {
+    min-height: auto;
+    padding: var(--space-1) 0;
+    background: transparent;
+    color: var(--color-sand);
+    border-radius: 0;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .btn--text:hover {
+    color: var(--color-ivory);
+    border-color: var(--color-gold);
+  }
+
+  .btn--sm {
+    min-height: 40px;
+    padding: 0 var(--space-5);
+    font-size: var(--text-sm);
+  }
+
+  .btn--text.btn--sm {
+    min-height: auto;
+    padding: var(--space-1) 0;
+  }
+</style>

@@ -1,0 +1,11 @@
+/* Cormorant Garamond 500 — заголовки. Только latin + cyrillic. */
+@import '@fontsource/cormorant-garamond/latin-500.css';
+@import '@fontsource/cormorant-garamond/cyrillic-500.css';
+
+/* Inter 400/500/600 — интерфейс и текст. Только latin + cyrillic. */
+@import '@fontsource/inter/latin-400.css';
+@import '@fontsource/inter/cyrillic-400.css';
+@import '@fontsource/inter/latin-500.css';
+@import '@fontsource/inter/cyrillic-500.css';
+@import '@fontsource/inter/latin-600.css';
+@import '@fontsource/inter/cyrillic-600.css';

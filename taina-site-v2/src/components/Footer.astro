@@ -1,0 +1,48 @@
+---
+---
+
+<footer class="footer">
+  <div class="mark">Taina<span class="dot">.</span></div>
+  <p class="tagline">AI и автоматизация для сильного бизнеса.</p>
+  <p class="contacts">
+    <a href="https://t.me/RitaRakunova">Telegram @RitaRakunova</a>
+    <span aria-hidden="true"> · </span>
+    <a href="mailto:ritarakunova@gmail.com">ritarakunova@gmail.com</a>
+  </p>
+</footer>
+
+<style>
+  .footer {
+    padding-block: var(--space-7) var(--space-8);
+    padding-inline: clamp(20px, 4vw, 56px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    border-top: 1px solid var(--color-line);
+  }
+
+  .mark {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: var(--text-lg);
+  }
+
+  .dot {
+    color: var(--color-gold);
+  }
+
+  .tagline,
+  .contacts {
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+  }
+
+  .contacts a {
+    text-decoration: underline;
+    text-decoration-color: var(--color-line);
+  }
+
+  .contacts a:hover {
+    color: var(--color-ivory);
+  }
+</style>
