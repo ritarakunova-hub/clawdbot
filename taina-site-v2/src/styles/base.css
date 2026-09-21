@@ -44,6 +44,14 @@ a {
   max-width: var(--measure);
 }
 
+/* Шапка теперь position:fixed (см. Header.astro) и не занимает места
+   в потоке — компенсируем отступом сверху для всего контента.
+   Хиро сам отменяет этот отступ (margin-top отрицательный), чтобы
+   уйти на весь экран под прозрачную шапку. */
+#main {
+  padding-top: var(--header-height);
+}
+
 .skip-link {
   position: absolute;
   top: -100%;

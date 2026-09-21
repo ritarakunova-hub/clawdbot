@@ -9,7 +9,7 @@ const navLinks = [
 ];
 ---
 
-<header class="header">
+<header class="header" id="site-header">
   <a class="brand" href="#top" aria-label="TAINA STUDIO — на главную">
     <svg viewBox="0 0 40 60" aria-hidden="true" focusable="false">
       <polygon points="20,0 38,30 2,30" fill="var(--color-ruby)"></polygon>
@@ -23,10 +23,27 @@ const navLinks = [
   <Button href="#contact" variant="outline" size="sm">AI-аудит</Button>
 </header>
 
+<script>
+  // Шапка прозрачная, пока за ней виден хиро (сцена на весь экран),
+  // и возвращает свой обычный фон, как только хиро уходит из вида.
+  // IntersectionObserver вместо чтения scrollY в цикле — дешевле и не
+  // конфликтует с общим циклом сцены (loop.ts).
+  const header = document.getElementById('site-header');
+  const hero = document.getElementById('hero');
+  if (header && hero && 'IntersectionObserver' in window) {
+    new IntersectionObserver(
+      ([entry]) => header.classList.toggle('header--over-hero', entry.isIntersecting),
+      { threshold: 0 },
+    ).observe(hero);
+  }
+</script>
+
 <style>
   .header {
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 30;
     display: flex;
     align-items: center;
@@ -37,6 +54,18 @@ const navLinks = [
     background: color-mix(in srgb, var(--color-bg) 85%, transparent);
     backdrop-filter: blur(6px);
     border-bottom: 1px solid var(--color-line);
+    transition:
+      background var(--duration-response) var(--ease-out),
+      border-color var(--duration-response) var(--ease-out);
+  }
+
+  /* Пока за шапкой виден хиро (сцена на весь экран, см. Hero.astro) —
+     шапка прозрачная, как в reference/taina-hero.html. Ниже по странице
+     (класс снимается) — обычный сплошной фон. */
+  .header--over-hero {
+    background: transparent;
+    backdrop-filter: none;
+    border-bottom-color: transparent;
   }
 
   .brand {

@@ -72,15 +72,18 @@ import { hero } from '@/content/copy';
     position: relative;
     height: 340vh;
     background: var(--color-bg);
+    /* #main компенсирует высоту шапки padding-top (шапка теперь
+       position:fixed, см. Header.astro) — хиро эту компенсацию
+       отменяет, чтобы сцена шла на весь экран от самого верха, как
+       в прототипе. Шапка при этом прозрачная, пока хиро виден
+       (.header--over-hero), и лежит поверх сцены по z-index. */
+    margin-top: calc(-1 * var(--header-height));
   }
 
   .stage {
-    /* top — под нашей персистентной шапкой (в прототипе шапка своя,
-       fixed поверх canvas; здесь используется общий Header.astro,
-       поэтому сцена стартует ниже него, а не перекрывает его). */
     position: sticky;
-    top: var(--header-height);
-    height: calc(100svh - var(--header-height));
+    top: 0;
+    height: 100svh;
     overflow: hidden;
     background: #030304;
   }
