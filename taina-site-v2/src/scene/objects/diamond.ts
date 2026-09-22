@@ -16,19 +16,18 @@ export interface DiamondRig {
 }
 
 export function buildDiamond(uTime: { value: number }): DiamondRig {
-  const h = 1.15;
-  const r = 0.72; // ширина ромба влево-вправо — видна всегда, задаёт силуэт
-  // Плоская масть «бубны» из игральных карт, а не объёмный камень: глубина
-  // (вперёд-назад) намного меньше ширины, поэтому при повороте ромб не
-  // раскрывается в большой объёмный шип, а остаётся тонкой гранёной пластиной.
-  const rz = 0.16;
-  const T = [0, h, 0];
-  const B = [0, -h, 0];
+  // Асимметричная бипирамида (крона выше основания) — значения откалиброваны
+  // отдельно по официальному листу brand assets (docs/brand/), финал, не менять на глаз.
+  const hT = 1.28;
+  const hB = 0.98;
+  const r = 0.74;
+  const T = [0, hT, 0];
+  const B = [0, -hB, 0];
   const E = [
     [r, 0, 0],
-    [0, 0, rz],
+    [0, 0, r],
     [-r, 0, 0],
-    [0, 0, -rz],
+    [0, 0, -r],
   ];
   const pos: number[] = [];
   for (let i = 0; i < 4; i++) {
@@ -41,7 +40,7 @@ export function buildDiamond(uTime: { value: number }): DiamondRig {
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geometry.computeVertexNormals();
 
-  const material = createDiamondMaterial(uTime);
+  const material = createDiamondMaterial(uTime, hT, hB);
   const mesh = new THREE.Mesh(geometry, material);
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(geometry, 1),

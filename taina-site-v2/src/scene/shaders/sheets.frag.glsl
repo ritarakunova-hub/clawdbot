@@ -26,12 +26,12 @@ void main(){
   vec3 tx=texture2D(uAtlas,auv).rgb;
   vec3 keyCol=vec3(1.,.24,.14);vec3 curCol=vec3(1.,.74,.36);
   vec3 lit=keyCol*lk+curCol*lc;
-  vec3 paper=vec3(.07,.055,.05);
-  vec3 col=paper*lit*1.7;
-  col+=tx.g*.20*lit;col+=tx.b*.85*lit;
+  vec3 paper=vec3(.032,.026,.03);
+  vec3 col=paper*(1.+lit*.9);
+  col+=tx.g*.12*lit;col+=tx.b*.3*lit;
   float lum=lk+lc;
   float wv=smoothstep(.05,.42,lum);
-  col+=tx.r*vec3(1.,.82,.42)*wv*(lk*1.1+lc*1.6+.08);
+  col+=tx.r*vec3(.98,.76,.36)*wv*(lk*1.3+lc*1.5+.08);
   vec2 ndc=vClip.xy/vClip.w;
   float zone=uPortrait>.5?smoothstep(.1,-.4,ndc.y):smoothstep(-.02,-.5,ndc.x)*(1.-smoothstep(.55,.8,ndc.y));
   col*=1.-zone*.8;
