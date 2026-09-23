@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>TAINA — ролик (исходник анимации)</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  html,body{ margin:0; background:#08080A; }
+  canvas{ display:block; width:100vw; height:auto; max-height:100vh; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+/*
+  30-секундный ролик TAINA. Всё детерминировано: кадр = render(t), t в секундах.
+  Рендер в MP4: render.mjs вызывает window.render(t) покадрово.
+  Сцены: 0–3 точка · 3–8 архив · 8–15 лабиринт · 15–18 тишина · 18–25 порядок · 25–30 покой.
+*/
+const W = 1920, H = 1080;
+const cv = document.getElementById('c');
+cv.width = W; cv.height = H;
+const g = cv.getContext('2d');
+
+const C = { void:'#08080A', gold:'#D7A24C', ember:'#E8722E', dia:'#C4302B', ink:'#ECE6DA', soft:'#A9A197', faint:'#6F6961', panel:'#111014' };
+const F = { disp:'"Cormorant Garamond", Georgia, serif', body:'"IBM Plex Sans", Arial, sans-serif', mono:'"IBM Plex Mono", monospace' };
+
+function rng(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, k) => a + (b - a) * k;
+const eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const eo = x => 1 - Math.pow(1 - x, 3);
+const ei = x => x * x * x;
+const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${a})`; };
+
+/* ---------- мир ---------- */
+const FLOOR = 1000, FX = 1000, DOT = { x: FX, y: 300 };
+
+// Башни архива
+const towers = (() => {
+  const r = rng(11), out = [];
+  let x = -40;
+  while (x < W + 40) {
+    const w = 70 + r() * 110;
+    const near = Math.abs(x + w / 2 - FX) < 120;
+    const h = near ? 0 : 260 + r() * 640;
+    const slabs = []; let y = 0;
+    while (y < h) { const sh = 10 + r() * 34; slabs.push({ y, h: sh, dx: (r() - .5) * 14, kind: r() }); y += sh + 2; }
+    out.push({ x, w, h, slabs, delay: r() * 1.6 });
+    x += w + 10 + r() * 30;
+  }
+  return out;
+})();
+
+// Лабиринт (recursive backtracker)
+const MZ = (() => {
+  const cols = 22, rows = 12, cs = 80, ox = 80, oy = 60, r = rng(5);
+  const cells = Array.from({ length: cols * rows }, () => ({ r: true, b: true, v: false }));
+  const idx = (c, rw) => rw * cols + c;
+  const stack = [[11, 11]]; cells[idx(11, 11)].v = true;
+  while (stack.length) {
+    const [c, rw] = stack[stack.length - 1];
+    const nb = [[c + 1, rw], [c - 1, rw], [c, rw + 1], [c, rw - 1]].filter(([a, b]) => a >= 0 && b >= 0 && a < cols && b < rows && !cells[idx(a, b)].v);
+    if (!nb.length) { stack.pop(); continue; }
+    const [a, b] = nb[Math.floor(r() * nb.length)];
+    if (a > c) cells[idx(c, rw)].r = false; else if (a < c) cells[idx(a, b)].r = false;
+    else if (b > rw) cells[idx(c, rw)].b = false; else cells[idx(a, b)].b = false;
+    cells[idx(a, b)].v = true; stack.push([a, b]);
+  }
+  const walls = [];
+  for (let rw = 0; rw < rows; rw++) for (let c = 0; c < cols; c++) {
+    const x = ox + c * cs, y = oy + rw * cs, cell = cells[idx(c, rw)];
+    if (cell.r) walls.push([x + cs, y, x + cs, y + cs]);
+    if (cell.b) walls.push([x, y + cs, x + cs, y + cs]);
+    if (c === 0) walls.push([x, y, x, y + cs]);
+    if (rw === 0) walls.push([x, y, x + cs, y]);
+  }
+  walls.forEach(w => { w.d = Math.hypot((w[0] + w[2]) / 2 - FX, (w[1] + w[3]) / 2 - FLOOR); });
+  // BFS: путь от старта к самой дальней клетке
+  const open = (c, rw, a, b) => {
+    if (a === c + 1) return !cells[idx(c, rw)].r; if (a === c - 1) return !cells[idx(a, b)].r;
+    if (b === rw + 1) return !cells[idx(c, rw)].b; return !cells[idx(a, b)].b;
+  };
+  const prev = new Map(), q = [[11, 11]]; prev.set('11,11', null); let last = [11, 11];
+  while (q.length) {
+    const [c, rw] = q.shift(); last = [c, rw];
+    for (const [a, b] of [[c + 1, rw], [c - 1, rw], [c, rw + 1], [c, rw - 1]]) {
+      if (a < 0 || b < 0 || a >= cols || b >= rows || prev.has(a + ',' + b) || !open(c, rw, a, b)) continue;
+      prev.set(a + ',' + b, [c, rw]); q.push([a, b]);
+    }
+  }
+  const path = []; let cur = last;
+  while (cur) { path.unshift({ x: ox + cur[0] * cs + cs / 2, y: oy + cur[1] * cs + cs / 2 + 26 }); cur = prev.get(cur.join(',')); }
+  return { walls, path: path.slice(0, 34) };
+})();
+MZ.path[0] = { x: FX, y: FLOOR };
+
+function pathAt(p) { // p ∈ [0,1] вдоль пути
+  const n = MZ.path.length - 1, f = clamp(p) * n, i = Math.min(n - 1, Math.floor(f)), k = f - i;
+  const a = MZ.path[i], b = MZ.path[i + 1];
+  return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), dir: Math.sign(b.x - a.x) || 1 };
+}
+
+// Летящие бумаги
+const papers = (() => { const r = rng(21); return Array.from({ length: 70 }, () => ({ x: r() * W, y: r() * H, vx: (r() - .3) * 260, vy: (r() - .6) * 140, rot: r() * 6, vr: (r() - .5) * 4, w: 26 + r() * 36, a: .25 + r() * .5 })); })();
+// Пыль
+const dust = (() => { const r = rng(3); return Array.from({ length: 140 }, () => ({ x: r() * W, y: r() * H, s: .6 + r() * 1.8, v: 4 + r() * 10, ph: r() * 6.28, a: .15 + r() * .45 })); })();
+// Карточки-документы для сцены порядка
+const cards = (() => {
+  const r = rng(33), out = [];
+  for (let c = 0; c < 3; c++) for (let rw = 0; rw < 6; rw++) {
+    out.push({ sx: 120 + r() * (W - 240), sy: 100 + r() * (H - 200), srot: (r() - .5) * 2.4,
+      tx: 250 + c * 150, ty: 214 + rw * 118, delay: r() * .9, lines: [.8, .55 + r() * .3, .4 + r() * .4] });
+  }
+  return out;
+})();
+const DIA5 = { x: 830, y: 540 }, SRC = 8;
+// Зерно
+const grains = [0, 1, 2, 3].map(s => {
+  const c = document.createElement('canvas'); c.width = 480; c.height = 270;
+  const x = c.getContext('2d'), d = x.createImageData(480, 270), r = rng(100 + s);
+  for (let i = 0; i < d.data.length; i += 4) { const v = r() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+  x.putImageData(d, 0, 0); return c;
+});
+
+/* ---------- примитивы ---------- */
+function glowDot(x, y, r, color, a) {
+  const gr = g.createRadialGradient(x, y, 0, x, y, r * 7);
+  gr.addColorStop(0, rgba(color, .55 * a)); gr.addColorStop(.25, rgba(color, .16 * a)); gr.addColorStop(1, rgba(color, 0));
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r * 7, 0, 7); g.fill();
+  g.fillStyle = rgba('#FFE7B8', a); g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+}
+function diamond(x, y, s, a, t) {
+  const pulse = 1 + .08 * Math.sin(t * 3.1);
+  const gr = g.createRadialGradient(x, y, 0, x, y, s * 9 * pulse);
+  gr.addColorStop(0, rgba(C.dia, .5 * a)); gr.addColorStop(.3, rgba(C.dia, .14 * a)); gr.addColorStop(1, rgba(C.dia, 0));
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, s * 9 * pulse, 0, 7); g.fill();
+  g.save(); g.translate(x, y); g.rotate(Math.PI / 4);
+  g.fillStyle = rgba(C.dia, a); g.fillRect(-s / 2, -s / 2, s, s);
+  g.fillStyle = rgba('#FF8A78', .35 * a); g.fillRect(-s / 2, -s / 2, s, s * .35);
+  g.restore();
+}
+function person(x, y, s, a, walk = 0, seated = false) { // x,y — ступни
+  g.save(); g.translate(x, y); g.scale(s, s);
+  g.fillStyle = rgba(C.ink, a); g.strokeStyle = rgba(C.ink, a); g.lineCap = 'round';
+  if (seated) {
+    g.lineWidth = 3.2;
+    g.beginPath(); g.moveTo(-4, -22); g.lineTo(8, -22); g.lineTo(10, 0); g.stroke();
+    g.beginPath(); g.ellipse(-4, -40, 6, 13, -.12, 0, 7); g.fill();
+    g.beginPath(); g.arc(-2, -60, 6, 0, 7); g.fill();
+    g.lineWidth = 2.6; g.beginPath(); g.moveTo(-2, -44); g.lineTo(16, -32); g.stroke();
+  } else {
+    const sw = Math.sin(walk) * 5;
+    g.lineWidth = 3.2;
+    g.beginPath(); g.moveTo(0, -20); g.lineTo(-sw, 0); g.moveTo(0, -20); g.lineTo(sw, 0); g.stroke();
+    g.beginPath(); g.ellipse(0, -32, 6, 13, 0, 0, 7); g.fill();
+    g.beginPath(); g.arc(0, -52, 6, 0, 7); g.fill();
+  }
+  g.restore();
+}
+function text(str, x, y, font, color, align = 'center', ls = '0px') {
+  g.font = font; g.fillStyle = color; g.textAlign = align; g.textBaseline = 'middle';
+  g.letterSpacing = ls; g.fillText(str, x, y); g.letterSpacing = '0px';
+}
+
+/* ---------- сцены ---------- */
+function drawTowers(t, alpha) {
+  for (const tw of towers) {
+    if (!tw.h) continue;
+    const rise = eo(seg(t, 3.4 + tw.delay, 6.2 + tw.delay));
+    const vis = tw.h * rise;
+    for (const s of tw.slabs) {
+      if (s.y > vis) break;
+      const y = FLOOR - s.y - s.h, x = tw.x + s.dx;
+      g.fillStyle = rgba('#0E0D11', alpha);
+      g.fillRect(x, y, tw.w, s.h);
+      g.strokeStyle = rgba(C.gold, (.18 + s.kind * .22) * alpha); g.lineWidth = 1.2;
+      g.strokeRect(x, y, tw.w, s.h);
+      if (s.kind > .62 && s.h > 18) { // корешок папки
+        g.fillStyle = rgba(C.gold, .22 * alpha); g.fillRect(x + tw.w * .35, y + s.h * .3, tw.w * .3, 2);
+      }
+    }
+  }
+}
+function drawDust(t, a) {
+  for (const d of dust) {
+    const y = ((d.y - t * d.v) % H + H) % H, x = d.x + Math.sin(t * .3 + d.ph) * 14;
+    g.fillStyle = rgba(C.gold, d.a * a * (.6 + .4 * Math.sin(t * 1.3 + d.ph)));
+    g.fillRect(x, y, d.s, d.s);
+  }
+}
+// BASE — внешняя матрица (для «застывшего» кадра с наездом); сцены ставят трансформы поверх неё
+let BASE = new DOMMatrix();
+function setT(a, b, c, d, e, f) { g.setTransform(BASE); g.transform(a, b, c, d, e, f); }
+function camera(x, y, z, shx = 0, shy = 0) { setT(z, 0, 0, z, W / 2 - x * z + shx, H / 2 - y * z + shy); }
+function frozenChaos(scale, alpha) {
+  BASE = new DOMMatrix().translate(W / 2, H / 2).scale(scale).translate(-W / 2, -H / 2);
+  g.save(); g.globalAlpha = alpha; sceneChaos(14.95, true); g.restore();
+  BASE = new DOMMatrix(); g.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+function sceneOpening(t) {
+  // 0–8: точка → отъезд камеры → архив нарастает
+  const pull = eio(seg(t, 3.0, 7.6));
+  const z = lerp(5.5, 1, pull);
+  const cx = lerp(DOT.x, W / 2 + 40, pull), cy = lerp(DOT.y + 40, H / 2 + 20, pull);
+  camera(cx, cy, z);
+  const haze = g.createRadialGradient(DOT.x, DOT.y, 0, DOT.x, DOT.y, 900);
+  haze.addColorStop(0, rgba(C.gold, .06 * seg(t, 3, 6))); haze.addColorStop(1, rgba(C.gold, 0));
+  g.fillStyle = haze; g.fillRect(-500, -500, W + 1000, H + 1000);
+  drawTowers(t, 1);
+  g.strokeStyle = rgba(C.gold, .18 * seg(t, 4, 6)); g.lineWidth = 1;
+  g.beginPath(); g.moveTo(-400, FLOOR + .5); g.lineTo(W + 400, FLOOR + .5); g.stroke();
+  person(FX, FLOOR, 1, seg(t, 4.6, 5.6));
+  const da = seg(t, .35, 1.1);
+  glowDot(DOT.x, DOT.y, lerp(1.2, 2.6, pull) / (z / 5.5 * .6 + .4), C.gold, da);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  // строка текста
+  const ta = seg(t, 1.1, 1.9) * (1 - seg(t, 3.1, 3.7));
+  if (ta > 0) text('У вашей компании уже есть ответ.', W / 2, 640 + (1 - eo(seg(t, 1.1, 1.9))) * 10, `500 70px ${F.disp}`, rgba(C.ink, ta));
+}
+
+function sceneChaos(t, frozen = false) {
+  // 8–15: папки «нет» → лабиринт → бег, вопросы, ускорение
+  const k = seg(t, 8, 15);
+  const p = ei(seg(t, 9.6, 15)) * .9 + seg(t, 9.6, 15) * .1;
+  const fig = pathAt(p);
+  const z = lerp(1, 1.75, eio(k));
+  const follow = eio(seg(t, 9, 12));
+  const cx = lerp(W / 2 + 40, fig.x, follow), cy = lerp(H / 2 + 20, fig.y - 60, follow);
+  const amp = frozen ? 0 : 9 * ei(k);
+  const shx = amp * (Math.sin(t * 47) + Math.sin(t * 29) * .6), shy = amp * (Math.cos(t * 41) + Math.sin(t * 23) * .6);
+  camera(cx, cy, z, shx, shy);
+  // башни растворяются
+  const tf = 1 - seg(t, 8.2, 10);
+  if (tf > 0) { drawTowers(99, tf); }
+  // стены лабиринта прорастают от человека
+  const rad = lerp(0, 1900, eio(seg(t, 8.8, 11.4)));
+  g.lineCap = 'square';
+  for (const w of MZ.walls) {
+    if (w.d > rad) continue;
+    const fresh = clamp((rad - w.d) / 160);
+    g.strokeStyle = rgba(C.gold, .16 + .3 * fresh * (1 - k * .4));
+    g.lineWidth = 2.2;
+    g.beginPath(); g.moveTo(w[0], w[1]); g.lineTo(w[2], w[3]); g.stroke();
+  }
+  // мигающие окна/таблицы в лабиринте
+  const fr = rng(Math.floor(t * 9) + 1);
+  if (t > 10.5) for (let i = 0; i < 6 + 10 * k; i++) {
+    const x = 100 + fr() * 1720, y = 80 + fr() * 900, w = 40 + fr() * 60, h = 26 + fr() * 30;
+    g.strokeStyle = rgba(fr() > .5 ? C.ember : C.gold, .5 * fr());
+    g.lineWidth = 1.2; g.strokeRect(x, y, w, h);
+    g.fillStyle = rgba(C.gold, .25); g.fillRect(x + 6, y + 8, w * .6, 2); g.fillRect(x + 6, y + 14, w * .4, 2);
+  }
+  // папки «нет»
+  [[8.25, -70], [8.85, 64], [9.4, -10]].forEach(([s, dx], i) => {
+    const q = seg(t, s, s + .75); if (q <= 0 || q >= 1) return;
+    const a = Math.sin(q * Math.PI);
+    const x = FX + dx, y = FLOOR - 120 - i * 8;
+    g.save(); g.translate(x, y);
+    g.fillStyle = rgba('#141217', a); g.strokeStyle = rgba(C.gold, .8 * a); g.lineWidth = 1.6;
+    g.fillRect(-34, -22, 68, 44); g.strokeRect(-34, -22, 68, 44);
+    g.save(); g.translate(-34, -22); g.rotate(-eo(seg(q, .1, .5)) * .9);
+    g.fillStyle = rgba('#1B1920', a); g.fillRect(0, -2, 68, 14); g.strokeRect(0, -2, 68, 14); g.restore();
+    g.restore();
+    text('нет', x, y + 44, `500 20px ${F.mono}`, rgba(C.ember, a * seg(q, .45, .6)), 'center', '2px');
+  });
+  person(fig.x, fig.y, 1, 1, frozen ? 0 : p * 140);
+  setT(1, 0, 0, 1, 0, 0);
+  // летящие бумаги (экранное пространство)
+  const tau = Math.pow(Math.max(0, t - 10.2), 2) * .55;
+  for (const pp of papers) {
+    const a = pp.a * seg(t, 10.2, 11.5);
+    if (a <= 0) continue;
+    const x = ((pp.x + pp.vx * tau) % (W + 200) + W + 200) % (W + 200) - 100;
+    const y = ((pp.y + pp.vy * tau) % (H + 200) + H + 200) % (H + 200) - 100;
+    g.save(); g.translate(x, y); g.rotate(pp.rot + pp.vr * tau * .4);
+    g.fillStyle = rgba('#17151A', a); g.strokeStyle = rgba(C.gold, a * .7); g.lineWidth = 1;
+    g.fillRect(-pp.w / 2, -pp.w * .65, pp.w, pp.w * 1.3); g.strokeRect(-pp.w / 2, -pp.w * .65, pp.w, pp.w * 1.3);
+    g.fillStyle = rgba(C.gold, a * .4); g.fillRect(-pp.w / 2 + 5, -pp.w * .4, pp.w * .6, 1.5); g.fillRect(-pp.w / 2 + 5, -pp.w * .25, pp.w * .45, 1.5);
+    g.restore();
+  }
+  // вопросы
+  const Q = [
+    [10.0, 'Где актуальная версия?', 560, 300, 1.5],
+    [11.3, 'Это точно по регламенту?', 1340, 720, 1.4],
+    [12.4, 'Кто знает ответ?', 700, 820, 1.2],
+    [13.3, 'Сейчас найду…', 1420, 260, 1.0],
+    [14.0, 'А это можно отправлять клиенту?', 960, 520, .8],
+    [14.5, 'Подожди…', 460, 560, .6],
+  ];
+  for (const [s, str, x, y, d] of Q) {
+    const q = seg(t, s, s + d); if (q <= 0 || (q >= 1 && !frozen)) continue;
+    const a = frozen ? .8 : Math.min(1, q * 5, (1 - q) * 4) * (.85 + .15 * Math.sin(t * 60));
+    text(str, x + shx * .5, y + shy * .5, `italic 500 54px ${F.disp}`, rgba(C.ember, a));
+  }
+}
+
+function sceneSilence(t) {
+  // 15–18: всё застывает, тускнеет, в глубине загорается ромб
+  const push = eio(seg(t, 15, 18));
+  frozenChaos(1 + push * .12, lerp(.55, .13, eo(seg(t, 15, 15.6))));
+  const a = eo(seg(t, 15.6, 16.8));
+  diamond(W / 2, H / 2, lerp(4, 22, eo(seg(t, 15.6, 18))), a, t);
+}
+
+function sceneOrder(t) {
+  // 18–25: ромб проходит через документы, нити собирают структуру, ответ со ссылкой
+  const fade = 1 - seg(t, 18, 19.2);
+  if (fade > 0) frozenChaos(1.12, .13 * fade);
+  const dm = eio(seg(t, 18, 19.6));
+  const dx = lerp(W / 2, DIA5.x, dm), dy = lerp(H / 2, DIA5.y, dm);
+  // тёплое свечение пространства
+  const warm = seg(t, 19, 24);
+  const hz = g.createRadialGradient(DIA5.x, DIA5.y, 0, DIA5.x, DIA5.y, 1100);
+  hz.addColorStop(0, rgba(C.gold, .09 * warm)); hz.addColorStop(1, rgba(C.gold, 0));
+  g.fillStyle = hz; g.fillRect(0, 0, W, H);
+  // нити
+  const src = cards[SRC];
+  cards.forEach((c, i) => {
+    const q = eio(seg(t, 18.5 + c.delay, 20.6 + c.delay));
+    const x = lerp(c.sx, c.tx, q), y = lerp(c.sy, c.ty, q), rot = lerp(c.srot, 0, q);
+    c.x = x; c.y = y;
+    const th = seg(t, 20.2 + i * .05, 21.6 + i * .05);
+    if (th > 0) {
+      const x0 = x + 55, y0 = y, mx = (x0 + dx) / 2;
+      const hot = i === SRC ? seg(t, 23.6, 24.2) : 0;
+      g.strokeStyle = rgba(C.gold, .22 + .55 * hot); g.lineWidth = 1 + hot * 1.2;
+      g.setLineDash([900 * th, 2000]);
+      g.beginPath(); g.moveTo(x0, y0); g.bezierCurveTo(mx, y0, mx, dy, dx, dy); g.stroke();
+      g.setLineDash([]);
+    }
+    g.save(); g.translate(x, y); g.rotate(rot);
+    const hot = i === SRC ? seg(t, 23.6, 24.2) : 0;
+    if (hot) { g.shadowColor = rgba(C.gold, .8); g.shadowBlur = 24 * hot; }
+    g.fillStyle = '#131217'; g.fillRect(-55, -38, 110, 76);
+    g.shadowBlur = 0;
+    g.strokeStyle = rgba(C.gold, .45 + .5 * hot); g.lineWidth = 1.3; g.strokeRect(-55, -38, 110, 76);
+    g.fillStyle = rgba(C.gold, .35 + .5 * hot);
+    c.lines.forEach((l, j) => g.fillRect(-44, -22 + j * 14, 88 * l, 2.5));
+    g.restore();
+  });
+  // нить к ответу
+  const ln = eio(seg(t, 21.4, 22.2));
+  if (ln > 0) {
+    g.strokeStyle = rgba(C.gold, .7); g.lineWidth = 2;
+    g.beginPath(); g.moveTo(dx + 22, dy); g.lineTo(lerp(dx + 22, 1040, ln), dy); g.stroke();
+  }
+  diamond(dx, dy, lerp(22, 26, dm), 1, t);
+  // панель ответа
+  const pa = eo(seg(t, 21.8, 22.6));
+  if (pa > 0) {
+    const px = 1040, py = 330, pw = 740, ph = 420;
+    g.save(); g.globalAlpha = pa; g.translate(0, (1 - pa) * 16);
+    g.fillStyle = C.panel; g.fillRect(px, py, pw, ph);
+    g.strokeStyle = rgba(C.gold, .35); g.lineWidth = 1.2; g.strokeRect(px, py, pw, ph);
+    text('ВОПРОС', px + 48, py + 56, `500 18px ${F.mono}`, C.faint, 'left', '3px');
+    const qs = 'Какая схема приёма для повторных пациентов?';
+    const n = Math.floor(qs.length * seg(t, 22.3, 23.1));
+    const cut = 'Какая схема приёма '.length; // перенос по границе слова
+    const q1 = qs.slice(0, Math.min(n, cut)), q2 = n > cut ? qs.slice(cut, n) : '';
+    text(q1, px + 48, py + 108, `600 44px ${F.disp}`, C.ink, 'left');
+    text(q2.trimStart(), px + 48, py + 154, `600 44px ${F.disp}`, C.ink, 'left');
+    const aa = seg(t, 23.1, 23.7);
+    text('Повторный пациент записывается без направления.', px + 48, py + 226, `400 25px ${F.body}`, rgba(C.soft, aa), 'left');
+    text('На приём — выписка с прошлого визита.', px + 48, py + 262, `400 25px ${F.body}`, rgba(C.soft, aa), 'left');
+    const sa = seg(t, 23.7, 24.2);
+    g.fillStyle = rgba(C.gold, .2 * sa); g.fillRect(px + 48, py + 310, pw - 96, 1);
+    text('↳ Источник: Регламент приёма, п. 3.2', px + 48, py + 352, `500 24px ${F.mono}`, rgba(C.gold, sa), 'left');
+    g.restore();
+  }
+  text('документ  →  правило  →  ответ', W / 2 + 90, 960, `500 20px ${F.mono}`, rgba(C.soft, .75 * seg(t, 24, 24.6)), 'center', '2px');
+}
+
+function sceneCalm(t) {
+  // 25–30: покой, человек работает при свете ромба, Бегемот на папках, финальные строки
+  const a = eo(seg(t, 25, 26.2));
+  const lamp = { x: 850, y: 612 };
+  const hz = g.createRadialGradient(lamp.x, lamp.y + 90, 0, lamp.x, lamp.y + 90, 520);
+  hz.addColorStop(0, rgba(C.gold, .16 * a)); hz.addColorStop(1, rgba(C.gold, 0));
+  g.fillStyle = hz; g.fillRect(0, 0, W, H);
+  g.strokeStyle = rgba(C.gold, .16 * a); g.lineWidth = 1;
+  g.beginPath(); g.moveTo(420, 820.5); g.lineTo(1500, 820.5); g.stroke();
+  // стол
+  g.strokeStyle = rgba(C.gold, .55 * a); g.lineWidth = 2;
+  g.beginPath(); g.moveTo(790, 762); g.lineTo(960, 762); g.moveTo(800, 762); g.lineTo(800, 820); g.moveTo(950, 762); g.lineTo(950, 820); g.stroke();
+  g.fillStyle = rgba(C.ink, .8 * a); g.fillRect(860, 756, 44, 3); g.fillRect(866, 751, 34, 3);
+  person(792, 820, 1.25, a, 0, true);
+  diamond(lamp.x, lamp.y, 13, a, t);
+  // папки и кот
+  const sx = 1180;
+  [[0, 0, 128], [6, 20, 118], [-4, 40, 132], [4, 60, 122]].forEach(([dx, dy, w]) => {
+    g.fillStyle = rgba('#100F13', a); g.fillRect(sx + dx, 800 - dy, w, 18);
+    g.strokeStyle = rgba(C.gold, .45 * a); g.lineWidth = 1.2; g.strokeRect(sx + dx, 800 - dy, w, 18);
+  });
+  const cx = sx + 64, cy = 740;
+  g.fillStyle = rgba('#040405', a); g.strokeStyle = rgba(C.faint, .7 * a); g.lineWidth = 1.2;
+  g.beginPath();
+  g.moveTo(cx - 34, cy);
+  g.bezierCurveTo(cx - 40, cy - 40, cx - 26, cy - 70, cx - 18, cy - 78);
+  g.lineTo(cx - 22, cy - 104); g.lineTo(cx - 8, cy - 90);
+  g.lineTo(cx + 8, cy - 90); g.lineTo(cx + 22, cy - 104);
+  g.lineTo(cx + 18, cy - 78);
+  g.bezierCurveTo(cx + 26, cy - 70, cx + 40, cy - 40, cx + 34, cy);
+  g.closePath(); g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(cx + 30, cy - 4); g.bezierCurveTo(cx + 70, cy, cx + 74, cy - 40, cx + 56, cy - 52); g.lineWidth = 7; g.strokeStyle = rgba('#040405', a); g.stroke();
+  const blink = (t > 27.9 && t < 28.05) ? .15 : 1;
+  g.fillStyle = rgba(C.gold, a);
+  g.beginPath(); g.ellipse(cx - 8, cy - 76, 3.4, 3.4 * blink, 0, 0, 7); g.ellipse(cx + 8, cy - 76, 3.4, 3.4 * blink, 0, 0, 7); g.fill();
+  // документ с ромбом
+  g.save(); g.translate(sx + 150, 790); g.rotate(.14);
+  g.fillStyle = rgba('#18161C', a); g.fillRect(-20, -30, 40, 56);
+  g.strokeStyle = rgba(C.gold, .6 * a); g.lineWidth = 1; g.strokeRect(-20, -30, 40, 56);
+  g.fillStyle = rgba(C.gold, .4 * a); g.fillRect(-13, -20, 22, 2); g.fillRect(-13, -14, 16, 2);
+  g.restore();
+  diamond(sx + 152, 802, 7, a * .9, t);
+  // финальные строки
+  const l1 = eo(seg(t, 26.4, 27.2)), l2 = eo(seg(t, 27.2, 28));
+  text('Ответ уже есть.', W / 2, 250 + (1 - l1) * 12, `500 84px ${F.disp}`, rgba(C.ink, l1));
+  text('TAINA помогает его найти.', W / 2, 340 + (1 - l2) * 12, `italic 500 84px ${F.disp}`, rgba(C.gold, l2));
+  const wm = seg(t, 28.3, 29);
+  if (wm > 0) {
+    g.font = `500 30px ${F.mono}`; g.letterSpacing = '14px';
+    const tw = g.measureText('TAINA').width; g.letterSpacing = '0px';
+    const x0 = W / 2 - (tw + 36) / 2;
+    diamond(x0 + 8, 968, 13, wm, 0);
+    text('TAINA', x0 + 36, 968, `500 30px ${F.mono}`, rgba(C.ink, wm), 'left', '14px');
+  }
+}
+
+/* ---------- кадр ---------- */
+function render(t) {
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  g.fillStyle = C.void; g.fillRect(0, 0, W, H);
+  if (t < 8) sceneOpening(t);
+  else if (t < 15) sceneChaos(t);
+  else if (t < 18) sceneSilence(t);
+  else if (t < 25) sceneOrder(t);
+  if (t >= 24.6) {
+    if (t < 26) { g.setTransform(1, 0, 0, 1, 0, 0); g.save(); g.globalAlpha = 1 - seg(t, 24.6, 25.8); sceneOrder(Math.min(t, 24.99)); g.restore(); }
+    sceneCalm(t);
+  }
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  // пыль, дымка, зерно, виньетка
+  const dustA = t < 15 ? seg(t, .5, 2) : t < 18 ? .5 : 1;
+  drawDust(t, dustA * .8);
+  g.globalCompositeOperation = 'overlay'; g.globalAlpha = .1;
+  g.drawImage(grains[Math.floor(t * 24) % 4], 0, 0, W, H);
+  g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+  const vg = g.createRadialGradient(W / 2, H / 2, H * .35, W / 2, H / 2, H * 1.05);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.72)');
+  g.fillStyle = vg; g.fillRect(0, 0, W, H);
+  // вход/выход
+  const fin = 1 - seg(t, 29.4, 30);
+  if (fin < 1) { g.fillStyle = rgba(C.void, 1 - fin); g.fillRect(0, 0, W, H); }
+}
+window.render = render;
+window.ready = Promise.all([
+  `500 70px ${F.disp}`, `italic 500 54px ${F.disp}`, `600 44px ${F.disp}`, `400 25px ${F.body}`, `500 24px ${F.mono}`
+].map(f => document.fonts.load(f, 'Ответ TAINA'))).then(() => document.fonts.ready);
+
+// Просмотр в браузере: ?t=12.5 — стоп-кадр, иначе проигрывание по кругу
+const qt = new URLSearchParams(location.search).get('t');
+if (!navigator.webdriver) {
+  window.ready.then(() => {
+    if (qt !== null) { render(parseFloat(qt)); return; }
+    const t0 = performance.now();
+    const loop = now => { render(((now - t0) / 1000) % 30); requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+  });
+}
+</script>
+</body>
+</html>
