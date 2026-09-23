@@ -2,8 +2,9 @@ import { onFrameStats } from './loop';
 import { getLevel, getDpr } from './quality';
 
 /**
- * Оверлей ?debug: время кадра, DPR, уровень качества, активная сцена.
- * Без ?debug в адресе элемент даже не создаётся — ничего в DOM не остаётся.
+ * Оверлей ?debug: время кадра, DPR, уровень качества, активная сцена и
+ * её прогресс (0..1). Без ?debug в адресе элемент даже не создаётся —
+ * ничего в DOM не остаётся.
  */
 export function initDebugOverlay(): void {
   if (typeof location === 'undefined') return;
@@ -27,14 +28,15 @@ export function initDebugOverlay(): void {
   ].join(';');
   document.body.appendChild(el);
 
-  const render = (frameMs: number, activeSceneId: string | null) => {
+  const render = (frameMs: number, activeSceneId: string | null, activeProgress: number | null) => {
     el.textContent =
       `frame: ${frameMs.toFixed(1)} ms\n` +
       `dpr: ${getDpr().toFixed(2)}\n` +
       `level: ${getLevel()}\n` +
-      `scene: ${activeSceneId ?? '—'}`;
+      `scene: ${activeSceneId ?? '—'}\n` +
+      `progress: ${activeProgress === null ? '—' : activeProgress.toFixed(2)}`;
   };
 
-  render(0, null);
-  onFrameStats(({ dt, activeSceneId }) => render(dt * 1000, activeSceneId));
+  render(0, null, null);
+  onFrameStats(({ dt, activeSceneId, activeProgress }) => render(dt * 1000, activeSceneId, activeProgress));
 }

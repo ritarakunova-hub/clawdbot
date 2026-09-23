@@ -23,6 +23,8 @@ export interface FrameStats {
   frameMs: number;
   dt: number;
   activeSceneId: string | null;
+  /** Сглаженный прогресс (0..1) активной сцены — для ?debug. */
+  activeProgress: number | null;
 }
 
 const scenes = new Map<string, SceneController>();
@@ -113,7 +115,8 @@ function frame(ts: number): void {
 
   if (statsListeners.size > 0) {
     const frameMs = performance.now() - frameStart;
-    const stats: FrameStats = { frameMs, dt, activeSceneId: active };
+    const activeProgress = active ? scroll.getSmoothedProgress(active) : null;
+    const stats: FrameStats = { frameMs, dt, activeSceneId: active, activeProgress };
     for (const cb of statsListeners) cb(stats);
   }
 }

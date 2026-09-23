@@ -4,9 +4,44 @@ import Container from '@/components/Container.astro';
 import { proyavka, reviewApproved } from '@/content/copy';
 ---
 
-<Section id="proyavka" label={proyavka.title}>
+<section class="proyavka-reveal" id="proyavka" aria-label={proyavka.title}>
+  <div class="reveal-scene" id="proyavka-reveal">
+    <div class="reveal-stage" id="proyavka-stage">
+      <h2 class="phrase" id="proyavka-phrase">{proyavka.title}</h2>
+    </div>
+  </div>
+</section>
+
+<script>
+  function boot() {
+    const root = document.getElementById('proyavka-reveal');
+    const stage = document.getElementById('proyavka-stage');
+    const phrase = document.getElementById('proyavka-phrase');
+    if (!root || !stage || !phrase) return;
+
+    import('@/scene/scenes/proyavka')
+      .then(({ mountProyavkaScene }) => {
+        mountProyavkaScene({ root, phrase });
+      })
+      .catch(() => {
+        // Нет WebGL2 или сцена упала — статичная проявленная картинка на
+        // CSS, фраза остаётся читаемой (уровни C/D из CLAUDE.md).
+        root.classList.add('proyavka-reveal--nogl');
+        phrase.style.setProperty('--s', '130%');
+      });
+  }
+
+  // Хиро грузит 3D после load; «Проявка» — сразу после, чтобы соседняя
+  // сцена (loop.ts) была готова заранее и переход был без мерцания.
+  if (document.readyState === 'complete') {
+    requestAnimationFrame(boot);
+  } else {
+    addEventListener('load', () => requestAnimationFrame(boot), { once: true });
+  }
+</script>
+
+<Section id="proyavka-more" label={`${proyavka.title} — подробности`}>
   <Container>
-    <h2 data-reveal>{proyavka.title}</h2>
     <div class="text" data-reveal>
       {proyavka.paragraphs.map((paragraph) => <p class="measure">{paragraph}</p>)}
     </div>
@@ -80,6 +115,58 @@ import { proyavka, reviewApproved } from '@/content/copy';
 </Section>
 
 <style>
+  .proyavka-reveal {
+    position: relative;
+    /* Прозрачный — сцена рисуется в общий холст сайта (#scene-gl,
+       Layout.astro), см. комментарий в Hero.astro про тот же приём. */
+  }
+
+  .reveal-scene {
+    height: 220vh;
+    position: relative;
+  }
+
+  .reveal-stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .phrase {
+    font-size: clamp(2.6rem, 7vw, 5.6rem);
+    text-align: center;
+    --s: -25%;
+    color: transparent;
+    background: linear-gradient(
+      100deg,
+      var(--color-ivory) 0%,
+      var(--color-ivory) calc(var(--s) - 14%),
+      var(--color-gold) calc(var(--s) - 2%),
+      color-mix(in srgb, var(--color-ivory) 0%, transparent) calc(var(--s) + 0.01%)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    padding-bottom: 0.08em;
+  }
+
+  /* Уровень C/D: WebGL недоступен, сцена упала, или контекст потерян —
+     статичная проявленная картинка на CSS вместо холста, фраза читаема. */
+  .proyavka-reveal--nogl .reveal-stage,
+  .proyavka-reveal--ctxlost .reveal-stage {
+    background: radial-gradient(60vmax 50vmax at 50% 55%, color-mix(in srgb, var(--color-sand) 24%, transparent), var(--color-bg) 68%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal-scene {
+      height: 100vh;
+      height: 100svh;
+    }
+  }
+
   h2 {
     font-size: var(--text-2xl);
   }
@@ -273,3 +360,13 @@ import { proyavka, reviewApproved } from '@/content/copy';
     color: var(--color-sand);
   }
 </style>
+
+<noscript>
+  <style>
+    /* Без JS сцена не грузится совсем — раскрываем градиент фразы сразу,
+       как в Hero.astro. */
+    #proyavka-phrase {
+      --s: 130%;
+    }
+  </style>
+</noscript>
