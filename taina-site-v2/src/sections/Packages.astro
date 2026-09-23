@@ -51,11 +51,11 @@ import { faq } from '@/content/faq';
       </tbody>
     </table>
 
-    <ul class="grid">
+    <ul class="grid" id="packages-grid">
       {
         packages.map((pkg, i) => (
           <li
-            class:list={['card', 'hover-lift', { 'card--recommended': pkg.recommended }]}
+            class:list={['card', { 'card--recommended': pkg.recommended }]}
             data-reveal
             style={`--reveal-delay: ${i * 80}ms`}
           >
@@ -117,6 +117,75 @@ import { faq } from '@/content/faq';
     </div>
   </Container>
 </Section>
+
+<script>
+  import { isReducedMotion } from '@/lib/a11y';
+
+  const cards = document.querySelectorAll<HTMLLIElement>('#packages-grid .card');
+  const canTilt = matchMedia('(pointer: fine)').matches;
+  const MAX_TILT = 4; // «наклон до 4°»
+  const LIFT_PX = 3;
+  const PRESS_SCALE = 0.985;
+
+  cards.forEach((card) => {
+    let raf = 0;
+    let tiltX = 0;
+    let tiltY = 0;
+    let pressed = false;
+
+    function paint() {
+      raf = 0;
+      const scale = pressed && !isReducedMotion() ? PRESS_SCALE : 1;
+      const lift = canTilt && !isReducedMotion() ? LIFT_PX : 0;
+      card.style.transform = `perspective(900px) rotateX(${tiltY}deg) rotateY(${tiltX}deg) translateY(${-lift}px) scale(${scale})`;
+    }
+
+    function schedule() {
+      if (!raf) raf = requestAnimationFrame(paint);
+    }
+
+    function onMove(e: PointerEvent) {
+      if (!canTilt || isReducedMotion()) return;
+      const rect = card.getBoundingClientRect();
+      const px = (e.clientX - rect.left) / rect.width;
+      const py = (e.clientY - rect.top) / rect.height;
+      tiltX = (px - 0.5) * 2 * MAX_TILT;
+      tiltY = -(py - 0.5) * 2 * MAX_TILT;
+      // «обновляемые раз за кадр» — пишем CSS-переменные для светлого
+      // пятна прямо тут (дёшево), а сам transform — через rAF ниже.
+      card.style.setProperty('--mx', `${px * 100}%`);
+      card.style.setProperty('--my', `${py * 100}%`);
+      schedule();
+    }
+
+    card.addEventListener('pointerenter', (e) => {
+      card.classList.add('is-tilting');
+      onMove(e);
+    });
+    card.addEventListener('pointermove', onMove);
+    card.addEventListener('pointerleave', () => {
+      card.classList.remove('is-tilting');
+      tiltX = 0;
+      tiltY = 0;
+      pressed = false;
+      card.style.transitionDuration = '';
+      card.style.transform = '';
+    });
+    card.addEventListener('pointerdown', () => {
+      pressed = true;
+      card.style.transitionDuration = '90ms';
+      schedule();
+    });
+    const release = () => {
+      if (!pressed) return;
+      pressed = false;
+      card.style.transitionDuration = '';
+      schedule();
+    };
+    card.addEventListener('pointerup', release);
+    card.addEventListener('pointercancel', release);
+  });
+</script>
 
 <style>
   h2 {
@@ -266,10 +335,42 @@ import { faq } from '@/content/faq';
     flex-direction: column;
     gap: var(--space-3);
     align-items: flex-start;
+    /* Наклон и лёгкий подъём ведёт JS (см. <script> ниже) — он же пишет
+       inline transform, поэтому transition здесь применяется что к
+       наведению, что к возврату, что к нажатию (там JS меняет только
+       transition-duration на 90мс). */
+    transition:
+      transform var(--duration-response) var(--ease-out),
+      border-color var(--duration-response) var(--ease-out);
+  }
+
+  .card:hover {
+    border-color: var(--color-gold);
   }
 
   .card--recommended {
     border-color: var(--color-gold);
+  }
+
+  /* Светлое пятно за курсором — координаты через --mx/--my, JS обновляет
+     их не чаще раза за кадр (см. <script>). */
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      220px circle at var(--mx, 50%) var(--my, 50%),
+      color-mix(in srgb, var(--color-gold) 16%, transparent),
+      transparent 65%
+    );
+    opacity: 0;
+    transition: opacity var(--duration-response) var(--ease-out);
+    pointer-events: none;
+  }
+
+  .card.is-tilting::before {
+    opacity: 1;
   }
 
   .badge {
