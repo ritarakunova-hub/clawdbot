@@ -8,12 +8,12 @@ import { faq } from '@/content/faq';
 
 <Section id="packages" label="Пакеты">
   <Container>
-    <h2>Пакеты</h2>
+    <h2 data-reveal>Пакеты</h2>
 
     <div class="segments">
       {
-        segments.items.map((item) => (
-          <div class="segment">
+        segments.items.map((item, i) => (
+          <div class="segment" data-reveal style={`--reveal-delay: ${i * 80}ms`}>
             <p class="k">{item.label}</p>
             <p>{item.text}</p>
           </div>
@@ -21,7 +21,7 @@ import { faq } from '@/content/faq';
       }
     </div>
 
-    <table class="compare">
+    <table class="compare" data-reveal>
       <thead>
         <tr>
           <th />
@@ -53,8 +53,12 @@ import { faq } from '@/content/faq';
 
     <ul class="grid">
       {
-        packages.map((pkg) => (
-          <li class:list={['card', { 'card--recommended': pkg.recommended }]}>
+        packages.map((pkg, i) => (
+          <li
+            class:list={['card', 'hover-lift', { 'card--recommended': pkg.recommended }]}
+            data-reveal
+            style={`--reveal-delay: ${i * 80}ms`}
+          >
             {pkg.tag && <p class="badge">{pkg.tag}</p>}
             <h3>{pkg.title}</h3>
             <p class="for-whom">{pkg.forWhom}</p>
@@ -68,7 +72,7 @@ import { faq } from '@/content/faq';
       }
     </ul>
 
-    <div class="support">
+    <div class="support" data-reveal>
       <h3>{support.title}</h3>
       <p class="price">{support.price}</p>
       <p class="description">{support.description}</p>
@@ -77,7 +81,7 @@ import { faq } from '@/content/faq';
       </Button>
     </div>
 
-    <div class="choose">
+    <div class="choose" data-reveal>
       <h3>{chooseHelp.title}</h3>
       <p>{chooseHelp.text}</p>
       <Button href="#contact" variant="solid" size="sm">
@@ -86,7 +90,7 @@ import { faq } from '@/content/faq';
       <p class="fine">{chooseHelp.fine}</p>
     </div>
 
-    <div class="infra">
+    <div class="infra" data-reveal>
       <p class="eyebrow">{infrastructure.eyebrow}</p>
       <h3>{infrastructure.title}</h3>
       <p class="lede measure">{infrastructure.lede}</p>
@@ -100,7 +104,7 @@ import { faq } from '@/content/faq';
       </div>
     </div>
 
-    <div class="faq">
+    <div class="faq" data-reveal>
       <h3>Вопросы</h3>
       {
         faq.map((item) => (

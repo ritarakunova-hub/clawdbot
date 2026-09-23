@@ -50,6 +50,14 @@ const { title, description } = Astro.props;
   </body>
 </html>
 
+<script>
+  // Появление обычных (не-3D) секций при скролле — единая утилита на
+  // всю страницу, см. lib/motion.ts.
+  import { initScrollReveal } from '@/lib/motion';
+
+  initScrollReveal();
+</script>
+
 <style>
   #scene-gl {
     /* Один холст на все 3D-сцены сайта (хиро, «Проявка», ...). z-index: -1

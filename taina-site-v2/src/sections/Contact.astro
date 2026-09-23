@@ -7,9 +7,9 @@ import { contact } from '@/content/copy';
 
 <Section id="contact" label={contact.title}>
   <Container>
-    <h2>{contact.title}</h2>
-    <p class="lead measure">{contact.lead}</p>
-    <div class="channels">
+    <h2 data-reveal>{contact.title}</h2>
+    <p class="lead measure" data-reveal>{contact.lead}</p>
+    <div class="channels" data-reveal style="--reveal-delay: 80ms">
       {
         // Оба канала равнозначны (CLAUDE.md) — одинаковый вариант кнопки.
         contact.channels.map((channel) => (

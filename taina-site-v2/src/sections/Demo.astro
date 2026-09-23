@@ -8,14 +8,14 @@ const { people, questions, minutes, rate } = demo.roi.fields;
 
 <Section id="demo" label={demo.title}>
   <Container>
-    <p class="eyebrow">{demo.eyebrow}</p>
-    <h2>{demo.heading}</h2>
-    <p class="rag-note measure">{demo.ragNote}</p>
+    <p class="eyebrow" data-reveal>{demo.eyebrow}</p>
+    <h2 data-reveal>{demo.heading}</h2>
+    <p class="rag-note measure" data-reveal>{demo.ragNote}</p>
 
     <ol class="steps">
       {
-        demo.steps.map((step) => (
-          <li class="step">
+        demo.steps.map((step, i) => (
+          <li class="step" data-reveal style={`--reveal-delay: ${i * 70}ms`}>
             <span class="step-tag" aria-hidden="true">
               {step.tag}
             </span>
@@ -30,12 +30,16 @@ const { people, questions, minutes, rate } = demo.roi.fields;
 
     <p class="privacy measure">{demo.privacyLine}</p>
 
-    <div class="block">
+    <div class="block" data-reveal>
       <h3 class="block-title">Как это выглядит на практике</h3>
       <ul class="scenarios">
         {
-          demo.scenarios.map((scenario) => (
-            <li class:list={['scenario', { 'scenario--refusal': scenario.isRefusal }]}>
+          demo.scenarios.map((scenario, i) => (
+            <li
+              class:list={['scenario', { 'scenario--refusal': scenario.isRefusal }]}
+              data-reveal
+              style={`--reveal-delay: ${i * 80}ms`}
+            >
               <p class="q">«{scenario.question}»</p>
               <p class="tag">{scenario.tag}</p>
               <p class="a">{scenario.answer}</p>
@@ -45,7 +49,7 @@ const { people, questions, minutes, rate } = demo.roi.fields;
       </ul>
     </div>
 
-    <div class="block">
+    <div class="block" data-reveal>
       <p class="eyebrow">{demo.roi.eyebrow}</p>
       <h3>{demo.roi.title}</h3>
       <p class="lede measure">{demo.roi.lede}</p>

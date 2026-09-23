@@ -6,10 +6,10 @@ import { project } from '@/content/copy';
 
 <Section id="project" label={project.title}>
   <Container>
-    <h2>{project.title}</h2>
+    <h2 data-reveal>{project.title}</h2>
 
     <div class="grid">
-      <article class="card">
+      <article class="card hover-lift" data-reveal>
         <p class="eyebrow">{project.case.eyebrow}</p>
         <h3>{project.case.title}</h3>
         <p class="lede">{project.case.lede}</p>
@@ -28,12 +28,12 @@ import { project } from '@/content/copy';
         <p class="foot">{project.case.foot}</p>
       </article>
 
-      <article class="card card--teaser" aria-hidden="true">
+      <article class="card card--teaser" data-reveal style="--reveal-delay: 80ms" aria-hidden="true">
         <p class="teaser">{project.teaser}</p>
       </article>
     </div>
 
-    <div class="block">
+    <div class="block" data-reveal>
       <p class="eyebrow">{project.market.eyebrow}</p>
       <h3>{project.market.title}</h3>
       <p class="lede measure">{project.market.lede}</p>

@@ -6,8 +6,8 @@ import { behemoth } from '@/content/copy';
 
 <Section id="behemoth" label={behemoth.title}>
   <Container>
-    <h2>{behemoth.title}</h2>
-    <div class="text">
+    <h2 data-reveal>{behemoth.title}</h2>
+    <div class="text" data-reveal>
       {behemoth.paragraphs.map((paragraph) => <p class="measure">{paragraph}</p>)}
       <p class="quote">«{behemoth.quote}»</p>
     </div>

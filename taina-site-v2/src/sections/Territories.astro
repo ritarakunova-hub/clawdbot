@@ -6,11 +6,11 @@ import { territories } from '@/content/copy';
 
 <Section id="territories" label={territories.title}>
   <Container>
-    <h2>{territories.title}</h2>
+    <h2 data-reveal>{territories.title}</h2>
     <ul class="grid">
       {
-        territories.items.map((item) => (
-          <li class="card">
+        territories.items.map((item, i) => (
+          <li class="card hover-lift" data-reveal style={`--reveal-delay: ${i * 80}ms`}>
             <h3>{item.title}</h3>
             <p>{item.text}</p>
           </li>

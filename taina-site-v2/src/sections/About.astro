@@ -6,8 +6,8 @@ import { about } from '@/content/copy';
 
 <Section id="about" label={about.title}>
   <Container>
-    <h2>{about.title}</h2>
-    <div class="text">
+    <h2 data-reveal>{about.title}</h2>
+    <div class="text" data-reveal>
       {about.paragraphs.map((paragraph) => <p class="measure">{paragraph}</p>)}
       <p class="philosophy measure">«{about.philosophy}»</p>
     </div>
