@@ -2,18 +2,22 @@
 import Section from '@/components/Section.astro';
 import Container from '@/components/Container.astro';
 import { demo } from '@/content/copy';
+
+const { people, questions, minutes, rate } = demo.roi.fields;
 ---
 
 <Section id="demo" label={demo.title}>
   <Container>
-    <h2>{demo.title}</h2>
-    <p class="intro measure">{demo.intro}</p>
+    <p class="eyebrow">{demo.eyebrow}</p>
+    <h2>{demo.heading}</h2>
+    <p class="rag-note measure">{demo.ragNote}</p>
+
     <ol class="steps">
       {
-        demo.steps.map((step, i) => (
+        demo.steps.map((step) => (
           <li class="step">
-            <span class="step-n" aria-hidden="true">
-              {String(i + 1).padStart(2, '0')}
+            <span class="step-tag" aria-hidden="true">
+              {step.tag}
             </span>
             <div>
               <h3>{step.title}</h3>
@@ -23,19 +27,196 @@ import { demo } from '@/content/copy';
         ))
       }
     </ol>
+
     <p class="privacy measure">{demo.privacyLine}</p>
+
+    <div class="block">
+      <h3 class="block-title">Как это выглядит на практике</h3>
+      <ul class="scenarios">
+        {
+          demo.scenarios.map((scenario) => (
+            <li class:list={['scenario', { 'scenario--refusal': scenario.isRefusal }]}>
+              <p class="q">«{scenario.question}»</p>
+              <p class="tag">{scenario.tag}</p>
+              <p class="a">{scenario.answer}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <div class="block">
+      <p class="eyebrow">{demo.roi.eyebrow}</p>
+      <h3>{demo.roi.title}</h3>
+      <p class="lede measure">{demo.roi.lede}</p>
+
+      <div class="roi">
+        <div class="roi-inputs">
+          <div class="roi-field">
+            <label for="roi-people">
+              {people.label} <span class="val" id="roi-people-val">{people.value}</span>
+            </label>
+            <input
+              type="range"
+              id="roi-people"
+              min={people.min}
+              max={people.max}
+              step={people.step}
+              value={people.value}
+            />
+          </div>
+          <div class="roi-field">
+            <label for="roi-questions">
+              {questions.label} <span class="val" id="roi-questions-val">{questions.value}</span>
+            </label>
+            <input
+              type="range"
+              id="roi-questions"
+              min={questions.min}
+              max={questions.max}
+              step={questions.step}
+              value={questions.value}
+            />
+          </div>
+          <div class="roi-field">
+            <label for="roi-minutes">
+              {minutes.label} <span class="val" id="roi-minutes-val">{minutes.value}</span>
+            </label>
+            <input
+              type="range"
+              id="roi-minutes"
+              min={minutes.min}
+              max={minutes.max}
+              step={minutes.step}
+              value={minutes.value}
+            />
+          </div>
+          <div class="roi-field">
+            <label for="roi-rate">
+              {rate.label} <span class="val" id="roi-rate-val">{rate.value}</span>
+            </label>
+            <input
+              type="range"
+              id="roi-rate"
+              min={rate.min}
+              max={rate.max}
+              step={rate.step}
+              value={rate.value}
+            />
+          </div>
+        </div>
+
+        <div class="roi-outputs" aria-live="polite">
+          <div class="roi-out">
+            <p class="k">Часов в месяц уходит на это сейчас</p>
+            <p class="v" id="roi-out-hours">0 <span>ч/мес</span></p>
+          </div>
+          <div class="roi-out">
+            <p class="k">Во сколько это обходится компании</p>
+            <p class="v" id="roi-out-money">0 <span>₽/мес</span></p>
+          </div>
+          <button class="copy-btn" id="roi-copy" type="button">{demo.roi.copyButton}</button>
+          <p class="copy-msg" id="roi-copy-msg" role="status"></p>
+        </div>
+      </div>
+
+      <p class="note measure">{demo.roi.note}</p>
+    </div>
   </Container>
 </Section>
 
-<style>
-  h2 {
-    font-size: var(--text-2xl);
+<script define:vars={{ copiedMessage: demo.roi.copiedMessage, copyFailMessage: demo.roi.copyFailMessage }}>
+  const peopleEl = document.getElementById('roi-people');
+  const questionsEl = document.getElementById('roi-questions');
+  const minutesEl = document.getElementById('roi-minutes');
+  const rateEl = document.getElementById('roi-rate');
+
+  function fmt(n) {
+    return Math.round(n).toLocaleString('ru-RU');
   }
 
-  .intro {
-    margin-top: var(--space-5);
-    font-size: var(--text-lg);
+  function calc() {
+    const people = parseFloat(peopleEl.value);
+    const questions = parseFloat(questionsEl.value);
+    const minutes = parseFloat(minutesEl.value);
+    const rate = parseFloat(rateEl.value);
+
+    document.getElementById('roi-people-val').textContent = String(people);
+    document.getElementById('roi-questions-val').textContent = String(questions);
+    document.getElementById('roi-minutes-val').textContent = String(minutes);
+    document.getElementById('roi-rate-val').textContent = fmt(rate);
+
+    // Формула дословно из docs/old-site-calculator.md: 21 — рабочих дней в месяце.
+    const hoursPerMonth = (people * questions * minutes * 21) / 60;
+    const moneyPerMonth = hoursPerMonth * rate;
+
+    document.getElementById('roi-out-hours').innerHTML = fmt(hoursPerMonth) + ' <span>ч/мес</span>';
+    document.getElementById('roi-out-money').innerHTML = fmt(moneyPerMonth) + ' <span>₽/мес</span>';
+
+    return { people, questions, minutes, rate, hoursPerMonth, moneyPerMonth };
+  }
+
+  [peopleEl, questionsEl, minutesEl, rateEl].forEach((el) => el.addEventListener('input', calc));
+  calc();
+
+  const copyBtn = document.getElementById('roi-copy');
+  const copyMsg = document.getElementById('roi-copy-msg');
+  copyBtn.addEventListener('click', () => {
+    const { people, questions, minutes, rate, hoursPerMonth, moneyPerMonth } = calc();
+    const text =
+      `Расчёт стоимости поиска информации (TAINA Studio)\n\n` +
+      `Вводные: ${people} сотрудников, ${questions} вопросов/день на человека, ${minutes} мин на ответ, ${fmt(rate)} ₽/час\n\n` +
+      `Сейчас уходит: ${fmt(hoursPerMonth)} часов в месяц (≈ ${fmt(moneyPerMonth)} ₽/месяц)\n\n` +
+      `AI-пилот — 70 000 ₽, AI-разбор (если нужен предварительный анализ) — 15 000 ₽\n` +
+      `taina.studio`;
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        copyMsg.textContent = copiedMessage;
+        setTimeout(() => {
+          copyMsg.textContent = '';
+        }, 4000);
+      })
+      .catch(() => {
+        copyMsg.textContent = copyFailMessage;
+      });
+  });
+</script>
+
+<style>
+  .eyebrow {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-gold);
+    margin-bottom: var(--space-3);
+  }
+
+  h2 {
+    font-size: var(--text-2xl);
+    max-width: 22ch;
+  }
+
+  h3 {
+    font-size: var(--text-xl);
+    max-width: 24ch;
+  }
+
+  .lede {
+    margin-top: var(--space-4);
     color: var(--color-sand);
+    font-size: var(--text-lg);
+  }
+
+  .rag-note {
+    margin-top: var(--space-5);
+    padding: var(--space-4) var(--space-5);
+    border-left: 2px solid var(--color-gold);
+    background: color-mix(in srgb, var(--color-gold) 5%, transparent);
+    color: var(--color-sand);
+    font-style: italic;
   }
 
   .steps {
@@ -49,28 +230,29 @@ import { demo } from '@/content/copy';
 
   .step {
     display: grid;
-    grid-template-columns: 40px 1fr;
+    grid-template-columns: 100px 1fr;
     gap: var(--space-4);
   }
 
-  .step-n {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 1px solid var(--color-line);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--text-sm);
-    font-weight: 600;
+  @media (max-width: 560px) {
+    .step {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .step-tag {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    letter-spacing: 0.06em;
     color: var(--color-gold);
-    flex: none;
+    padding-top: 3px;
   }
 
   .step h3 {
     font-family: var(--font-sans);
     font-size: var(--text-base);
     font-weight: 600;
+    max-width: none;
   }
 
   .step p {
@@ -81,6 +263,176 @@ import { demo } from '@/content/copy';
 
   .privacy {
     margin-top: var(--space-7);
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+  }
+
+  .block {
+    margin-top: var(--space-8);
+    padding-top: var(--space-8);
+    border-top: 1px solid var(--color-line);
+  }
+
+  .block-title {
+    font-size: var(--text-xl);
+  }
+
+  .scenarios {
+    margin: var(--space-5) 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .scenario {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    padding: var(--space-5);
+  }
+
+  .scenario--refusal {
+    border-color: var(--color-line);
+  }
+
+  .scenario .q {
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    color: var(--color-ivory);
+  }
+
+  .scenario .tag {
+    margin-top: var(--space-2);
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gold);
+  }
+
+  .scenario--refusal .tag {
+    color: var(--color-sand);
+  }
+
+  .scenario .a {
+    margin-top: var(--space-2);
+    color: var(--color-sand);
+    max-width: var(--measure);
+  }
+
+  .roi {
+    margin-top: var(--space-6);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border: 1px solid var(--color-line);
+  }
+
+  @media (max-width: 820px) {
+    .roi {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .roi-inputs {
+    padding: var(--space-6);
+    border-right: 1px solid var(--color-line);
+  }
+
+  @media (max-width: 820px) {
+    .roi-inputs {
+      border-right: none;
+      border-bottom: 1px solid var(--color-line);
+    }
+  }
+
+  .roi-field {
+    margin-bottom: var(--space-5);
+  }
+
+  .roi-field:last-child {
+    margin-bottom: 0;
+  }
+
+  .roi-field label {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+    margin-bottom: var(--space-3);
+  }
+
+  .roi-field .val {
+    color: var(--color-gold);
+    font-weight: 600;
+  }
+
+  .roi-field input[type='range'] {
+    width: 100%;
+    accent-color: var(--color-gold);
+  }
+
+  .roi-outputs {
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-5);
+  }
+
+  .roi-out .k {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-sand);
+    margin-bottom: var(--space-2);
+  }
+
+  .roi-out .v {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: var(--text-2xl);
+    color: var(--color-gold);
+  }
+
+  .roi-out .v span {
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+    font-family: var(--font-sans);
+  }
+
+  .copy-btn {
+    align-self: flex-start;
+    margin-top: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    font: inherit;
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+    background: transparent;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition:
+      color var(--duration-response) var(--ease-out),
+      border-color var(--duration-response) var(--ease-out);
+  }
+
+  .copy-btn:hover {
+    color: var(--color-ivory);
+    border-color: var(--color-gold);
+  }
+
+  .copy-msg {
+    min-height: 1.2em;
+    font-size: var(--text-sm);
+    color: var(--color-gold);
+  }
+
+  .note {
+    margin-top: var(--space-4);
     font-size: var(--text-sm);
     color: var(--color-sand);
   }

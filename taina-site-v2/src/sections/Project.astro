@@ -1,29 +1,51 @@
 ---
 import Section from '@/components/Section.astro';
 import Container from '@/components/Container.astro';
-import { project, reviewApproved } from '@/content/copy';
+import { project } from '@/content/copy';
 ---
 
 <Section id="project" label={project.title}>
   <Container>
     <h2>{project.title}</h2>
+
     <div class="grid">
       <article class="card">
+        <p class="eyebrow">{project.case.eyebrow}</p>
         <h3>{project.case.title}</h3>
-        <p>{project.case.description}</p>
-        <p class="disclaimer">{project.case.disclaimer}</p>
-        {
-          reviewApproved && (
-            <blockquote class="review">
-              <p>«{project.case.review.quote}»</p>
-              <cite>{project.case.review.attribution}</cite>
-            </blockquote>
-          )
-        }
+        <p class="lede">{project.case.lede}</p>
+
+        <dl class="cells">
+          {
+            project.case.cells.map((cell) => (
+              <div class="cell">
+                <dt>{cell.label}</dt>
+                <dd>{cell.text}</dd>
+              </div>
+            ))
+          }
+        </dl>
+
+        <p class="foot">{project.case.foot}</p>
       </article>
+
       <article class="card card--teaser" aria-hidden="true">
         <p class="teaser">{project.teaser}</p>
       </article>
+    </div>
+
+    <div class="block">
+      <p class="eyebrow">{project.market.eyebrow}</p>
+      <h3>{project.market.title}</h3>
+      <p class="lede measure">{project.market.lede}</p>
+
+      <div class="market">
+        <div class="stat">
+          <p class="num">{project.market.stat}</p>
+          <p class="src">{project.market.source}</p>
+        </div>
+        <p class="market-text measure">{project.market.text}</p>
+        <p class="fine measure">{project.market.fine}</p>
+      </div>
     </div>
   </Container>
 </Section>
@@ -31,6 +53,16 @@ import { project, reviewApproved } from '@/content/copy';
 <style>
   h2 {
     font-size: var(--text-2xl);
+  }
+
+  .eyebrow {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-gold);
+    margin-bottom: var(--space-3);
   }
 
   .grid {
@@ -59,32 +91,40 @@ import { project, reviewApproved } from '@/content/copy';
     max-width: var(--measure);
   }
 
-  .card p {
+  .card .lede {
     margin-top: var(--space-3);
     color: var(--color-sand);
     max-width: var(--measure);
   }
 
-  .disclaimer {
-    font-size: var(--text-sm);
+  .cells {
+    margin: var(--space-5) 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
   }
 
-  .review {
-    margin: var(--space-5) 0 0;
-    padding-left: var(--space-4);
-    border-left: 2px solid var(--color-gold);
-    font-family: var(--font-serif);
-    font-size: var(--text-lg);
+  .cell dt {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-sand);
+    margin-bottom: var(--space-1);
+  }
+
+  .cell dd {
+    margin: 0;
     color: var(--color-ivory);
   }
 
-  .review cite {
-    display: block;
-    margin-top: var(--space-3);
-    font-family: var(--font-sans);
-    font-style: normal;
+  .foot {
+    margin-top: var(--space-5);
+    padding-top: var(--space-4);
+    border-top: 1px dashed var(--color-line);
     font-size: var(--text-sm);
     color: var(--color-sand);
+    font-style: italic;
   }
 
   .card--teaser {
@@ -99,5 +139,62 @@ import { project, reviewApproved } from '@/content/copy';
     color: var(--color-sand);
     font-family: var(--font-serif);
     font-size: var(--text-lg);
+  }
+
+  .block {
+    margin-top: var(--space-8);
+    padding-top: var(--space-8);
+    border-top: 1px solid var(--color-line);
+  }
+
+  .block h3 {
+    font-size: var(--text-xl);
+    max-width: 22ch;
+  }
+
+  .lede {
+    margin-top: var(--space-4);
+    color: var(--color-sand);
+    font-size: var(--text-lg);
+  }
+
+  .market {
+    margin-top: var(--space-6);
+    border: 1px solid var(--color-line);
+    padding: var(--space-6);
+  }
+
+  .stat {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-5);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-4);
+  }
+
+  .stat .num {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    color: var(--color-gold);
+    line-height: 1;
+  }
+
+  .stat .src {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    color: var(--color-sand);
+    letter-spacing: 0.04em;
+  }
+
+  .market-text {
+    color: var(--color-sand);
+  }
+
+  .fine {
+    margin-top: var(--space-4);
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+    font-style: italic;
   }
 </style>
