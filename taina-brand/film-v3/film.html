@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>TAINA — «Он видит больше», рисованная версия (исходник)</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  html,body{ margin:0; background:#040304; height:100%; }
+  canvas{ display:block; height:100vh; width:auto; max-width:100vw; margin:0 auto; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+/*
+  «Он видит больше» — полностью нарисованная версия, без фотографий. 30 с, 1080×1920. Кадр = render(t).
+  0–5.8     Взгляд  — в темноте открываются янтарные глаза, контровой свет обрисовывает кота; нырок в зрачок
+  5.8–13    Поиск   — девушка на полу среди светящихся бумаг; вспышки: регламенты, договоры…
+  13–18.3   Свет    — камера поднимается: арка, в ней загорается красный ромб, луч света вниз
+  18.3–23.6 Порядок — бумаги стягиваются в ромб, шёлковые ленты; «Ответ уже есть. TAINA помогает его найти.»
+  23.6–26.9 Рядом   — Бегемот на стопке книг в луче света
+  26.9–30   Знак    — TAINA STUDIO, металлическое золото
+*/
+const W = 1080, H = 1920, DUR = 30;
+window.FILM = { w: W, h: H, dur: DUR };
+const cv = document.getElementById('c'); cv.width = W; cv.height = H;
+const g = cv.getContext('2d');
+
+const C = { void:'#040304', gold:'#C9974A', goldHi:'#F2CF8A', goldDk:'#6B4A1E', red:'#D0141C', ink:'#EFE6D6', amber:'#F0A83A', fur:'#050404' };
+const SERIF = '"Cormorant Garamond", Georgia, serif';
+
+function rng(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, k) => a + (b - a) * k;
+const eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const eo = x => 1 - Math.pow(1 - x, 3);
+const ei = x => x * x * x;
+const bell = (t, a, b, fi = .4, fo = .4) => Math.min(seg(t, a, a + fi), 1 - seg(t, b - fo, b));
+const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${a})`; };
+
+/* ---------- силуэты: контур из кривых → точки, нормали, «мех» ---------- */
+function shape(start, segs, seed, n = 14) {
+  const pts = []; let [px, py] = start; pts.push([px, py]);
+  for (const s of segs) {
+    if (s.length === 2) { for (let i = 1; i <= n; i++) { const k = i / n; pts.push([lerp(px, s[0], k), lerp(py, s[1], k)]); } [px, py] = s; }
+    else {
+      const [ax, ay, bx, by, x, y] = s;
+      for (let i = 1; i <= n * 2; i++) { const k = i / (n * 2), u = 1 - k;
+        pts.push([u*u*u*px + 3*u*u*k*ax + 3*u*k*k*bx + k*k*k*x, u*u*u*py + 3*u*u*k*ay + 3*u*k*k*by + k*k*k*y]); }
+      [px, py] = [x, y];
+    }
+  }
+  const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length, cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+  const r = rng(seed), m = pts.length;
+  return pts.map((p, i) => {
+    const a = pts[(i - 1 + m) % m], b = pts[(i + 1) % m];
+    let nx = b[1] - a[1], ny = -(b[0] - a[0]); const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
+    if (nx * (p[0] - cx) + ny * (p[1] - cy) < 0) { nx = -nx; ny = -ny; }
+    return { x: p[0], y: p[1], nx, ny, r1: r(), r2: r(), r3: r() };
+  });
+}
+// Силуэт с контровым светом. light — направление К источнику света
+function silhouette(S, x, y, s, { light = [1, -.4], rim = C.goldHi, rimA = 1, fur = 1, glowA = .5, fill = C.fur } = {}) {
+  const [lx0, ly0] = light, ll = Math.hypot(lx0, ly0), lx = lx0 / ll, ly = ly0 / ll;
+  const P = S.map(p => ({ ...p, X: x + p.x * s, Y: y + p.y * s, f: Math.max(0, p.nx * lx + p.ny * ly) }));
+  const poly = () => { g.beginPath(); P.forEach((p, i) => i ? g.lineTo(p.X, p.Y) : g.moveTo(p.X, p.Y)); g.closePath(); };
+  if (glowA > 0 && rimA > 0) { g.save(); g.shadowColor = rgba(rim, glowA * rimA); g.shadowBlur = 60; g.shadowOffsetX = lx * 10; g.shadowOffsetY = ly * 10; g.fillStyle = fill; poly(); g.fill(); g.restore(); }
+  g.fillStyle = fill; poly(); g.fill();
+  if (rimA <= 0) return P;
+  g.save(); g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+  for (let i = 0; i < P.length; i++) {
+    const p = P[i], q = P[(i + 1) % P.length], f = (p.f + q.f) / 2;
+    if (f < .05) continue;
+    g.strokeStyle = rgba(rim, rimA * Math.pow(f, 1.4)); g.lineWidth = 1.2 + 2.4 * f;
+    g.beginPath(); g.moveTo(p.X, p.Y); g.lineTo(q.X, q.Y); g.stroke();
+  }
+  if (fur > 0) for (const p of P) {
+    if (p.f < .12) continue;
+    for (const [rr, off] of [[p.r1, 0], [p.r2, .5]]) {
+      const len = (5 + 14 * rr) * fur, ang = Math.atan2(p.ny, p.nx) + (p.r3 - .5) * .9 + off * (rr - .5);
+      g.strokeStyle = rgba(rim, rimA * p.f * (.25 + .45 * rr)); g.lineWidth = .8 + rr * .6;
+      g.beginPath(); g.moveTo(p.X - p.nx * 3, p.Y - p.ny * 3); g.lineTo(p.X + Math.cos(ang) * len, p.Y + Math.sin(ang) * len); g.stroke();
+    }
+  }
+  g.restore();
+  return P;
+}
+
+// Кот сидит анфас. Единицы: ширина ~190, высота 300, начало — середина низа
+const CAT = shape([-70, 0], [
+  [-96, -40, -94, -92, -78, -122], [-66, -150, -54, -162, -47, -176], [-60, -186, -66, -198, -64, -210],
+  [-62, -226, -60, -238, -56, -248], [-54, -266, -52, -282, -49, -296], [-40, -284, -30, -270, -22, -259],
+  [-12, -263, 12, -263, 22, -259], [30, -270, 40, -284, 49, -296], [52, -282, 54, -266, 56, -248],
+  [60, -238, 62, -226, 64, -210], [66, -198, 60, -186, 47, -176], [54, -162, 66, -150, 78, -122],
+  [94, -92, 96, -40, 70, 0], [30, 4, -30, 4, -70, 0]
+], 7);
+const TAIL = (() => { // хвост — трубка вокруг кривой
+  const c = [], w = k => lerp(13, 7, k);
+  for (let i = 0; i <= 30; i++) { const k = i / 30, u = 1 - k;
+    c.push([u*u*u*62 + 3*u*u*k*120 + 3*u*k*k*90 + k*k*k*-20, u*u*u*-12 + 3*u*u*k*-6 + 3*u*k*k*22 + k*k*k*10]); }
+  const L = [], R = [];
+  c.forEach((p, i) => { const a = c[Math.max(0, i - 1)], b = c[Math.min(c.length - 1, i + 1)]; let nx = -(b[1] - a[1]), ny = b[0] - a[0]; const l = Math.hypot(nx, ny); nx /= l; ny /= l;
+    L.push([p[0] + nx * w(i / 30), p[1] + ny * w(i / 30)]); R.push([p[0] - nx * w(i / 30), p[1] - ny * w(i / 30)]); });
+  const all = [...L, ...R.reverse()];
+  return shape(all[0], all.slice(1).map(p => [p[0], p[1]]), 17, 2);
+})();
+const CAT_EYES = [[-24, -222], [24, -222]];
+
+// Девушка сидит на полу в профиль (смотрит вправо), держит лист
+const GIRL = shape([-52, 0], [
+  [-68, -40, -74, -96, -60, -126], [-55, -136, -50, -141, -44, -146],
+  [-52, -150, -60, -162, -54, -172], [-48, -184, -34, -186, -28, -178],
+  [-20, -190, 2, -192, 12, -180], [19, -172, 22, -162, 24, -153], [29, -149], [25, -145],
+  [26, -140, 20, -133, 11, -132], [3, -127],
+  [20, -112, 38, -100, 56, -92], [67, -92],
+  [77, -88, 87, -72, 87, -58], [87, -40, 83, -14, 79, -5], [95, -3], [95, 0], [-52, 0]
+], 23);
+
+function catFace(x, y, s, open, pupil, a = 1, glint = 0) {
+  if (a <= 0) return;
+  for (const [ex, ey] of CAT_EYES) {
+    const X = x + ex * s, Y = y + ey * s, w = 11 * s, h = 7.2 * s * open;
+    if (open > .02) {
+      g.save(); g.globalAlpha = a;
+      g.beginPath(); g.moveTo(X - w, Y + 1 * s); g.quadraticCurveTo(X, Y - h * 1.35, X + w, Y - 1 * s); g.quadraticCurveTo(X, Y + h * 1.35, X - w, Y + 1 * s); g.closePath();
+      const gr = g.createRadialGradient(X, Y, 0, X, Y, w);
+      gr.addColorStop(0, '#FFE08A'); gr.addColorStop(.45, '#F2A83A'); gr.addColorStop(1, '#6A3A06');
+      g.fillStyle = gr; g.fill(); g.clip();
+      g.fillStyle = '#050302'; g.beginPath(); g.ellipse(X, Y, w * lerp(.14, 1.2, pupil), h * 1.5, 0, 0, 7); g.fill();
+      g.fillStyle = 'rgba(255,250,235,.9)'; g.beginPath(); g.arc(X + w * .32, Y - h * .35, Math.max(1.2, s * 1.4), 0, 7); g.fill();
+      g.restore();
+      glow(X, Y, w * 3.2, C.amber, .28 * a * open);
+    }
+    if (glint > 0) star4(X + w * .3, Y - h * .4, 9 * s * .35 + 10, glint);
+  }
+  // нос и усы
+  g.save(); g.globalAlpha = a * .5; g.strokeStyle = rgba(C.goldHi, .5); g.lineWidth = Math.max(.6, s * .18);
+  for (const sgn of [-1, 1]) for (let i = 0; i < 3; i++) {
+    g.beginPath(); g.moveTo(x + sgn * 8 * s, y - 202 * s + i * 2 * s);
+    g.quadraticCurveTo(x + sgn * 30 * s, y - (204 - i * 3) * s, x + sgn * (52 + i * 4) * s, y - (198 - i * 7) * s); g.stroke();
+  }
+  g.restore();
+}
+
+/* ---------- примитивы ---------- */
+function glow(x, y, r, color, a, mode = 'lighter') {
+  if (a <= 0 || r <= 0) return;
+  g.save(); g.globalCompositeOperation = mode;
+  const gr = g.createRadialGradient(x, y, 0, x, y, r);
+  gr.addColorStop(0, rgba(color, a)); gr.addColorStop(.35, rgba(color, a * .28)); gr.addColorStop(1, rgba(color, 0));
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.restore();
+}
+function gem(x, y, w, h, a) {
+  if (a <= 0) return;
+  glow(x, y, h * 1.6, C.red, .55 * a);
+  glow(x, y, h * .7, '#FF5A3C', .35 * a);
+  g.save(); g.globalAlpha = a; g.translate(x, y);
+  const T = [0, -h / 2], R = [w / 2, 0], B = [0, h / 2], L = [-w / 2, 0], O = [w * .06, -h * .04];
+  const tri = (p, q, r, c) => { g.fillStyle = c; g.beginPath(); g.moveTo(...p); g.lineTo(...q); g.lineTo(...r); g.closePath(); g.fill(); };
+  tri(T, L, O, '#E3372C'); tri(T, R, O, '#A8121A'); tri(L, B, O, '#7E0B10'); tri(R, B, O, '#3E0406');
+  const sh = g.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
+  sh.addColorStop(0, 'rgba(255,190,150,.35)'); sh.addColorStop(.45, 'rgba(255,120,90,0)');
+  g.fillStyle = sh; g.beginPath(); g.moveTo(...T); g.lineTo(...R); g.lineTo(...B); g.lineTo(...L); g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(255,150,110,.9)'; g.lineWidth = Math.max(1, w * .012);
+  g.beginPath(); g.moveTo(...T); g.lineTo(...R); g.lineTo(...B); g.lineTo(...L); g.closePath(); g.stroke();
+  g.strokeStyle = 'rgba(255,170,130,.35)'; g.lineWidth = Math.max(.6, w * .006);
+  g.beginPath(); g.moveTo(...T); g.lineTo(...O); g.lineTo(...B); g.moveTo(...L); g.lineTo(...O); g.lineTo(...R); g.stroke();
+  g.restore();
+}
+function flare(x, y, len, a, color = '#FF6A48') {
+  if (a <= 0) return;
+  g.save(); g.globalCompositeOperation = 'lighter';
+  for (const [dx, dy, l, th] of [[1, 0, len, 3], [0, 1, len * .7, 2.4], [.7, .7, len * .22, 1.2], [.7, -.7, len * .22, 1.2]]) {
+    const gr = g.createLinearGradient(x - dx * l, y - dy * l, x + dx * l, y + dy * l);
+    gr.addColorStop(0, rgba(color, 0)); gr.addColorStop(.5, rgba('#FFE2C8', .9 * a)); gr.addColorStop(1, rgba(color, 0));
+    g.strokeStyle = gr; g.lineWidth = th; g.beginPath(); g.moveTo(x - dx * l, y - dy * l); g.lineTo(x + dx * l, y + dy * l); g.stroke();
+  }
+  g.restore();
+  glow(x, y, len * .25, color, .6 * a);
+}
+function star4(x, y, r, a, color = C.goldHi) {
+  if (a <= 0) return;
+  g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = rgba(color, a); g.translate(x, y);
+  g.beginPath(); g.moveTo(0, -r); g.quadraticCurveTo(0, 0, r * .9, 0); g.quadraticCurveTo(0, 0, 0, r); g.quadraticCurveTo(0, 0, -r * .9, 0); g.quadraticCurveTo(0, 0, 0, -r); g.fill();
+  g.restore(); glow(x, y, r * 1.6, color, .4 * a);
+}
+function text(str, x, y, size, color, a, { italic = false, weight = 500, ls = 0, caps = false, glowA = .35 } = {}) {
+  if (a <= 0) return;
+  g.save(); g.globalAlpha = a;
+  g.font = `${italic ? 'italic ' : ''}${weight} ${size}px ${SERIF}`; g.letterSpacing = ls + 'px';
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = color;
+  g.shadowColor = rgba(C.gold, glowA); g.shadowBlur = size * .45;
+  g.fillText(caps ? str.toUpperCase() : str, x + ls / 2, y);
+  g.restore();
+}
+function divider(y, half, p, a) {
+  if (p <= 0 || a <= 0) return;
+  const cx = W / 2, l = half * eo(p);
+  g.save(); g.globalAlpha = a;
+  const gr = g.createLinearGradient(cx - l, 0, cx + l, 0);
+  gr.addColorStop(0, rgba(C.gold, 0)); gr.addColorStop(.5, rgba(C.goldHi, .95)); gr.addColorStop(1, rgba(C.gold, 0));
+  g.strokeStyle = gr; g.lineWidth = 1.4; g.beginPath(); g.moveTo(cx - l, y); g.lineTo(cx + l, y); g.stroke();
+  g.fillStyle = C.goldHi; g.translate(cx, y); g.rotate(Math.PI / 4); const d = 8 * eo(seg(p, .2, .7)); g.fillRect(-d / 2, -d / 2, d, d);
+  g.restore();
+  for (const k of [-.55, .55]) { g.fillStyle = rgba(C.goldHi, a * seg(p, .5, 1)); g.beginPath(); g.arc(cx + k * half, y, 2.4, 0, 7); g.fill(); }
+  for (const k of [-.3, .3]) star4(cx + k * half, y, 5, a * seg(p, .6, 1) * .7);
+}
+// Стрельчатая арка — золотая линия, рисуется снизу вверх (p 0..1)
+function arch(cx, base, top, half, p, a, lw = 2) {
+  if (p <= 0 || a <= 0) return;
+  const shoulder = top + half * 1.25;
+  const path = side => { const pts = [];
+    for (let i = 0; i <= 40; i++) pts.push([cx + side * half, lerp(base, shoulder, i / 40)]);
+    for (let i = 1; i <= 40; i++) { const k = i / 40, u = 1 - k;
+      pts.push([u*u*(cx + side * half) + 2*u*k*(cx + side * half) + k*k*cx, u*u*shoulder + 2*u*k*(top + half * .25) + k*k*top]); }
+    return pts; };
+  g.save(); g.globalCompositeOperation = 'lighter'; g.lineWidth = lw; g.strokeStyle = rgba(C.gold, .85 * a);
+  g.shadowColor = rgba(C.goldHi, .7 * a); g.shadowBlur = 16;
+  for (const side of [-1, 1]) { const pts = path(side), n = Math.floor(pts.length * p);
+    g.beginPath(); pts.slice(0, Math.max(2, n)).forEach((q, i) => i ? g.lineTo(...q) : g.moveTo(...q)); g.stroke(); }
+  g.restore();
+}
+function paperQuad(x, y, w, rot, a, lit = 1, flat = 0) {
+  if (a <= 0) return;
+  g.save(); g.translate(x, y);
+  if (flat) { g.scale(1, .3); g.rotate(rot); } else { g.rotate(rot); g.transform(1, 0, Math.sin(rot * 1.7) * .45, .82 + .18 * Math.cos(rot * 1.3), 0, 0); }
+  if (w > 64 && !flat) g.filter = `blur(${((w - 64) / 12).toFixed(1)}px)`;
+  const h = w * 1.3;
+  const gr = g.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
+  gr.addColorStop(0, `rgba(255,236,200,${a * lit})`); gr.addColorStop(.5, `rgba(${Math.round(lerp(90, 238, lit))},${Math.round(lerp(55, 170, lit))},${Math.round(lerp(25, 100, lit))},${a * .9})`); gr.addColorStop(1, `rgba(60,34,14,${a * .8})`);
+  g.fillStyle = gr; g.fillRect(-w / 2, -h / 2, w, h);
+  g.fillStyle = `rgba(80,45,15,${a * .35})`;
+  for (let i = 0; i < 6; i++) g.fillRect(-w / 2 + w * .12, -h / 2 + h * (.16 + i * .12), w * (i % 2 ? .55 : .72), Math.max(.8, w * .018));
+  g.restore();
+}
+// Шёлковая лента: пучок нитей с атласным блеском
+function ribbon(t, y0, amp, width, color, hi, a, phase = 0, speed = .8) {
+  if (a <= 0) return;
+  g.save(); g.globalCompositeOperation = 'lighter';
+  const N = 34;
+  for (let k = 0; k < N; k++) {
+    const q = k / (N - 1);
+    g.beginPath();
+    for (let x = -40; x <= W + 40; x += 14) {
+      const u = x / W;
+      const cy = y0 + Math.sin(u * 5.2 + t * speed + phase) * amp + Math.sin(u * 2.1 - t * .5 + phase) * amp * .5;
+      const wv = width * (.55 + .45 * Math.sin(u * 3.3 + t * .7 + phase));
+      const tw = Math.sin(u * 4 + t * .6 + phase); // перекрут
+      const y = cy + (q - .5) * wv * tw;
+      x === -40 ? g.moveTo(x, y) : g.lineTo(x, y);
+    }
+    const sheen = Math.pow(Math.max(0, Math.sin(q * Math.PI * 1.2 + t * .8 + phase)), 6);
+    g.strokeStyle = rgba(sheen > .3 ? hi : color, a * (.05 + .22 * sheen + .06 * Math.sin(q * 3.14)));
+    g.lineWidth = 1.6; g.stroke();
+  }
+  g.restore();
+}
+
+/* ---------- частицы ---------- */
+const dust = (() => { const r = rng(3); return Array.from({ length: 170 }, () => ({ x: r() * W, y: r() * H, s: .6 + r() * 2.2, v: 6 + r() * 16, ph: r() * 6.28, a: .12 + r() * .5 })); })();
+const flyers = (() => { const r = rng(21); return Array.from({ length: 22 }, () => ({ x: 560 + r() * 380, y: 1220 + r() * 300, vx: 25 + r() * 60, vy: -(60 + r() * 90), rot: r() * 6.28, vr: (r() - .5) * 1.6, w: 22 + r() * (r() > .8 ? 90 : 46), ph: r() * 6.28, delay: r() * 3 })); })();
+const floorPapers = (() => { const r = rng(9); return Array.from({ length: 46 }, () => ({ x: 40 + r() * 1000, y: 2395 + r() * 170, rot: r() * 6.28, w: 44 + r() * 64 })); })();
+const vortex = (() => { const r = rng(44); return Array.from({ length: 28 }, () => ({ th: r() * 6.28, r0: 560 + r() * 520, w: 26 + r() * (r() > .75 ? 90 : 44), rot: r() * 6.28, delay: r() * 1.4, spin: 1.6 + r() * 1.6 })); })();
+const grains = [0, 1, 2, 3].map(s => {
+  const c = document.createElement('canvas'); c.width = 270; c.height = 480;
+  const x = c.getContext('2d'), d = x.createImageData(270, 480), r = rng(100 + s);
+  for (let i = 0; i < d.data.length; i += 4) { const v = r() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+  x.putImageData(d, 0, 0); return c;
+});
+
+/* ---------- сцены ---------- */
+function sLook(t) { // 0–5.8 Взгляд
+  const open = eo(seg(t, .6, 1.5)) * (t > 3.6 && t < 3.78 ? .12 : 1); // одно моргание
+  let s = lerp(8.2, 6.2, eo(seg(t, 0, 5)));
+  const eye = CAT_EYES[0];
+  let ax = 540, ay = 800; // экранная точка между глаз
+  const dive = ei(seg(t, 4.9, 5.8));
+  let fx = 0, fy = -222;
+  if (dive > 0) { fx = lerp(0, eye[0], eo(seg(t, 4.9, 5.4))); s *= 1 + dive * 9; ay = lerp(800, H / 2, dive); }
+  const x = ax - fx * s, y = ay - fy * s;
+  const rim = eio(seg(t, 1.8, 4.4));
+  // луч сверху слева
+  { const gr = g.createLinearGradient(0, 0, W * .7, H * .6); gr.addColorStop(0, rgba(C.gold, .12 * rim)); gr.addColorStop(1, rgba(C.gold, 0)); g.fillStyle = gr; g.fillRect(0, 0, W, H); }
+  silhouette(CAT, x, y, s, { light: [-.6, -1], rimA: rim, fur: 2.6, glowA: .35 });
+  catFace(x, y, s, open, ei(seg(t, 5.0, 5.7)), 1);
+  text('Он видит больше.', W / 2, 1600, 88, C.ink, bell(t, 2.4, 5.0, .8, .4), { italic: true });
+  g.fillStyle = rgba(C.void, seg(t, 5.45, 5.8)); g.fillRect(0, 0, W, H);
+}
+
+const WORDS = ['регламенты', 'договоры', 'протоколы', 'переписки', 'прайсы', 'инструкции'];
+function sSearch(t) { // 5.8–18.3 Поиск и Свет (мир высотой ~2700)
+  const tilt = eio(seg(t, 13, 16.2));
+  const top = lerp(1150, 380, tilt), z = lerp(1, 1.06, seg(t, 5.8, 18.3));
+  const k = seg(t, 9, 13), amp = 5 * k * (1 - seg(t, 12.8, 13.3));
+  const shx = amp * Math.sin(t * 43), shy = amp * Math.cos(t * 37);
+  g.save(); g.translate(W / 2 + shx, H / 2 + shy); g.scale(z, z); g.translate(-W / 2, -H / 2 - top);
+  const FLOOR = 2400, GX = 430, GS = 2.7; // девушка
+  const hand = { x: GX + 64 * GS, y: FLOOR - 100 * GS };
+  const lamp = .85 + .15 * Math.sin(t * 7) * Math.sin(t * 3.3);
+  // пол
+  { const gr = g.createLinearGradient(0, FLOOR - 160, 0, FLOOR + 500); gr.addColorStop(0, rgba('#0B0806', 0)); gr.addColorStop(.25, '#0B0806'); gr.addColorStop(1, C.void); g.fillStyle = gr; g.fillRect(0, FLOOR - 160, W, 700); }
+  g.save(); g.translate(hand.x, FLOOR + 30); g.scale(1, .22); glow(0, 0, 700, '#FF9A3C', .35 * lamp); g.restore();
+  // арка и ромб (проявляются в «Свете»)
+  const D = { x: 540, y: 900 };
+  const archP = eo(seg(t, 15.4, 17.2));
+  arch(540, FLOOR - 10, 560, 300, archP, 1, 2.2);
+  arch(540, FLOOR - 10, 610, 262, archP, .45, 1.2);
+  const gA = eo(seg(t, 15.2, 16.4));
+  // луч от ромба вниз
+  if (gA > 0) { g.save(); g.globalCompositeOperation = 'lighter';
+    const gr = g.createLinearGradient(0, D.y, 0, FLOOR); gr.addColorStop(0, rgba('#FF6A40', .35 * gA)); gr.addColorStop(1, rgba(C.gold, .05 * gA));
+    g.fillStyle = gr; g.beginPath(); g.moveTo(D.x - 20, D.y); g.lineTo(D.x + 20, D.y); g.lineTo(D.x + 260, FLOOR); g.lineTo(D.x - 260, FLOOR); g.closePath(); g.fill(); g.restore(); }
+  gem(D.x, D.y, 150 * gA + 1, 270 * gA + 1, gA);
+  flare(D.x, D.y, lerp(120, 900, eo(seg(t, 16.2, 18.3))), seg(t, 16.1, 16.6) * (.7 + .3 * Math.sin(t * 5)));
+  // бумаги на полу
+  for (const p of floorPapers) {
+    const d = Math.hypot(p.x - hand.x, (p.y - FLOOR) * 3);
+    paperQuad(p.x, p.y, p.w, p.rot, .9, clamp(1.1 - d / 600) * lamp, 1);
+  }
+  // девушка: свет от листа в руках
+  glow(hand.x, hand.y, 380, '#FF9A3C', .45 * lamp);
+  silhouette(GIRL, GX, FLOOR, GS, { light: [1, .15], rim: '#FFC27A', rimA: .95 * lamp, fur: .5, glowA: .45 });
+  if (gA > 0) silhouette(GIRL, GX, FLOOR, GS, { light: [.2, -1], rim: '#FF8A5A', rimA: .6 * gA, fur: 0, glowA: 0 }); // свет ромба сверху
+  // линии руки и голени — чтобы поза читалась
+  g.save(); g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+  g.strokeStyle = rgba('#FFC27A', .55 * lamp); g.lineWidth = 2.2;
+  g.beginPath(); g.moveTo(GX - 30 * GS, FLOOR - 124 * GS); g.bezierCurveTo(GX - 10 * GS, FLOOR - 96 * GS, GX + 30 * GS, FLOOR - 90 * GS, hand.x - 4, hand.y + 4); g.stroke();
+  g.strokeStyle = rgba('#FFC27A', .3 * lamp); g.lineWidth = 1.6;
+  g.beginPath(); g.moveTo(GX + 40 * GS, FLOOR - 70 * GS); g.bezierCurveTo(GX + 20 * GS, FLOOR - 40 * GS, GX + 10 * GS, FLOOR - 12 * GS, GX - 20 * GS, FLOOR - 4 * GS); g.stroke();
+  g.restore();
+  paperQuad(hand.x + 14, hand.y - 18, 84, -.35, 1, lamp * 1.15);
+  glow(hand.x, hand.y, 140, '#FFE0A8', .5 * lamp);
+  // летящие бумаги
+  const pa = seg(t, 6, 7.2) * (1 - seg(t, 15.5, 17));
+  for (const p of flyers) {
+    const tt = Math.max(0, t - 5.8 - p.delay * .3) * (1 + k * 1.2);
+    const x = p.x + p.vx * tt + Math.sin(tt * 1.3 + p.ph) * 26, y = top + p.y + p.vy * tt;
+    const a = pa * clamp((y - top - 80) / 400) * .85;
+    paperQuad(x, y, p.w, p.rot + p.vr * tt, a, .75 + .25 * Math.sin(tt + p.ph));
+  }
+  g.restore();
+  // затемнение низа под текст
+  { const gr = g.createLinearGradient(0, 1420, 0, H); gr.addColorStop(0, rgba(C.void, 0)); gr.addColorStop(1, rgba(C.void, .85 * (1 - tilt * .5))); g.fillStyle = gr; g.fillRect(0, 1420, W, H - 1420); }
+  // тексты
+  text('Ответ где-то здесь.', W / 2, 1660, 82, C.ink, bell(t, 6.8, 8.9, .6, .4), { italic: true });
+  WORDS.forEach((w, i) => {
+    const s0 = 9.0 + i * .62, a = bell(t, s0, s0 + .58, .06, .12);
+    if (a > 0) text(w, W / 2 + Math.sin(i * 7) * 60, 1660 + Math.cos(i * 5) * 40, 60, C.goldHi, a * (.85 + .15 * Math.sin(t * 70)), { caps: true, ls: 16, weight: 600, glowA: .6 });
+  });
+  text('Ответ был рядом.', W / 2, 300, 86, C.ink, bell(t, 16.4, 18.4, .7, .4), { italic: true });
+  const dy = H / 2 + (900 - H / 2 - top) * z;
+  const bloom = bell(t, 17.8, 18.9, .5, .6);
+  if (bloom > 0) { glow(540, dy, 1600 * bloom, C.red, .9 * bloom); glow(540, dy, 900 * bloom, '#FFD2A8', .8 * bloom); }
+}
+
+function sOrder(t) { // 18.3–23.6 Порядок
+  const D = { x: W / 2, y: 780 };
+  const intro = eo(seg(t, 18.3, 19.2));
+  ribbon(t, 1540, 120, 150, C.red, '#FF6A5A', seg(t, 19, 20.5), 0);
+  ribbon(t, 1620, 90, 110, C.gold, C.goldHi, seg(t, 19.4, 20.8), 2.1, .6);
+  const vl = eo(seg(t, 18.6, 19.8));
+  if (vl > 0) {
+    const gr = g.createLinearGradient(0, D.y - 700, 0, D.y + 700);
+    gr.addColorStop(0, rgba(C.gold, 0)); gr.addColorStop(.5, rgba(C.goldHi, .8)); gr.addColorStop(1, rgba(C.gold, 0));
+    g.strokeStyle = gr; g.lineWidth = 1.3; g.beginPath(); g.moveTo(D.x, D.y - 700 * vl); g.lineTo(D.x, D.y + 700 * vl); g.stroke();
+  }
+  // кольца-орбиты
+  g.save(); g.strokeStyle = rgba(C.gold, .5 * seg(t, 19, 20)); g.lineWidth = 1.2;
+  g.beginPath(); g.ellipse(D.x, D.y, 330, 110, -.18, 0, 6.29 * eo(seg(t, 19, 20.6))); g.stroke();
+  g.strokeStyle = rgba(C.gold, .25 * seg(t, 19.3, 20.3));
+  g.beginPath(); g.arc(D.x, D.y, 250, -Math.PI / 2, -Math.PI / 2 + 6.29 * eo(seg(t, 19.3, 21))); g.stroke(); g.restore();
+  let absorbed = 0;
+  for (const v of vortex) {
+    const q = seg(t, 18.4 + v.delay, 20.6 + v.delay);
+    if (q >= 1) { absorbed++; continue; }
+    const r = v.r0 * (1 - eio(q)), th = v.th + q * v.spin;
+    const x = D.x + Math.cos(th) * r, y = D.y + Math.sin(th) * r * 1.25;
+    const a = seg(t, 18.4, 18.9) * (1 - seg(q, .75, 1));
+    paperQuad(x, y, v.w * lerp(1, .2, q), v.rot + q * 5, a * .9, .9);
+    if (q > .55) { g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = rgba(C.goldHi, .5 * a); g.lineWidth = 1.2;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(lerp(x, D.x, .35), lerp(y, D.y, .35)); g.stroke(); g.restore(); }
+  }
+  gem(D.x, D.y, lerp(300, 190, intro), lerp(560, 350, intro), 1);
+  flare(D.x, D.y, 520 + 180 * Math.sin(t * 2), .45 + .25 * absorbed / vortex.length);
+  for (let i = 0; i < 7; i++) star4(D.x + Math.cos(i * 2.4 + t * .5) * (260 + i * 22), D.y + Math.sin(i * 2.4 + t * .5) * 120, 7 + i % 3 * 3, seg(t, 20, 21) * (.5 + .5 * Math.sin(t * 3 + i)));
+  text('Ответ уже есть.', W / 2, 1230, 92, C.ink, seg(t, 20.8, 21.6), {});
+  text('TAINA помогает его найти.', W / 2, 1340, 82, C.goldHi, seg(t, 21.5, 22.3), { italic: true, glowA: .55 });
+  divider(1440, 250, seg(t, 22, 22.9), 1);
+  g.fillStyle = rgba(C.void, seg(t, 23.1, 23.6)); g.fillRect(0, 0, W, H);
+}
+
+function sNear(t) { // 23.6–26.9 Рядом
+  const s = lerp(2.55, 2.7, seg(t, 23.6, 26.9)), x = 540, y = 1300;
+  // луч света сверху слева
+  g.save(); g.globalCompositeOperation = 'lighter';
+  const gr = g.createLinearGradient(80, 0, 700, 1300); gr.addColorStop(0, rgba(C.gold, .22)); gr.addColorStop(1, rgba(C.gold, 0));
+  g.fillStyle = gr; g.beginPath(); g.moveTo(-100, 0); g.lineTo(260, 0); g.lineTo(900, 1400); g.lineTo(380, 1400); g.closePath(); g.fill(); g.restore();
+  // стопка книг
+  [[0, 0, 420], [10, 44, 380], [-8, 88, 440]].forEach(([dx, dy, w]) => {
+    const bx = x - w / 2 + dx, by = y + dy;
+    g.fillStyle = '#0C0907'; g.fillRect(bx, by, w, 42);
+    g.strokeStyle = rgba(C.gold, .55); g.lineWidth = 1.4; g.strokeRect(bx, by, w, 42);
+    g.fillStyle = rgba(C.goldHi, .5); g.fillRect(bx + w * .12, by + 18, w * .76, 2);
+    g.save(); g.translate(bx + w / 2, by + 21); g.rotate(Math.PI / 4); g.fillStyle = rgba(C.red, .9); g.fillRect(-4, -4, 8, 8); g.restore();
+  });
+  silhouette(TAIL, x, y, s, { light: [-.6, -1], rimA: .9, fur: 1.4, glowA: .2 });
+  silhouette(CAT, x, y, s, { light: [-.6, -1], rimA: 1, fur: 1.6, glowA: .45 });
+  // лапы — лёгкий намёк
+  g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = rgba(C.goldHi, .28); g.lineWidth = 1.4;
+  for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(x + sx * 20 * s, y - 118 * s); g.quadraticCurveTo(x + sx * 26 * s, y - 60 * s, x + sx * 22 * s, y - 4 * s); g.stroke(); }
+  g.restore();
+  const open = t > 25.7 && t < 25.86 ? .1 : 1;
+  catFace(x, y, s, open, .1, 1, bell(t, 24.5, 25.4, .25, .5));
+  text('Всегда рядом.', W / 2, 1640, 86, C.goldHi, bell(t, 24.3, 26.9, .7, .5), { italic: true, glowA: .5 });
+  g.fillStyle = rgba(C.void, 1 - seg(t, 23.6, 24.2) + seg(t, 26.5, 26.9)); g.fillRect(0, 0, W, H);
+}
+
+// Металлическое золото для надписей
+const metal = document.createElement('canvas'); metal.width = W; metal.height = 420;
+function goldWord(str, y, size, ls, a, shine) {
+  if (a <= 0) return;
+  const m = metal.getContext('2d');
+  m.setTransform(1, 0, 0, 1, 0, 0); m.globalCompositeOperation = 'source-over'; m.clearRect(0, 0, W, 420);
+  m.font = `600 ${size}px ${SERIF}`; m.letterSpacing = ls + 'px'; m.textAlign = 'center'; m.textBaseline = 'middle';
+  const gr = m.createLinearGradient(0, 210 - size * .45, 0, 210 + size * .45);
+  gr.addColorStop(0, '#5E3F17'); gr.addColorStop(.28, '#E8C07A'); gr.addColorStop(.5, '#8C5E26'); gr.addColorStop(.72, '#F5D99A'); gr.addColorStop(1, '#6A4A1E');
+  m.fillStyle = gr; m.fillText(str, W / 2 + ls / 2, 210);
+  m.globalCompositeOperation = 'source-atop';
+  m.globalAlpha = .22; m.drawImage(grains[1], 0, 0, W, 420); m.globalAlpha = 1;
+  const sx = lerp(-300, W + 300, shine); // блик проходит по буквам
+  const sh = m.createLinearGradient(sx - 120, 0, sx + 120, 0);
+  sh.addColorStop(0, 'rgba(255,240,200,0)'); sh.addColorStop(.5, 'rgba(255,240,200,.75)'); sh.addColorStop(1, 'rgba(255,240,200,0)');
+  m.fillStyle = sh; m.fillRect(0, 0, W, 420);
+  g.save(); g.globalAlpha = a; g.shadowColor = rgba(C.gold, .45); g.shadowBlur = 40;
+  g.drawImage(metal, 0, y - 210); g.restore();
+}
+function sSign(t) { // 26.9–30 Знак
+  const a = eo(seg(t, 26.9, 27.8));
+  glow(W / 2, 820, 900, '#7A3A10', .35 * a, 'source-over');
+  arch(540, 1330, 330, 330, eo(seg(t, 27, 28.6)), .35, 1.4);
+  const D = { x: 540, y: 600 };
+  gem(D.x, D.y, 120 * a, 190 * a, a);
+  flare(D.x, D.y, 420, bell(t, 27.5, 28.8, .3, .8) * .9);
+  goldWord('TAINA', 870, 260, 10, a, seg(t, 27.6, 28.8));
+  goldWord('STUDIO', 1060, 84, 34, seg(t, 27.4, 28.2), seg(t, 27.9, 29));
+  divider(1480, 300, seg(t, 28, 28.8), 1);
+  text('Технологии · Люди · Результат', W / 2, 1560, 38, C.gold, seg(t, 28.3, 29), { caps: true, ls: 9, weight: 600, glowA: .2 });
+}
+
+/* ---------- кадр ---------- */
+function render(t) {
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.filter = 'none';
+  g.fillStyle = C.void; g.fillRect(0, 0, W, H);
+  if (t < 5.8) sLook(t);
+  else if (t < 18.3) { sSearch(t); g.fillStyle = rgba(C.void, 1 - seg(t, 5.8, 6.6)); g.fillRect(0, 0, W, H); }
+  else if (t < 23.6) sOrder(t);
+  else if (t < 26.9) sNear(t);
+  else sSign(t);
+  if (t >= 18.3 && t < 18.9) { const b = 1 - seg(t, 18.3, 18.9); glow(W / 2, 780, 1700, C.red, .9 * b); glow(W / 2, 780, 900, '#FFD2A8', .8 * b); }
+  g.save(); g.globalCompositeOperation = 'lighter';
+  const dA = t < 5.8 ? seg(t, 2.5, 4) * .6 : 1;
+  for (const d of dust) {
+    const y = ((d.y - t * d.v) % H + H) % H, x = d.x + Math.sin(t * .4 + d.ph) * 18;
+    g.fillStyle = rgba(C.goldHi, d.a * dA * (.55 + .45 * Math.sin(t * 1.7 + d.ph)) * .6);
+    g.fillRect(x, y, d.s, d.s);
+  }
+  g.restore();
+  g.globalCompositeOperation = 'overlay'; g.globalAlpha = .13;
+  g.drawImage(grains[Math.floor(t * 24) % 4], 0, 0, W, H);
+  g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+  const vg = g.createRadialGradient(W / 2, H / 2, W * .45, W / 2, H / 2, H * .75);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.6)');
+  g.fillStyle = vg; g.fillRect(0, 0, W, H);
+  if (t > 29.6) { g.fillStyle = rgba(C.void, seg(t, 29.6, 30)); g.fillRect(0, 0, W, H); }
+}
+window.render = render;
+window.ready = Promise.all(['500 80px', 'italic 500 80px', '600 58px'].map(f => document.fonts.load(`${f} ${SERIF}`, 'Ответ TAINA'))).then(() => document.fonts.ready);
+
+const qt = new URLSearchParams(location.search).get('t');
+if (!navigator.webdriver) window.ready.then(() => {
+  if (qt !== null) return render(parseFloat(qt));
+  const t0 = performance.now();
+  const loop = now => { render(((now - t0) / 1000) % DUR); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+});
+</script>
+</body>
+</html>

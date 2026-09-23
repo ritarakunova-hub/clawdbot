@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>TAINA — «Он видит больше» (исходник)</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  html,body{ margin:0; background:#040304; height:100%; }
+  canvas{ display:block; height:100vh; width:auto; max-width:100vw; margin:0 auto; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+/*
+  «Он видит больше» — 30 с, вертикаль 1080×1920. Кадр = render(t).
+  0–5.8   Взгляд   — в темноте открываются глаза Бегемота
+  5.8–13  Поиск    — девушка среди бумаг, вспышки: регламенты, договоры…
+  13–18.3 Свет     — камера поднимается: над ней ромб; он загорается фирменным красным
+  18.3–23.6 Порядок — бумаги стягиваются в ромб; «Ответ уже есть. TAINA помогает его найти.»
+  23.6–26.9 Рядом  — Бегемот
+  26.9–30 Знак     — логотип TAINA Studio
+*/
+const W = 1080, H = 1920, DUR = 30;
+window.FILM = { w: W, h: H, dur: DUR };
+const cv = document.getElementById('c'); cv.width = W; cv.height = H;
+const g = cv.getContext('2d');
+
+const C = { void:'#040304', gold:'#C9974A', goldHi:'#F2CF8A', red:'#D0141C', ink:'#EFE6D6', warm:'#E9C79A' };
+const SERIF = '"Cormorant Garamond", Georgia, serif';
+
+function rng(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, k) => a + (b - a) * k;
+const eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const eo = x => 1 - Math.pow(1 - x, 3);
+const ei = x => x * x * x;
+const bell = (t, a, b, fi = .4, fo = .4) => Math.min(seg(t, a, a + fi), 1 - seg(t, b - fo, b)); // появление-удержание-исчезание
+const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${a})`; };
+
+/* ---------- ассеты ---------- */
+const IMG = {};
+const loadImg = (k, src) => new Promise((ok, err) => { const i = new Image(); i.onload = () => { IMG[k] = i; ok(); }; i.onerror = err; i.src = src; });
+const off = document.createElement('canvas'); off.width = W; off.height = H;
+const og = off.getContext('2d');
+
+// Кадрирование: точка изображения (fx,fy) ставится в точку экрана (cx,cy) с масштабом s
+function place(ctx, img, s, fx, fy, cx = W / 2, cy = H / 2, filter = 'none', alpha = 1) {
+  ctx.save(); ctx.globalAlpha = alpha; ctx.filter = filter;
+  ctx.drawImage(img, cx - fx * s, cy - fy * s, img.width * s, img.height * s);
+  ctx.restore();
+}
+const mapPt = (s, fx, fy, cx, cy, x, y) => ({ x: cx + (x - fx) * s, y: cy + (y - fy) * s });
+// Растушёвка верхнего и нижнего края картинки в фон
+function featherY(top, bottom, size = 220) {
+  let gr = g.createLinearGradient(0, top, 0, top + size);
+  gr.addColorStop(0, rgba(C.void, 1)); gr.addColorStop(1, rgba(C.void, 0));
+  g.fillStyle = gr; g.fillRect(0, top - 2, W, size + 2);
+  g.fillStyle = C.void; g.fillRect(0, 0, W, Math.max(0, top));
+  gr = g.createLinearGradient(0, bottom - size, 0, bottom);
+  gr.addColorStop(0, rgba(C.void, 0)); gr.addColorStop(1, rgba(C.void, 1));
+  g.fillStyle = gr; g.fillRect(0, bottom - size, W, size + 2);
+  g.fillStyle = C.void; g.fillRect(0, bottom, W, H - bottom);
+}
+
+/* ---------- примитивы ---------- */
+function glow(x, y, r, color, a, mode = 'lighter') {
+  if (a <= 0) return;
+  g.save(); g.globalCompositeOperation = mode;
+  const gr = g.createRadialGradient(x, y, 0, x, y, r);
+  gr.addColorStop(0, rgba(color, a)); gr.addColorStop(.35, rgba(color, a * .28)); gr.addColorStop(1, rgba(color, 0));
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.restore();
+}
+// Фирменный ромб: вытянутый, огранённый, со световой кромкой
+function gem(x, y, w, h, a, t = 0) {
+  if (a <= 0) return;
+  glow(x, y, h * 1.6, C.red, .55 * a);
+  glow(x, y, h * .7, '#FF5A3C', .35 * a);
+  g.save(); g.globalAlpha = a; g.translate(x, y);
+  const T = [0, -h / 2], R = [w / 2, 0], B = [0, h / 2], L = [-w / 2, 0], O = [w * .06, -h * .04];
+  const tri = (p, q, r, c) => { g.fillStyle = c; g.beginPath(); g.moveTo(...p); g.lineTo(...q); g.lineTo(...r); g.closePath(); g.fill(); };
+  tri(T, L, O, '#E3372C'); tri(T, R, O, '#A8121A'); tri(L, B, O, '#7E0B10'); tri(R, B, O, '#3E0406');
+  const sh = g.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
+  sh.addColorStop(0, 'rgba(255,190,150,.35)'); sh.addColorStop(.45, 'rgba(255,120,90,0)');
+  g.fillStyle = sh; g.beginPath(); g.moveTo(...T); g.lineTo(...R); g.lineTo(...B); g.lineTo(...L); g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(255,150,110,.9)'; g.lineWidth = Math.max(1, w * .012);
+  g.beginPath(); g.moveTo(...T); g.lineTo(...R); g.lineTo(...B); g.lineTo(...L); g.closePath(); g.stroke();
+  g.strokeStyle = 'rgba(255,170,130,.35)'; g.lineWidth = Math.max(.6, w * .006);
+  g.beginPath(); g.moveTo(...T); g.lineTo(...O); g.lineTo(...B); g.moveTo(...L); g.lineTo(...O); g.lineTo(...R); g.stroke();
+  g.restore();
+}
+// Лучевая вспышка (крест из света)
+function flare(x, y, len, a, color = '#FF6A48') {
+  if (a <= 0) return;
+  g.save(); g.globalCompositeOperation = 'lighter';
+  for (const [dx, dy, l, th] of [[1, 0, len, 3], [0, 1, len * .7, 2.4], [.7, .7, len * .22, 1.2], [.7, -.7, len * .22, 1.2]]) {
+    const gr = g.createLinearGradient(x - dx * l, y - dy * l, x + dx * l, y + dy * l);
+    gr.addColorStop(0, rgba(color, 0)); gr.addColorStop(.5, rgba('#FFE2C8', .9 * a)); gr.addColorStop(1, rgba(color, 0));
+    g.strokeStyle = gr; g.lineWidth = th; g.beginPath(); g.moveTo(x - dx * l, y - dy * l); g.lineTo(x + dx * l, y + dy * l); g.stroke();
+  }
+  g.restore();
+  glow(x, y, len * .25, color, .6 * a);
+}
+function star4(x, y, r, a, color = C.goldHi) { // маленькая четырёхлучевая искра
+  if (a <= 0) return;
+  g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = rgba(color, a); g.translate(x, y);
+  g.beginPath(); g.moveTo(0, -r); g.quadraticCurveTo(0, 0, r * .9, 0); g.quadraticCurveTo(0, 0, 0, r); g.quadraticCurveTo(0, 0, -r * .9, 0); g.quadraticCurveTo(0, 0, 0, -r); g.fill();
+  g.restore(); glow(x, y, r * 1.6, color, .4 * a);
+}
+function text(str, x, y, size, color, a, { italic = false, weight = 500, ls = 0, caps = false, glowA = .35 } = {}) {
+  if (a <= 0) return;
+  g.save(); g.globalAlpha = a;
+  g.font = `${italic ? 'italic ' : ''}${weight} ${size}px ${SERIF}`; g.letterSpacing = ls + 'px';
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = color;
+  g.shadowColor = rgba(C.gold, glowA); g.shadowBlur = size * .45;
+  g.fillText(caps ? str.toUpperCase() : str, x + ls / 2, y);
+  g.restore();
+}
+// Орнамент-разделитель: линия из центра в стороны, в центре — ромбик
+function divider(y, half, p, a) {
+  if (p <= 0 || a <= 0) return;
+  const cx = W / 2, l = half * eo(p);
+  g.save(); g.globalAlpha = a;
+  const gr = g.createLinearGradient(cx - l, 0, cx + l, 0);
+  gr.addColorStop(0, rgba(C.gold, 0)); gr.addColorStop(.5, rgba(C.goldHi, .95)); gr.addColorStop(1, rgba(C.gold, 0));
+  g.strokeStyle = gr; g.lineWidth = 1.4; g.beginPath(); g.moveTo(cx - l, y); g.lineTo(cx + l, y); g.stroke();
+  g.fillStyle = C.goldHi; g.translate(cx, y); g.rotate(Math.PI / 4); const d = 7 * eo(seg(p, .2, .7)); g.fillRect(-d / 2, -d / 2, d, d);
+  g.restore();
+  for (const k of [-.55, .55]) { g.fillStyle = rgba(C.goldHi, a * seg(p, .5, 1)); g.beginPath(); g.arc(cx + k * half, y, 2.2, 0, 7); g.fill(); }
+}
+
+/* ---------- частицы ---------- */
+const dust = (() => { const r = rng(3); return Array.from({ length: 170 }, () => ({ x: r() * W, y: r() * H, s: .6 + r() * 2.2, v: 6 + r() * 16, ph: r() * 6.28, a: .12 + r() * .5 })); })();
+const papers = (() => { const r = rng(21); return Array.from({ length: 20 }, () => ({ x: 380 + r() * 620, y: 950 + r() * 420, vx: 25 + r() * 60, vy: -(50 + r() * 90), rot: r() * 6.28, vr: (r() - .5) * 1.6, w: 22 + r() * (r() > .8 ? 90 : 46), ph: r() * 6.28, delay: r() * 3 })); })();
+const vortex = (() => { const r = rng(44); return Array.from({ length: 28 }, () => ({ th: r() * 6.28, r0: 560 + r() * 520, w: 26 + r() * (r() > .75 ? 90 : 44), rot: r() * 6.28, delay: r() * 1.4, spin: 1.6 + r() * 1.6 })); })();
+const grains = [0, 1, 2, 3].map(s => {
+  const c = document.createElement('canvas'); c.width = 270; c.height = 480;
+  const x = c.getContext('2d'), d = x.createImageData(270, 480), r = rng(100 + s);
+  for (let i = 0; i < d.data.length; i += 4) { const v = r() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+  x.putImageData(d, 0, 0); return c;
+});
+
+function paperQuad(x, y, w, rot, a, lit = 1) {
+  // лист бумаги, подсвеченный тёплым светом; крупные (ближние) — размыты, как вне фокуса
+  g.save(); g.translate(x, y); g.rotate(rot); g.transform(1, 0, Math.sin(rot * 1.7) * .45, .82 + .18 * Math.cos(rot * 1.3), 0, 0);
+  if (w > 64) g.filter = `blur(${((w - 64) / 12).toFixed(1)}px)`;
+  const h = w * 1.3;
+  const gr = g.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
+  gr.addColorStop(0, `rgba(255,236,200,${a})`); gr.addColorStop(.5, `rgba(${Math.round(lerp(150, 238, lit))},${Math.round(lerp(95, 170, lit))},${Math.round(lerp(50, 100, lit))},${a * .9})`); gr.addColorStop(1, `rgba(90,50,20,${a * .7})`);
+  g.fillStyle = gr; g.fillRect(-w / 2, -h / 2, w, h);
+  g.fillStyle = `rgba(80,45,15,${a * .35})`;
+  for (let i = 0; i < 6; i++) g.fillRect(-w / 2 + w * .12, -h / 2 + h * (.16 + i * .12), w * (i % 2 ? .55 : .72), Math.max(.8, w * .018));
+  g.restore();
+  glow(x, y, w * .9, '#FFB060', .08 * a * lit);
+}
+function waves(t, y0, a) { // золото-красные шёлковые нити
+  if (a <= 0) return;
+  g.save(); g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 26; i++) {
+    const k = i / 25, col = i % 3 === 0 ? C.red : C.gold;
+    g.strokeStyle = rgba(col, a * (.22 + .3 * Math.sin(k * 3.14))); g.lineWidth = 1.5;
+    g.beginPath();
+    for (let x = -20; x <= W + 20; x += 18) {
+      const y = y0 + Math.sin(x * .006 + t * .9 + k * 1.8) * (90 + 50 * k) + Math.sin(x * .013 - t * .6 + k * 4) * 26 + k * 70;
+      x === -20 ? g.moveTo(x, y) : g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+  g.restore();
+}
+
+/* ---------- сцены ---------- */
+function sLook(t) { // 0–5.8 Взгляд
+  const cat = IMG.cat, E1 = [490, 287], E2 = [600, 287];
+  let s = lerp(2.3, 1.6, eo(seg(t, 0, 5)));
+  let fx = 545, fy = 330, cx = W / 2, cy = 820;
+  const dive = ei(seg(t, 4.9, 5.8));
+  if (dive > 0) { s *= 1 + dive * 7; fx = lerp(fx, E1[0], eo(seg(t, 4.9, 5.4))); fy = lerp(fy, E1[1], eo(seg(t, 4.9, 5.4))); cy = lerp(cy, H / 2, dive); }
+  const reveal = eio(seg(t, 1.8, 4.6));
+  place(g, cat, s, fx, fy, cx, cy, `brightness(${lerp(0, .95, reveal)}) contrast(1.08)`);
+  // глаза: светятся раньше, чем проявляется кот
+  const eyesA = eo(seg(t, .5, 1.6)) * (1 - reveal * .6);
+  if (eyesA > 0) {
+    og.setTransform(1, 0, 0, 1, 0, 0); og.globalCompositeOperation = 'source-over'; og.clearRect(0, 0, W, H);
+    place(og, cat, s, fx, fy, cx, cy, 'brightness(1.6) saturate(1.3)');
+    og.globalCompositeOperation = 'destination-in';
+    for (const [ex, ey] of [E1, E2]) {
+      const p = mapPt(s, fx, fy, cx, cy, ex, ey), r = 34 * s;
+      const gr = og.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+      gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(.55, 'rgba(0,0,0,.8)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      og.fillStyle = gr; og.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+    }
+    g.save(); g.globalAlpha = eyesA; g.drawImage(off, 0, 0); g.restore();
+    for (const [ex, ey] of [E1, E2]) { const p = mapPt(s, fx, fy, cx, cy, ex, ey); glow(p.x, p.y, 70 * s, '#E0A030', .4 * eyesA); }
+  }
+  featherY(-9999, cy + (1024 - fy) * s);
+  text('Он видит больше.', W / 2, 1580, 84, C.ink, bell(t, 2.4, 5.0, .8, .4), { italic: true });
+  g.fillStyle = rgba(C.void, seg(t, 5.25, 5.8)); g.fillRect(0, 0, W, H);
+}
+
+const WORDS = ['регламенты', 'договоры', 'протоколы', 'переписки', 'прайсы', 'инструкции'];
+function sSearch(t) { // 5.8–18.3 Поиск и Свет
+  const img = IMG.search;
+  const tilt = eio(seg(t, 13, 16.2));
+  const fy = lerp(900, 330, tilt), s = lerp(1.62, 1.8, seg(t, 5.8, 18.3));
+  const cx = W / 2, cy = 1000;
+  const k = seg(t, 9, 13);
+  const amp = 5 * k * (1 - seg(t, 12.8, 13.3));
+  const shx = amp * Math.sin(t * 43), shy = amp * Math.cos(t * 37);
+  const bright = lerp(.72, 1.02, seg(t, 15.4, 16.6));
+  place(g, img, s, 560, fy, cx + shx, cy + shy, `brightness(${bright}) contrast(1.06) saturate(1.05)`);
+  { const top = cy + shy - fy * s; if (top > -320) featherY(top - 10, 1e5, 340); } // верхний край фото уходит в фон
+  // верх скрыт, пока не поднимем камеру
+  const hide = 1 - seg(t, 13.2, 15);
+  if (hide > 0) { const gr = g.createLinearGradient(0, 0, 0, 640); gr.addColorStop(0, rgba(C.void, .96 * hide)); gr.addColorStop(1, rgba(C.void, 0)); g.fillStyle = gr; g.fillRect(0, 0, W, 640); }
+  // низ — под текст
+  { const gr = g.createLinearGradient(0, 1380, 0, H); gr.addColorStop(0, rgba(C.void, 0)); gr.addColorStop(1, rgba(C.void, .9 * (1 - tilt * .5))); g.fillStyle = gr; g.fillRect(0, 1380, W, H - 1380); }
+  // бумаги в воздухе
+  const pa = seg(t, 6, 7.2) * (1 - seg(t, 15.5, 17));
+  for (const p of papers) {
+    const tt = Math.max(0, t - 5.8 - p.delay * .3) * (1 + k * 1.2);
+    const x = p.x + p.vx * tt + Math.sin(tt * 1.3 + p.ph) * 26, y = p.y + p.vy * tt - tilt * 500;
+    const a = pa * clamp((y - 80) / 400) * .8;
+    if (a > 0) paperQuad(x + shx, y + shy, p.w, p.rot + p.vr * tt, a, .75 + .25 * Math.sin(tt + p.ph));
+  }
+  // ромб: картинка → фирменный красный
+  const d = mapPt(s, 560, fy, cx, cy, 560, 270);
+  const gA = eo(seg(t, 15.2, 16.4));
+  gem(d.x, d.y, 100 * s * .92, 190 * s * .92, gA * .95, t);
+  flare(d.x, d.y, lerp(120, 900, eo(seg(t, 16.2, 18.3))), seg(t, 16.1, 16.6) * (.7 + .3 * Math.sin(t * 5)));
+  // тексты
+  text('Ответ где-то здесь.', W / 2, 1640, 80, C.ink, bell(t, 6.8, 8.9, .6, .4), { italic: true });
+  WORDS.forEach((w, i) => {
+    const s0 = 9.0 + i * .62, a = bell(t, s0, s0 + .58, .06, .12);
+    if (a > 0) text(w, W / 2 + Math.sin(i * 7) * 60, 1640 + Math.cos(i * 5) * 40, 58, C.goldHi, a * (.85 + .15 * Math.sin(t * 70)), { caps: true, ls: 16, weight: 600, glowA: .6 });
+  });
+  text('Ответ был рядом.', W / 2, 300, 84, C.ink, bell(t, 16.4, 18.4, .7, .4), { italic: true });
+  // вспышка-переход
+  const bloom = bell(t, 17.8, 18.9, .5, .6);
+  if (bloom > 0) { glow(d.x, d.y, 1600 * bloom, C.red, .9 * bloom); glow(d.x, d.y, 900 * bloom, '#FFD2A8', .8 * bloom); }
+}
+
+function sOrder(t) { // 18.3–23.6 Порядок
+  const D = { x: W / 2, y: 780 };
+  const intro = eo(seg(t, 18.3, 19.2));
+  // вертикальная нить через ромб
+  const vl = eo(seg(t, 18.6, 19.8));
+  if (vl > 0) {
+    const gr = g.createLinearGradient(0, D.y - 700, 0, D.y + 700);
+    gr.addColorStop(0, rgba(C.gold, 0)); gr.addColorStop(.5, rgba(C.goldHi, .8)); gr.addColorStop(1, rgba(C.gold, 0));
+    g.strokeStyle = gr; g.lineWidth = 1.3; g.beginPath(); g.moveTo(D.x, D.y - 700 * vl); g.lineTo(D.x, D.y + 700 * vl); g.stroke();
+  }
+  // кольцо-орбита
+  g.save(); g.globalAlpha = .55 * seg(t, 19, 20); g.strokeStyle = rgba(C.gold, .6); g.lineWidth = 1.2;
+  g.beginPath(); g.ellipse(D.x, D.y, 330, 110, -.18, 0, 6.29 * eo(seg(t, 19, 20.6))); g.stroke(); g.restore();
+  // бумаги стягиваются в ромб
+  let absorbed = 0;
+  for (const v of vortex) {
+    const q = seg(t, 18.4 + v.delay, 20.6 + v.delay);
+    if (q >= 1) { absorbed++; continue; }
+    const r = v.r0 * (1 - eio(q)), th = v.th + q * v.spin;
+    const x = D.x + Math.cos(th) * r, y = D.y + Math.sin(th) * r * 1.25;
+    const a = seg(t, 18.4, 18.9) * (1 - seg(q, .75, 1));
+    paperQuad(x, y, v.w * lerp(1, .2, q), v.rot + q * 5, a * .9, .9);
+    if (q > .55) { g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = rgba(C.goldHi, .5 * a); g.lineWidth = 1.2;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(lerp(x, D.x, .35), lerp(y, D.y, .35)); g.stroke(); g.restore(); }
+  }
+  const pulse = absorbed / vortex.length;
+  gem(D.x, D.y, lerp(300, 190, intro), lerp(560, 350, intro), 1, t);
+  flare(D.x, D.y, 520 + 180 * Math.sin(t * 2), .45 + .25 * pulse);
+  for (let i = 0; i < 7; i++) star4(D.x + Math.cos(i * 2.4 + t * .5) * (260 + i * 22), D.y + Math.sin(i * 2.4 + t * .5) * 120, 7 + i % 3 * 3, seg(t, 20, 21) * (.5 + .5 * Math.sin(t * 3 + i)));
+  waves(t, 1560, seg(t, 19.2, 21));
+  text('Ответ уже есть.', W / 2, 1250, 90, C.ink, seg(t, 20.8, 21.6), {});
+  text('TAINA помогает его найти.', W / 2, 1360, 82, C.goldHi, seg(t, 21.5, 22.3), { italic: true, glowA: .55 });
+  divider(1470, 250, seg(t, 22, 22.9), 1);
+  g.fillStyle = rgba(C.void, seg(t, 23.1, 23.6)); g.fillRect(0, 0, W, H);
+}
+
+function sNear(t) { // 23.6–26.9 Рядом
+  const cat = IMG.cat, s = lerp(1.08, 1.2, seg(t, 23.6, 26.9)), fy = 470, cy = 880;
+  place(g, cat, s, 545, fy, W / 2, cy, 'brightness(1.02) contrast(1.06)');
+  featherY(cy - fy * s + 40, cy + (1024 - fy) * s - 40, 260);
+  for (const [ex, ey, d] of [[490, 287, 0], [600, 287, .12]]) {
+    const p = mapPt(s, 545, fy, W / 2, cy, ex, ey);
+    star4(p.x + 6, p.y - 6, 22, bell(t, 24.5 + d, 25.4 + d, .25, .5));
+  }
+  text('Всегда рядом.', W / 2, 1640, 84, C.goldHi, bell(t, 24.3, 26.9, .7, .5), { italic: true, glowA: .5 });
+  const fin = seg(t, 23.6, 24.2), fout = seg(t, 26.5, 26.9);
+  g.fillStyle = rgba(C.void, 1 - fin + fout); g.fillRect(0, 0, W, H);
+}
+
+function sSign(t) { // 26.9–30 Знак
+  const logo = IMG.logo, s = lerp(1.0, 1.04, seg(t, 26.9, 30)), cy = 880;
+  place(g, logo, s, 512, 512, W / 2, cy, `brightness(${lerp(.4, 1.08, eo(seg(t, 26.9, 27.9)))}) sepia(.35) saturate(1.1)`);
+  featherY(cy - 512 * s + 20, cy + 512 * s - 20, 320);
+  const d = mapPt(s, 512, 512, W / 2, cy, 512, 322);
+  glow(d.x, d.y, 260, '#FF6A30', (.35 + .15 * Math.sin(t * 3)) * seg(t, 27.4, 28.2));
+  flare(d.x, d.y, 360, bell(t, 27.5, 28.6, .3, .7) * .8, '#FF8A40');
+  divider(1480, 300, seg(t, 28, 28.8), 1);
+  text('Технологии · Люди · Результат', W / 2, 1560, 38, C.gold, seg(t, 28.3, 29), { caps: true, ls: 9, weight: 600, glowA: .2 });
+  g.fillStyle = rgba(C.void, 1 - seg(t, 26.9, 27.4)); g.fillRect(0, 0, W, H);
+}
+
+/* ---------- кадр ---------- */
+function render(t) {
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.filter = 'none';
+  g.fillStyle = C.void; g.fillRect(0, 0, W, H);
+  if (t < 5.8) sLook(t);
+  else if (t < 18.3) sSearch(t);
+  else if (t < 23.6) sOrder(t);
+  else if (t < 26.9) sNear(t);
+  else sSign(t);
+  // вспышка поверх стыка сцен 18.3
+  if (t >= 18.3 && t < 18.9) { const b = 1 - seg(t, 18.3, 18.9); glow(W / 2, 780, 1700, C.red, .9 * b); glow(W / 2, 780, 900, '#FFD2A8', .8 * b); }
+  // пыль
+  g.save(); g.globalCompositeOperation = 'lighter';
+  const dA = t < 5.8 ? seg(t, 2.5, 4) * .6 : 1;
+  for (const d of dust) {
+    const y = ((d.y - t * d.v) % H + H) % H, x = d.x + Math.sin(t * .4 + d.ph) * 18;
+    g.fillStyle = rgba(C.goldHi, d.a * dA * (.55 + .45 * Math.sin(t * 1.7 + d.ph)) * .6);
+    g.fillRect(x, y, d.s, d.s);
+  }
+  g.restore();
+  // зерно и виньетка
+  g.globalCompositeOperation = 'overlay'; g.globalAlpha = .13;
+  g.drawImage(grains[Math.floor(t * 24) % 4], 0, 0, W, H);
+  g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+  const vg = g.createRadialGradient(W / 2, H / 2, W * .45, W / 2, H / 2, H * .75);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.6)');
+  g.fillStyle = vg; g.fillRect(0, 0, W, H);
+  if (t > 29.6) { g.fillStyle = rgba(C.void, seg(t, 29.6, 30)); g.fillRect(0, 0, W, H); }
+}
+window.render = render;
+window.ready = Promise.all([
+  loadImg('cat', 'assets/cat.jpg'), loadImg('search', 'assets/search.jpg'), loadImg('logo', 'assets/logo.jpg'),
+  ...['500 80px', 'italic 500 80px', '600 58px'].map(f => document.fonts.load(`${f} ${SERIF}`, 'Ответ TAINA'))
+]).then(() => document.fonts.ready);
+
+const qt = new URLSearchParams(location.search).get('t');
+if (!navigator.webdriver) window.ready.then(() => {
+  if (qt !== null) return render(parseFloat(qt));
+  const t0 = performance.now();
+  const loop = now => { render(((now - t0) / 1000) % DUR); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+});
+</script>
+</body>
+</html>
