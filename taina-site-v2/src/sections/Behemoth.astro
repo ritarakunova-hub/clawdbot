@@ -1,36 +1,109 @@
 ---
-import Section from '@/components/Section.astro';
 import Container from '@/components/Container.astro';
 import { behemoth } from '@/content/copy';
 ---
 
-<Section id="behemoth" label={behemoth.title}>
-  <Container>
-    <h2 data-reveal>{behemoth.title}</h2>
-    <div class="text" data-reveal>
-      {behemoth.paragraphs.map((paragraph) => <p class="measure">{paragraph}</p>)}
-      <p class="quote">«{behemoth.quote}»</p>
+<section class="behemoth-reveal" id="behemoth" aria-label={behemoth.title}>
+  <div class="reveal-scene" id="behemoth-reveal">
+    <div class="reveal-stage">
+      <Container>
+        <p class="lead measure" id="behemoth-lead">{behemoth.paragraphs[0]}</p>
+        <p class="quote" id="behemoth-quote">«{behemoth.quote}»</p>
+      </Container>
     </div>
-  </Container>
-</Section>
+  </div>
+</section>
 
-<style>
-  h2 {
-    font-size: var(--text-2xl);
+<script>
+  function boot() {
+    const root = document.getElementById('behemoth-reveal');
+    const lead = document.getElementById('behemoth-lead');
+    const quote = document.getElementById('behemoth-quote');
+    if (!root || !lead || !quote) return;
+
+    import('@/scene/scenes/behemoth')
+      .then(({ mountBehemothScene }) => {
+        mountBehemothScene({ root, lead, quote, catImageUrl: '/img/cat-eyes.jpg' });
+      })
+      .catch(() => {
+        // Нет WebGL2 или сцена упала — статичный тёмный фон, фраза читаема
+        // сразу (уровни C/D из CLAUDE.md).
+        root.classList.add('behemoth-reveal--nogl');
+        lead.style.opacity = '0';
+        quote.style.opacity = '1';
+      });
   }
 
-  .text {
-    margin-top: var(--space-6);
+  if (document.readyState === 'complete') {
+    requestAnimationFrame(boot);
+  } else {
+    addEventListener('load', () => requestAnimationFrame(boot), { once: true });
+  }
+</script>
+
+<style>
+  .behemoth-reveal {
+    position: relative;
+    /* Прозрачный — сцена рисуется в общий холст сайта, см. Proyavka.astro. */
+  }
+
+  .reveal-scene {
+    height: 120vh;
+    position: relative;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal-scene {
+      height: 100vh;
+      height: 100svh;
+    }
+  }
+
+  .reveal-stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow: hidden;
     display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .lead {
+    margin: 0 auto;
     font-size: var(--text-lg);
     color: var(--color-sand);
+    transition: opacity var(--duration-scene) var(--ease-out);
   }
 
   .quote {
+    margin: 0 auto;
+    max-width: 28ch;
     font-family: var(--font-serif);
     font-style: italic;
+    font-size: var(--text-2xl);
     color: var(--color-ivory);
+    opacity: 0;
+    transition: opacity var(--duration-scene) var(--ease-out);
+  }
+
+  /* Уровень C/D: WebGL недоступен, сцена упала, или контекст потерян —
+     фраза читаема сразу на тёмном фоне без глаз кота. */
+  .behemoth-reveal--nogl .reveal-stage,
+  .behemoth-reveal--ctxlost .reveal-stage {
+    background: radial-gradient(50vmax 40vmax at 50% 50%, color-mix(in srgb, var(--color-ruby) 10%, transparent), var(--color-bg) 70%);
   }
 </style>
+
+<noscript>
+  <style>
+    /* Без JS сцена не грузится совсем — фраза видна сразу. */
+    #behemoth-quote {
+      opacity: 1;
+    }
+    #behemoth-lead {
+      opacity: 0;
+    }
+  </style>
+</noscript>
