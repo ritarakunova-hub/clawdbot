@@ -31,22 +31,52 @@ const { people, questions, minutes, rate } = demo.roi.fields;
     <p class="privacy measure">{demo.privacyLine}</p>
 
     <div class="block" data-reveal>
-      <h3 class="block-title">Как это выглядит на практике</h3>
-      <ul class="scenarios">
-        {
-          demo.scenarios.map((scenario, i) => (
-            <li
-              class:list={['scenario', { 'scenario--refusal': scenario.isRefusal }]}
-              data-reveal
-              style={`--reveal-delay: ${i * 80}ms`}
-            >
-              <p class="q">«{scenario.question}»</p>
-              <p class="tag">{scenario.tag}</p>
-              <p class="a">{scenario.answer}</p>
-            </li>
-          ))
-        }
-      </ul>
+      <h3 class="block-title">Попробуйте сами</h3>
+      <p class="lede measure">
+        Работает прямо здесь, на демо-базе TAINA — без сети и без ваших данных. Задайте свой
+        вопрос или возьмите готовый.
+      </p>
+
+      <div class="chat" id="demo-chat">
+        <form class="chat-form" id="demo-chat-form">
+          <label class="chat-label" for="demo-chat-input">Ваш вопрос</label>
+          <div class="chat-row">
+            <input
+              type="text"
+              id="demo-chat-input"
+              name="question"
+              autocomplete="off"
+              placeholder="Например: сколько стоит внедрение?"
+            />
+            <button class="chat-submit" type="submit">Спросить</button>
+          </div>
+          <div class="chat-chips" role="group" aria-label="Примеры вопросов">
+            {
+              demo.scenarios.map((scenario) => (
+                <button class="chip" type="button" data-question={scenario.question}>
+                  {scenario.question}
+                </button>
+              ))
+            }
+          </div>
+        </form>
+
+        <div class="chat-stage" aria-hidden="true">
+          <svg class="chat-diamond" id="demo-chat-diamond" viewBox="0 0 40 60">
+            <polygon points="20,0 38,30 2,30" fill="var(--color-ruby)" />
+            <polygon points="38,30 20,60 2,30" fill="var(--color-crimson)" />
+          </svg>
+          <span class="chat-beam" id="demo-chat-beam" />
+          <svg class="chat-cat" id="demo-chat-cat" viewBox="0 0 60 24">
+            <ellipse class="eye" cx="18" cy="12" rx="7" ry="9" fill="var(--color-sand)" />
+            <ellipse class="eye" cx="42" cy="12" rx="7" ry="9" fill="var(--color-sand)" />
+          </svg>
+        </div>
+
+        <div class="chat-answer" id="demo-chat-answer" aria-live="polite">
+          <p class="chat-placeholder" id="demo-chat-placeholder">Здесь появится ответ.</p>
+        </div>
+      </div>
     </div>
 
     <div class="block" data-reveal>
@@ -129,7 +159,167 @@ const { people, questions, minutes, rate } = demo.roi.fields;
   </Container>
 </Section>
 
-<script define:vars={{ copiedMessage: demo.roi.copiedMessage, copyFailMessage: demo.roi.copyFailMessage }}>
+<script define:vars={{ scenarios: demo.scenarios }}>
+  // --- Демо-чат: контракт POST /api/ask {question} → {answer, sources[], found}.
+  // Пока нет адреса вебхука n8n — функции /api/ask не существует, запрос
+  // падает мгновенно (или по таймауту), и чат сам переключается в
+  // mock-режим на записанных ответах ниже. Когда бэкенд появится —
+  // достаточно будет добавить Netlify Function по этому пути, менять
+  // фронтенд не придётся.
+  const REQUEST_TIMEOUT_MS = 12_000;
+  const COOLDOWN_MS = 1_500;
+  const refusalScenario = scenarios.find((s) => s.isRefusal) ?? scenarios[scenarios.length - 1];
+  const answerScenarios = scenarios.filter((s) => s !== refusalScenario);
+
+  function normalize(text) {
+    return text
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function matchScore(input, question) {
+    const normInput = normalize(input);
+    const normQuestion = normalize(question);
+    if (!normInput || !normQuestion) return 0;
+    if (normInput === normQuestion) return 100;
+    if (normInput.includes(normQuestion) || normQuestion.includes(normInput)) return 50;
+    const inputWords = new Set(normInput.split(' ').filter((w) => w.length > 3));
+    const questionWords = normQuestion.split(' ').filter((w) => w.length > 3);
+    return questionWords.filter((w) => inputWords.has(w)).length;
+  }
+
+  function mockAsk(question) {
+    let best = null;
+    let bestScore = 0;
+    for (const scenario of answerScenarios) {
+      const score = matchScore(question, scenario.question);
+      if (score > bestScore) {
+        bestScore = score;
+        best = scenario;
+      }
+    }
+    if (best) {
+      return { answer: best.answer, sources: [best.tag], found: true };
+    }
+    return { answer: refusalScenario.answer, sources: [], found: false };
+  }
+
+  async function askBackend(question, signal) {
+    const res = await fetch('/api/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question }),
+      signal,
+    });
+    if (!res.ok) throw new Error(`статус ${res.status}`);
+    const data = await res.json();
+    if (typeof data.answer !== 'string' || typeof data.found !== 'boolean') {
+      throw new Error('неожиданный формат ответа');
+    }
+    return data;
+  }
+
+  async function askWithRetry(question) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      try {
+        const data = await askBackend(question, controller.signal);
+        clearTimeout(timer);
+        return data;
+      } catch {
+        clearTimeout(timer);
+      }
+    }
+    return null;
+  }
+
+  const form = document.getElementById('demo-chat-form');
+  const input = document.getElementById('demo-chat-input');
+  const submitBtn = form?.querySelector('.chat-submit');
+  const chips = document.querySelectorAll('#demo-chat-form .chip');
+  const diamond = document.getElementById('demo-chat-diamond');
+  const beam = document.getElementById('demo-chat-beam');
+  const cat = document.getElementById('demo-chat-cat');
+  const answerBox = document.getElementById('demo-chat-answer');
+
+  let busy = false;
+
+  function renderAnswer({ answer, sources, found }) {
+    answerBox.innerHTML = '';
+    const p = document.createElement('p');
+    p.className = found ? 'a' : 'a a--refusal';
+    p.textContent = answer;
+    answerBox.appendChild(p);
+    if (found && sources?.length) {
+      const tag = document.createElement('p');
+      tag.className = 'tag';
+      tag.textContent = sources[0];
+      answerBox.insertBefore(tag, p);
+    }
+  }
+
+  function setBusy(state) {
+    busy = state;
+    if (submitBtn) submitBtn.disabled = state;
+    chips.forEach((c) => (c.disabled = state));
+  }
+
+  async function ask(question) {
+    if (busy || !question.trim()) return;
+    setBusy(true);
+
+    diamond.classList.add('is-thinking');
+    answerBox.innerHTML = '<p class="chat-status">Ищу в базе знаний…</p>';
+
+    const remote = await askWithRetry(question);
+    const result = remote ?? mockAsk(question);
+
+    diamond.classList.remove('is-thinking');
+    beam.classList.remove('is-returning');
+    // Перезапуск CSS-анимации на повторном вопросе.
+    void beam.offsetWidth;
+    beam.classList.add('is-active');
+
+    await new Promise((resolve) => setTimeout(resolve, 700));
+
+    if (result.found) {
+      renderAnswer(result);
+    } else {
+      beam.classList.remove('is-active');
+      beam.classList.add('is-returning');
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      cat.classList.add('is-blinking');
+      setTimeout(() => cat.classList.remove('is-blinking'), 280);
+      renderAnswer(result);
+    }
+
+    // Небольшая пауза перед следующим вопросом — простая защита от
+    // случайного спама кликами по чипам (полноценный лимит на сервере
+    // появится вместе с Netlify Function-прокси к n8n).
+    setTimeout(() => setBusy(false), COOLDOWN_MS);
+  }
+
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (busy) {
+      answerBox.innerHTML = '<p class="chat-status">Уже ищу ответ — секунду…</p>';
+      return;
+    }
+    ask(input.value);
+  });
+
+  chips.forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const question = chip.dataset.question ?? '';
+      input.value = question;
+      input.focus();
+      ask(question);
+    });
+  });
+
   const peopleEl = document.getElementById('roi-people');
   const questionsEl = document.getElementById('roi-questions');
   const minutesEl = document.getElementById('roi-minutes');
@@ -281,49 +471,238 @@ const { people, questions, minutes, rate } = demo.roi.fields;
     font-size: var(--text-xl);
   }
 
-  .scenarios {
-    margin: var(--space-5) 0 0;
-    padding: 0;
-    list-style: none;
+  .chat {
+    margin-top: var(--space-6);
     display: flex;
     flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .chat-label {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+    margin-bottom: var(--space-2);
+  }
+
+  .chat-row {
+    display: flex;
     gap: var(--space-3);
   }
 
-  .scenario {
+  @media (max-width: 560px) {
+    .chat-row {
+      flex-direction: column;
+    }
+  }
+
+  .chat-row input[type='text'] {
+    flex: 1;
+    min-width: 0;
+    padding: var(--space-3) var(--space-4);
+    font: inherit;
+    font-size: var(--text-base);
+    color: var(--color-ivory);
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-pill);
+    transition: border-color var(--duration-response) var(--ease-out);
+  }
+
+  .chat-row input[type='text']:focus-visible {
+    outline: none;
+    border-color: var(--color-gold);
+  }
+
+  .chat-submit {
+    padding: 0 var(--space-6);
+    font: inherit;
+    font-weight: 600;
+    color: var(--color-bg);
+    background: var(--color-gold);
+    border: none;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: opacity var(--duration-response) var(--ease-out);
+  }
+
+  .chat-submit:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .chat-chips {
+    margin-top: var(--space-3);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .chip {
+    font: inherit;
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+    background: transparent;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-pill);
+    padding: var(--space-2) var(--space-4);
+    cursor: pointer;
+    transition:
+      color var(--duration-response) var(--ease-out),
+      border-color var(--duration-response) var(--ease-out);
+  }
+
+  .chip:hover,
+  .chip:focus-visible {
+    color: var(--color-ivory);
+    border-color: var(--color-gold);
+  }
+
+  .chip:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .chat-stage {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    height: 40px;
+  }
+
+  .chat-diamond {
+    width: 26px;
+    height: 40px;
+    flex: none;
+    transition: transform var(--duration-response) var(--ease-out);
+  }
+
+  .chat-diamond.is-thinking {
+    animation: chat-diamond-pulse 900ms var(--ease-in-out) infinite;
+  }
+
+  @keyframes chat-diamond-pulse {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.12);
+    }
+  }
+
+  .chat-beam {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, var(--color-ruby), var(--color-gold));
+    transform-origin: left;
+    transform: scaleX(0);
+    opacity: 0;
+  }
+
+  .chat-beam.is-active {
+    animation: chat-beam-grow 700ms var(--ease-in-out) forwards;
+  }
+
+  .chat-beam.is-returning {
+    animation: chat-beam-shrink 500ms var(--ease-out) forwards;
+  }
+
+  @keyframes chat-beam-grow {
+    0% {
+      transform: scaleX(0);
+      opacity: 0;
+    }
+    20% {
+      opacity: 1;
+    }
+    100% {
+      transform: scaleX(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes chat-beam-shrink {
+    0% {
+      transform: scaleX(1);
+      opacity: 1;
+    }
+    100% {
+      transform: scaleX(0);
+      opacity: 0;
+    }
+  }
+
+  .chat-cat {
+    width: 44px;
+    height: 18px;
+    flex: none;
+    opacity: 0.85;
+  }
+
+  .chat-cat .eye {
+    transform-origin: center;
+    transition: transform 140ms var(--ease-out);
+  }
+
+  .chat-cat.is-blinking .eye {
+    animation: chat-cat-blink 280ms var(--ease-in-out);
+  }
+
+  @keyframes chat-cat-blink {
+    0%,
+    100% {
+      transform: scaleY(1);
+    }
+    50% {
+      transform: scaleY(0.08);
+    }
+  }
+
+  .chat-answer {
+    padding: var(--space-5);
     background: var(--color-surface);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-card);
-    padding: var(--space-5);
+    min-height: 3.5em;
   }
 
-  .scenario--refusal {
-    border-color: var(--color-line);
+  .chat-answer .chat-placeholder,
+  .chat-answer .chat-status {
+    color: var(--color-sand);
+    font-style: italic;
   }
 
-  .scenario .q {
-    font-family: var(--font-serif);
-    font-size: var(--text-lg);
-    color: var(--color-ivory);
-  }
-
-  .scenario .tag {
-    margin-top: var(--space-2);
+  .chat-answer .tag {
     font-family: var(--font-sans);
     font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--color-gold);
+    margin-bottom: var(--space-2);
+    animation: chat-answer-in 300ms var(--ease-out);
   }
 
-  .scenario--refusal .tag {
-    color: var(--color-sand);
-  }
-
-  .scenario .a {
-    margin-top: var(--space-2);
-    color: var(--color-sand);
+  .chat-answer .a {
+    color: var(--color-ivory);
     max-width: var(--measure);
+    animation: chat-answer-in 300ms var(--ease-out);
+  }
+
+  .chat-answer .a--refusal {
+    color: var(--color-sand);
+  }
+
+  @keyframes chat-answer-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
 
   .roi {
