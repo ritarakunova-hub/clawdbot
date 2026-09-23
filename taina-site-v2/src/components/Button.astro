@@ -4,12 +4,13 @@ interface Props {
   variant?: 'solid' | 'outline' | 'text';
   size?: 'md' | 'sm';
   class?: string;
+  id?: string;
 }
 
-const { href, variant = 'solid', size = 'md', class: className } = Astro.props;
+const { href, variant = 'solid', size = 'md', class: className, id } = Astro.props;
 ---
 
-<a href={href} class:list={['btn', `btn--${variant}`, `btn--${size}`, className]}>
+<a href={href} id={id} class:list={['btn', `btn--${variant}`, `btn--${size}`, className]}>
   <slot />
 </a>
 

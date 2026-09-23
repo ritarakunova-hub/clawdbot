@@ -1,60 +1,562 @@
 ---
-import Section from '@/components/Section.astro';
 import Container from '@/components/Container.astro';
+import Button from '@/components/Button.astro';
 import { territories } from '@/content/copy';
 ---
 
-<Section id="territories" label={territories.title}>
-  <Container>
-    <h2 data-reveal>{territories.title}</h2>
-    <ul class="grid">
-      {
-        territories.items.map((item, i) => (
-          <li class="card hover-lift" data-reveal style={`--reveal-delay: ${i * 80}ms`}>
-            <h3>{item.title}</h3>
-            <p>{item.text}</p>
-          </li>
-        ))
+<section class="territories-scene" id="territories" aria-label={territories.title}>
+  <div class="scrub" id="territories-scrub">
+    <div class="stage">
+      <Container class="head">
+        <p class="eyebrow" data-reveal>{territories.title}</p>
+      </Container>
+      <ul class="filmstrip" id="territories-strip">
+        {
+          territories.items.map((item) => (
+            <li
+              class="frame"
+              data-territory={item.id}
+              tabindex="0"
+              role="button"
+              aria-label={`Открыть «${item.title}» на весь экран`}
+            >
+              <div class:list={['visual', `visual--${item.id}`]} aria-hidden="true">
+                {item.id === 'meanings' && (
+                  <svg viewBox="0 0 200 200" class="motif">
+                    <polygon
+                      points="100,20 170,80 140,180 60,180 30,80"
+                      fill="none"
+                      stroke="var(--color-gold)"
+                      stroke-width="1.5"
+                    />
+                    <polygon points="100,20 170,80 100,110 30,80" fill="color-mix(in srgb, var(--color-gold) 16%, transparent)" />
+                    <polygon points="30,80 100,110 60,180" fill="color-mix(in srgb, var(--color-ruby) 22%, transparent)" />
+                    <polygon points="100,110 140,180 60,180" fill="color-mix(in srgb, var(--color-ruby) 14%, transparent)" />
+                    <polygon points="100,110 170,80 140,180" fill="color-mix(in srgb, var(--color-gold) 10%, transparent)" />
+                  </svg>
+                )}
+                {item.id === 'images' && (
+                  <div class="film">
+                    <div class="film-sprockets" />
+                    <div class="film-grain" />
+                    <div class="film-sprockets film-sprockets--bottom" />
+                  </div>
+                )}
+                {item.id === 'systems' && (
+                  <svg viewBox="0 0 200 200" class="motif">
+                    <line x1="40" y1="40" x2="100" y2="100" stroke="var(--color-line)" stroke-width="1.5" />
+                    <line x1="100" y1="100" x2="165" y2="55" stroke="var(--color-line)" stroke-width="1.5" />
+                    <line x1="100" y1="100" x2="55" y2="160" stroke="var(--color-line)" stroke-width="1.5" />
+                    <line x1="100" y1="100" x2="155" y2="150" stroke="var(--color-line)" stroke-width="1.5" />
+                    <path id={`path-${item.id}`} d="M40,40 L100,100 L165,55" fill="none" stroke="none" />
+                    <circle cx="40" cy="40" r="5" fill="var(--color-sand)" />
+                    <circle cx="100" cy="100" r="6" fill="var(--color-gold)" />
+                    <circle cx="165" cy="55" r="5" fill="var(--color-sand)" />
+                    <circle cx="55" cy="160" r="5" fill="var(--color-sand)" />
+                    <circle cx="155" cy="150" r="5" fill="var(--color-sand)" />
+                    <circle class="graph-light" r="4" fill="var(--color-ruby)" />
+                  </svg>
+                )}
+              </div>
+              <div class="dim" />
+              <div class="copy">
+                <h3>{item.title}</h3>
+                <p>{item.text}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="expanded" id="territories-expanded" hidden>
+  <div class="expanded-panel">
+    <button class="expanded-close" id="territories-close" type="button" aria-label="Закрыть">
+      ✕
+    </button>
+    <div class="expanded-visual" id="territories-expanded-visual" aria-hidden="true" />
+    <div class="expanded-copy">
+      <h3 id="territories-expanded-title" />
+      <p id="territories-expanded-text" />
+      <Button href="#contact" id="territories-expanded-cta">
+        Выбрать эту территорию
+      </Button>
+    </div>
+  </div>
+</div>
+
+<script>
+  import * as loop from '@/scene/loop';
+  import * as scroll from '@/scene/scroll';
+  import { isReducedMotion } from '@/lib/a11y';
+
+  const SCENE_ID = 'territories';
+  const STORAGE_KEY = 'taina:territory';
+
+  const root = document.getElementById('territories');
+  const scrub = document.getElementById('territories-scrub');
+  const strip = document.getElementById('territories-strip');
+  const frames = Array.from(document.querySelectorAll<HTMLLIElement>('.frame'));
+  const expanded = document.getElementById('territories-expanded');
+  const expandedVisual = document.getElementById('territories-expanded-visual');
+  const expandedTitle = document.getElementById('territories-expanded-title');
+  const expandedText = document.getElementById('territories-expanded-text');
+  const expandedClose = document.getElementById('territories-close');
+  const expandedCta = document.getElementById('territories-expanded-cta') as HTMLAnchorElement | null;
+
+  if (root && scrub && strip && frames.length) {
+    const isDesktop = () => matchMedia('(min-width: 861px)').matches;
+
+    function layoutStrip() {
+      if (!isDesktop()) {
+        strip!.style.transform = 'none';
+        frames.forEach((f) => f.classList.remove('is-active'));
+        return;
       }
-    </ul>
-  </Container>
-</Section>
+      const p = isReducedMotion() ? 0.5 : scroll.getSmoothedProgress(SCENE_ID);
+      const maxTranslate = Math.max(0, strip!.scrollWidth - scrub!.clientWidth);
+      strip!.style.transform = `translateX(${-maxTranslate * p}px)`;
+
+      const activeIndex = Math.round(p * (frames.length - 1));
+      frames.forEach((f, i) => f.classList.toggle('is-active', i === activeIndex));
+    }
+
+    scroll.registerTarget(SCENE_ID, root);
+    loop.onFrameStats(layoutStrip);
+    loop.start();
+
+    addEventListener('resize', layoutStrip);
+
+    // --- раскрытие кадра на весь экран (FLIP) ---
+    let lastFocused: HTMLElement | null = null;
+
+    function openFrame(frame: HTMLLIElement) {
+      const item = territoriesById(frame.dataset.territory);
+      if (!item || !expanded || !expandedVisual || !expandedTitle || !expandedText || !expandedCta) return;
+
+      try {
+        sessionStorage.setItem(STORAGE_KEY, item.id);
+      } catch {
+        // приватный режим и т.п. — не критично, просто не запомнится
+      }
+
+      const first = frame.getBoundingClientRect();
+
+      expandedVisual.innerHTML = frame.querySelector('.visual')?.innerHTML ?? '';
+      expandedVisual.className = `expanded-visual visual--${item.id}`;
+      expandedTitle.textContent = item.title;
+      expandedText.textContent = item.text;
+      // Выбор территории уже сохранён в sessionStorage выше — форма
+      // прочитает его сама. В самой ссылке параметр не нужен: `?` после
+      // `#` не станет query-string браузера, а сделает переход полной
+      // перезагрузкой страницы (другой URL) вместо прокрутки к форме.
+
+      lastFocused = document.activeElement as HTMLElement;
+      expanded.hidden = false;
+      document.body.classList.add('territories-lock-scroll');
+
+      const last = expanded.getBoundingClientRect();
+      const reduced = isReducedMotion();
+
+      if (reduced) {
+        expandedClose?.focus();
+        return;
+      }
+
+      const dx = first.left - last.left;
+      const dy = first.top - last.top;
+      const sx = first.width / last.width;
+      const sy = first.height / last.height;
+
+      const panel = expanded.querySelector<HTMLElement>('.expanded-panel');
+      if (panel) {
+        panel.style.transformOrigin = 'top left';
+        panel.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+        panel.style.opacity = '0.4';
+        requestAnimationFrame(() => {
+          panel.style.transition = 'transform 700ms var(--ease-in-out), opacity 400ms var(--ease-out)';
+          panel.style.transform = 'none';
+          panel.style.opacity = '1';
+        });
+      }
+      expandedClose?.focus();
+    }
+
+    function closeExpanded() {
+      if (!expanded) return;
+      expanded.hidden = true;
+      document.body.classList.remove('territories-lock-scroll');
+      const panel = expanded.querySelector<HTMLElement>('.expanded-panel');
+      if (panel) {
+        panel.style.transition = '';
+        panel.style.transform = '';
+        panel.style.opacity = '';
+      }
+      lastFocused?.focus();
+    }
+
+    function territoriesById(id: string | undefined) {
+      const map: Record<string, { id: string; title: string; text: string }> = {};
+      frames.forEach((f) => {
+        const key = f.dataset.territory;
+        if (key) {
+          map[key] = {
+            id: key,
+            title: f.querySelector('h3')?.textContent ?? '',
+            text: f.querySelector('.copy p')?.textContent ?? '',
+          };
+        }
+      });
+      return id ? map[id] : undefined;
+    }
+
+    frames.forEach((frame) => {
+      frame.addEventListener('click', () => openFrame(frame));
+      frame.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openFrame(frame);
+        }
+      });
+    });
+
+    expandedClose?.addEventListener('click', closeExpanded);
+    addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && expanded && !expanded.hidden) closeExpanded();
+    });
+  }
+</script>
 
 <style>
-  h2 {
-    font-size: var(--text-2xl);
-  }
-
-  .grid {
-    margin: var(--space-7) 0 0;
-    padding: 0;
-    list-style: none;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-5);
+  .territories-scene {
+    /* Без своей 3D-сцены — перекрываем общий холст сами (см. base.css). */
+    background: var(--color-bg);
+    height: 300vh;
+    position: relative;
+    border-top: 1px solid var(--color-line);
   }
 
   @media (max-width: 860px) {
-    .grid {
-      grid-template-columns: 1fr;
+    .territories-scene {
+      height: auto;
     }
   }
 
-  .card {
-    background: var(--color-surface);
-    border: 1px solid var(--color-line);
+  .scrub {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+  }
+
+  @media (max-width: 860px) {
+    .scrub {
+      position: static;
+      height: auto;
+      padding-block: clamp(64px, 10vw, 128px);
+    }
+  }
+
+  .stage {
+    width: 100%;
+  }
+
+  .head {
+    margin-bottom: var(--space-6);
+  }
+
+  .eyebrow {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-gold);
+  }
+
+  .filmstrip {
+    display: flex;
+    gap: var(--space-6);
+    padding-inline: clamp(20px, 8vw, 120px);
+    margin: 0;
+    list-style: none;
+    will-change: transform;
+  }
+
+  @media (max-width: 860px) {
+    .filmstrip {
+      flex-direction: column;
+      padding-inline: 0;
+    }
+  }
+
+  .frame {
+    position: relative;
+    flex: 0 0 min(640px, 78vw);
+    height: min(64vh, 560px);
     border-radius: var(--radius-card);
+    overflow: hidden;
+    border: 1px solid var(--color-line);
+    background: var(--color-surface);
+    cursor: pointer;
+    transform: scale(0.94);
+    transition: transform var(--duration-scene) var(--ease-out);
+  }
+
+  .frame.is-active {
+    transform: scale(1);
+  }
+
+  @media (max-width: 860px) {
+    .frame {
+      flex: none;
+      width: 100%;
+      height: auto;
+      min-height: 320px;
+      transform: none;
+    }
+  }
+
+  .visual {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .motif {
+    width: 62%;
+    height: 62%;
+    animation: territory-orbit 16s var(--ease-in-out) infinite;
+  }
+
+  .frame:hover .motif,
+  .frame:focus-visible .motif,
+  .frame.is-active .motif {
+    animation-duration: calc(16s / 2.2);
+  }
+
+  @keyframes territory-orbit {
+    0%,
+    100% {
+      transform: perspective(800px) rotateY(-6deg);
+    }
+    50% {
+      transform: perspective(800px) rotateY(6deg);
+    }
+  }
+
+  .graph-light {
+    offset-path: path('M40,40 L100,100 L165,55');
+    animation: territory-graph-light 3.4s linear infinite;
+  }
+
+  @keyframes territory-graph-light {
+    0% {
+      offset-distance: 0%;
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    90% {
+      opacity: 1;
+    }
+    100% {
+      offset-distance: 100%;
+      opacity: 0;
+    }
+  }
+
+  .film {
+    width: 78%;
+    height: 60%;
+    position: relative;
+    background: color-mix(in srgb, var(--color-bg) 60%, black);
+    border-radius: 4px;
+    overflow: hidden;
+    animation: territory-orbit 18s var(--ease-in-out) infinite;
+  }
+
+  .frame:hover .film,
+  .frame:focus-visible .film,
+  .frame.is-active .film {
+    animation-duration: calc(18s / 2.2);
+  }
+
+  .film-sprockets {
+    position: absolute;
+    top: 6px;
+    left: 0;
+    right: 0;
+    height: 10px;
+    background-image: repeating-linear-gradient(
+      to right,
+      var(--color-sand) 0 6px,
+      transparent 6px 16px
+    );
+    opacity: 0.5;
+  }
+
+  .film-sprockets--bottom {
+    top: auto;
+    bottom: 6px;
+  }
+
+  .film-grain {
+    position: absolute;
+    inset: 20px 8px;
+    background: linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--color-gold) 12%, transparent),
+      transparent 60%,
+      color-mix(in srgb, var(--color-ruby) 10%, transparent)
+    );
+    opacity: 0.8;
+  }
+
+  .dim {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    opacity: 0.55;
+    transition: opacity 260ms var(--ease-out);
+    pointer-events: none;
+  }
+
+  .frame.is-active .dim,
+  .frame:hover .dim,
+  .frame:focus-visible .dim {
+    opacity: 0;
+  }
+
+  @media (max-width: 860px) {
+    .dim {
+      opacity: 0;
+    }
+  }
+
+  .copy {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
     padding: var(--space-6);
   }
 
-  .card h3 {
+  .copy h3 {
     font-size: var(--text-xl);
     color: var(--color-gold);
   }
 
-  .card p {
+  .copy p {
     margin-top: var(--space-3);
     color: var(--color-sand);
+    max-width: var(--measure);
+  }
+
+  /* --- раскрытый кадр --- */
+  .expanded {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(20px, 5vw, 64px);
+  }
+
+  .expanded[hidden] {
+    display: none;
+  }
+
+  .expanded::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+  }
+
+  .expanded-panel {
+    position: relative;
+    z-index: 1;
+    width: min(920px, 100%);
+    max-height: 100%;
+    overflow: auto;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  @media (max-width: 720px) {
+    .expanded-panel {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .expanded-visual {
+    position: relative;
+    min-height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg);
+    overflow: hidden;
+  }
+
+  .expanded-visual .motif,
+  .expanded-visual .film {
+    animation: none;
+  }
+
+  .expanded-copy {
+    padding: var(--space-7);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+
+  .expanded-copy h3 {
+    font-size: var(--text-2xl);
+    color: var(--color-gold);
+  }
+
+  .expanded-copy p {
+    color: var(--color-sand);
+  }
+
+  .expanded-close {
+    position: absolute;
+    top: var(--space-4);
+    right: var(--space-4);
+    z-index: 2;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--color-line);
+    background: var(--color-bg);
+    color: var(--color-ivory);
     font-size: var(--text-base);
+    cursor: pointer;
+    transition:
+      border-color var(--duration-response) var(--ease-out),
+      color var(--duration-response) var(--ease-out);
+  }
+
+  .expanded-close:hover {
+    border-color: var(--color-gold);
+    color: var(--color-gold);
+  }
+
+  :global(body.territories-lock-scroll) {
+    overflow: hidden;
   }
 </style>
