@@ -1,0 +1,339 @@
+<title>Раскадровка TAINA</title>
+<meta name="description" content="30-секундный имиджевый ролик TAINA: раскадровка, промпты, звук, визуальная ДНК.">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  /* Намеренно одна тёмная тема: это мир ролика — «тёмный архив». */
+  :root{
+    color-scheme: dark;
+    --void:#08080A;
+    --paper:#131216;
+    --paper-2:#1B1A1F;
+    --line:#2C2A30;
+    --ink:#ECE6DA;
+    --ink-soft:#A9A197;
+    --ink-faint:#6F6961;
+    --gold:#D7A24C;
+    --ember:#E8722E;
+    --diamond:#C4302B; /* временный — заменить на фирменный HEX ромба */
+    --display:"Fraunces", Georgia, "Times New Roman", serif;
+    --body:"Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  body{
+    background:var(--void); color:var(--ink); font:16px/1.6 var(--body);
+    background-image: radial-gradient(ellipse 70% 40% at 50% 0%, rgba(215,162,76,.07), transparent 70%);
+  }
+  .wrap{ max-width:1040px; margin:0 auto; padding:56px 20px 80px; }
+  h1,h2,h3{ font-family:var(--display); font-weight:500; text-wrap:balance; margin:0; letter-spacing:-.01em; }
+  h1{ font-size:clamp(34px,6vw,58px); line-height:1.05; }
+  h1 em{ color:var(--gold); font-style:italic; }
+  h2{ font-size:clamp(24px,3.4vw,32px); line-height:1.15; margin-bottom:18px; }
+  h3{ font-size:20px; line-height:1.25; }
+  p{ margin:0; }
+  .eyebrow{ font:500 12px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint); display:flex; align-items:center; gap:10px; margin-bottom:22px; }
+  .dia{ display:inline-block; width:9px; height:9px; background:var(--diamond); transform:rotate(45deg); box-shadow:0 0 12px var(--diamond); flex:none; }
+  .lede{ color:var(--ink-soft); font-size:18px; max-width:62ch; margin-top:22px; }
+  section{ margin-top:72px; }
+
+  /* Темп ролика */
+  .tempo{ margin-top:40px; }
+  .tempo-bar{ display:grid; grid-template-columns:15fr 3fr 7fr 5fr; height:10px; border-radius:2px; overflow:hidden; }
+  .tempo-bar span:nth-child(1){ background:linear-gradient(90deg,#2a2622,var(--ember)); }
+  .tempo-bar span:nth-child(2){ background:var(--void); outline:1px solid var(--line); }
+  .tempo-bar span:nth-child(3){ background:linear-gradient(90deg,var(--diamond),var(--gold)); }
+  .tempo-bar span:nth-child(4){ background:rgba(215,162,76,.35); }
+  .tempo-labels{ display:grid; grid-template-columns:15fr 3fr 7fr 5fr; gap:8px; margin-top:10px; font-size:13px; color:var(--ink-soft); }
+  .tempo-labels b{ display:block; font:500 11px/1.4 var(--mono); color:var(--ink-faint); letter-spacing:.06em; }
+
+  /* Сцены */
+  .scenes{ display:grid; gap:18px; }
+  .scene{ display:grid; grid-template-columns:minmax(0,300px) minmax(0,1fr); gap:24px; padding:20px; background:var(--paper); border:1px solid var(--line); border-radius:4px; }
+  .scene svg{ width:100%; height:auto; display:block; border:1px solid var(--line); background:var(--void); }
+  .tc{ font:500 12px/1 var(--mono); color:var(--gold); letter-spacing:.08em; margin-bottom:8px; }
+  .scene h3{ margin-bottom:8px; }
+  .scene .what{ color:var(--ink-soft); font-size:15px; }
+  .onscreen{ margin-top:12px; padding:10px 14px; border-left:2px solid var(--gold); background:var(--paper-2); font-family:var(--display); font-size:17px; }
+  .onscreen small{ display:block; font:500 10px/1.6 var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--ink-faint); }
+  .sound{ margin-top:10px; font-size:13px; color:var(--ink-faint); }
+  .sound b{ color:var(--ink-soft); font-weight:500; }
+  .prompt{ margin-top:12px; position:relative; }
+  .prompt code{ display:block; font:500 12.5px/1.55 var(--mono); color:#CFC6B6; background:#0E0D10; border:1px solid var(--line); padding:12px 14px; padding-right:92px; border-radius:3px; white-space:pre-wrap; word-break:break-word; }
+  .copy{ position:absolute; top:8px; right:8px; font:500 11px/1 var(--mono); letter-spacing:.06em; color:var(--gold); background:transparent; border:1px solid rgba(215,162,76,.45); border-radius:2px; padding:7px 9px; cursor:pointer; }
+  .copy:hover{ background:rgba(215,162,76,.1); }
+  .copy:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+
+  /* Стиль-строка */
+  .style-block .prompt code{ font-size:13px; }
+
+  /* ДНК */
+  .dna{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); }
+  .dna div{ background:var(--void); padding:18px 18px 20px; }
+  .dna h3{ font-size:17px; margin-bottom:6px; display:flex; align-items:center; gap:10px; }
+  .dna p{ color:var(--ink-soft); font-size:14px; }
+  .sw{ width:14px; height:14px; border-radius:2px; flex:none; border:1px solid rgba(255,255,255,.12); }
+
+  .palette{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+  .chip{ border:1px solid var(--line); border-radius:3px; overflow:hidden; background:var(--paper); }
+  .chip i{ display:block; height:64px; }
+  .chip div{ padding:10px 12px; font-size:13px; }
+  .chip code{ font:500 12px var(--mono); color:var(--ink-soft); }
+  .chip .todo{ color:var(--ember); font-size:12px; }
+
+  .two{ display:grid; grid-template-columns:1fr 1fr; gap:28px; }
+  ul.clean{ list-style:none; padding:0; margin:0; display:grid; gap:8px; }
+  ul.clean li{ padding-left:22px; position:relative; color:var(--ink-soft); font-size:15px; }
+  ul.clean.no li::before{ content:"×"; position:absolute; left:2px; color:var(--ember); font-family:var(--mono); }
+  ul.clean.yes li::before{ content:""; position:absolute; left:4px; top:.6em; width:7px; height:7px; background:var(--gold); transform:rotate(45deg); }
+
+  ol.steps{ padding:0; margin:0; list-style:none; counter-reset:s; display:grid; gap:14px; }
+  ol.steps li{ counter-increment:s; display:grid; grid-template-columns:34px 1fr; gap:12px; color:var(--ink-soft); font-size:15px; }
+  ol.steps li::before{ content:counter(s); font:500 13px/26px var(--mono); color:var(--gold); border:1px solid rgba(215,162,76,.4); width:26px; height:26px; text-align:center; border-radius:50%; }
+  ol.steps b{ color:var(--ink); font-weight:600; }
+
+  .final{ text-align:center; padding:64px 20px; border:1px solid var(--line); background:radial-gradient(circle at 50% 40%, rgba(196,48,43,.12), transparent 55%), var(--void); }
+  .final p{ font-family:var(--display); font-size:clamp(24px,4vw,38px); line-height:1.2; }
+  .final .brand{ margin-top:26px; font:600 15px/1 var(--mono); letter-spacing:.4em; color:var(--ink); display:inline-flex; gap:12px; align-items:center; }
+
+  @media (max-width:760px){
+    .scene{ grid-template-columns:1fr; }
+    .two{ grid-template-columns:1fr; }
+    .tempo-labels{ grid-template-columns:1fr 1fr; }
+    .tempo-bar{ grid-template-columns:15fr 3fr 7fr 5fr; }
+  }
+  @media (prefers-reduced-motion: no-preference){
+    .glow{ animation:pulse 3.2s ease-in-out infinite; transform-origin:center; transform-box:fill-box; }
+    @keyframes pulse{ 50%{ opacity:.55; } }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow"><span class="dia"></span>TAINA · имиджевый ролик · 30 сек</p>
+    <h1>Ответ уже есть.<br><em>TAINA помогает его найти.</em></h1>
+    <p class="lede">Раскадровка для аниматора или AI-генерации. Ролик не про ИИ как технологию, а про момент, когда бизнес понимает: ответ давно лежит внутри компании, просто сотрудники часами ищут, проверяют и пересылают его.</p>
+
+    <div class="tempo" aria-label="Темп ролика">
+      <div class="tempo-bar"><span></span><span></span><span></span><span></span></div>
+      <div class="tempo-labels">
+        <p><b>0–15</b>Хаос нарастает, монтаж ускоряется</p>
+        <p><b>15–18</b>Резкая тишина</p>
+        <p><b>18–25</b>Медленное раскрытие</p>
+        <p><b>25–30</b>Покой</p>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <h2>Раскадровка</h2>
+    <div class="scenes">
+
+      <article class="scene">
+        <svg viewBox="0 0 160 90" role="img" aria-label="Темнота и золотая точка">
+          <circle class="glow" cx="80" cy="42" r="2.2" fill="#D7A24C"/>
+          <circle cx="80" cy="42" r="9" fill="#D7A24C" opacity=".08"/>
+          <rect x="46" y="58" width="68" height="2.4" rx="1" fill="#D7A24C" opacity=".55"/>
+        </svg>
+        <div>
+          <p class="tc">00:00 — 00:03</p>
+          <h3>Точка света</h3>
+          <p class="what">Полная темнота, слышен шорох бумаги. Появляется маленькая золотая точка и раскрывается в строку текста. Пауза.</p>
+          <div class="onscreen"><small>Текст на экране</small>У вашей компании уже есть ответ.</div>
+          <p class="sound"><b>Звук:</b> шорох страницы в тишине, одиночный.</p>
+          <div class="prompt"><code>total darkness, a single tiny warm golden point of light in the center of the frame, faint dust particles, film grain, near-black #08080A background, minimal, cinematic</code><button class="copy" type="button">Копировать</button></div>
+        </div>
+      </article>
+
+      <article class="scene">
+        <svg viewBox="0 0 160 90" role="img" aria-label="Огромный архив и маленький человек">
+          <g fill="none" stroke="#D7A24C" stroke-width=".5" opacity=".55">
+            <rect x="8" y="22" width="14" height="60"/><rect x="24" y="10" width="12" height="72"/><rect x="38" y="30" width="16" height="52"/>
+            <rect x="104" y="18" width="14" height="64"/><rect x="120" y="8" width="16" height="74"/><rect x="138" y="28" width="14" height="54"/>
+            <path d="M58 60h10v22H58zM90 54h12v28H90z"/>
+          </g>
+          <g stroke="#D7A24C" stroke-width=".3" opacity=".35"><path d="M10 30h10M10 36h10M26 18h8M26 24h8M122 16h12M122 22h12M40 38h12"/></g>
+          <circle cx="80" cy="30" r="1.4" fill="#D7A24C"/>
+          <g fill="#ECE6DA"><circle cx="80" cy="74.5" r="1.2"/><rect x="79.1" y="76" width="1.8" height="5" rx=".6"/></g>
+        </svg>
+        <div>
+          <p class="tc">00:03 — 00:08</p>
+          <h3>Архив нарастает</h3>
+          <p class="what">Камера отъезжает: точка оказывается крошечным огоньком в огромном пространстве. Вокруг маленького человека нарастают стопки PDF, папок, таблиц, договоров, скриптов.</p>
+          <p class="sound"><b>Звук:</b> бумага, клавиатура, первые уведомления.</p>
+          <div class="prompt"><code>slow camera pull-back revealing a vast dark archive, towering stacks of papers, folders, binders and spreadsheets rising like buildings, a tiny faceless human silhouette in dark clothes standing at the bottom, one small golden light high above</code><button class="copy" type="button">Копировать</button></div>
+        </div>
+      </article>
+
+      <article class="scene">
+        <svg viewBox="0 0 160 90" role="img" aria-label="Лабиринт из документов и вопросы">
+          <g fill="none" stroke="#D7A24C" stroke-width=".7" opacity=".5">
+            <path d="M10 10h140v70H10z M10 26h40v18 M66 10v30h30 M112 26v36h-30 M28 62h40v18 M130 44h20 M50 44h16v18 M96 62h16"/>
+          </g>
+          <g font-family="IBM Plex Mono, monospace" font-size="5.2" fill="#E8722E">
+            <text x="18" y="21">где версия?</text><text x="98" y="21">по регламенту?</text><text x="60" y="56">кто знает?</text>
+          </g>
+          <g fill="#ECE6DA"><circle cx="40" cy="70" r="1.2"/><rect x="39.1" y="71.5" width="1.8" height="4.5" rx=".6"/></g>
+          <g stroke="#ECE6DA" stroke-width=".3" opacity=".5"><path d="M33 72h-5M33 74h-7"/></g>
+        </svg>
+        <div>
+          <p class="tc">00:08 — 00:15</p>
+          <h3>Лабиринт</h3>
+          <p class="what">Человек открывает папку: не то. Другую: не то. Архив складывается в лабиринт из полок, таблиц, окон и сообщений. Вспыхивают вопросы. Монтаж ускоряется. Человек не бестолковый: информации просто слишком много.</p>
+          <div class="onscreen"><small>Текст на экране, вспышками</small>Где актуальная версия? · Это точно по регламенту? · Кто знает ответ?</div>
+          <p class="sound"><b>Звук:</b> наслоение: шорох, клики, уведомления, далёкие голоса «сейчас найду…», «подожди…».</p>
+          <div class="prompt"><code>a labyrinth built from archive shelves, folders and floating document fragments, tiny faceless figure moving fast through narrow corridors, papers flying, warm amber light flickers, fast cuts, rising tension</code><button class="copy" type="button">Копировать</button></div>
+        </div>
+      </article>
+
+      <article class="scene">
+        <svg viewBox="0 0 160 90" role="img" aria-label="Тишина и красный ромб">
+          <g fill="none" stroke="#D7A24C" stroke-width=".5" opacity=".15"><path d="M10 10h140v70H10z M10 26h40v18 M66 10v30h30 M112 26v36h-30 M28 62h40v18"/></g>
+          <circle cx="80" cy="45" r="16" fill="#C4302B" opacity=".1"/>
+          <rect class="glow" x="77" y="42" width="6" height="6" fill="#C4302B" transform="rotate(45 80 45)"/>
+        </svg>
+        <div>
+          <p class="tc">00:15 — 00:18</p>
+          <h3>Тишина</h3>
+          <p class="what">Весь шум обрывается. В глубине лабиринта загорается маленький красный ромб. Камера медленно движется к нему.</p>
+          <p class="sound"><b>Звук:</b> абсолютная тишина, затем одна низкая нота.</p>
+          <div class="prompt"><code>deep inside a dark labyrinth of documents, a small glowing red diamond appears in the distance, everything freezes, dust hangs in the air, slow push-in, silence</code><button class="copy" type="button">Копировать</button></div>
+        </div>
+      </article>
+
+      <article class="scene">
+        <svg viewBox="0 0 160 90" role="img" aria-label="Нити соединяют документы, ответ со ссылкой на источник">
+          <g stroke="#D7A24C" stroke-width=".4" opacity=".7">
+            <path d="M44 22L66 36M44 45H66M44 68L66 54M22 22h22M22 45h22M22 68h22"/>
+          </g>
+          <g fill="none" stroke="#D7A24C" stroke-width=".6"><rect x="12" y="17" width="10" height="11"/><rect x="12" y="40" width="10" height="11"/><rect x="12" y="63" width="10" height="11"/></g>
+          <rect x="66" y="41" width="8" height="8" fill="#C4302B" transform="rotate(45 70 45)"/>
+          <path d="M76 45h10" stroke="#D7A24C" stroke-width=".6"/>
+          <rect x="86" y="24" width="64" height="42" rx="2" fill="#131216" stroke="#2C2A30"/>
+          <g font-family="IBM Plex Mono, monospace" font-size="4.2">
+            <text x="91" y="33" fill="#A9A197">Схема приёма</text><text x="91" y="39" fill="#A9A197">повторных пациентов?</text>
+            <rect x="91" y="44" width="52" height="1.6" fill="#ECE6DA" opacity=".6"/><rect x="91" y="48" width="40" height="1.6" fill="#ECE6DA" opacity=".6"/>
+            <text x="91" y="59" fill="#D7A24C">↳ Регламент, п. 3.2</text>
+          </g>
+        </svg>
+        <div>
+          <p class="tc">00:18 — 00:25</p>
+          <h3>Порядок</h3>
+          <p class="what">Ромб проходит сквозь документы, и тонкие золотые нити соединяют разрозненные бумаги в одну структуру. Появляется окно помощника: вопрос, ответ и ссылка на документ-источник. Это не волшебство ChatGPT: видно, из какого документа взят ответ.</p>
+          <div class="onscreen"><small>Текст на экране</small>«Какая схема приёма для повторных пациентов?» → ответ<br><span style="font-family:var(--mono);font-size:13px;color:var(--gold)">Источник: Регламент приёма, п. 3.2</span></div>
+          <p class="sound"><b>Звук:</b> тёплая минималистичная тема: фортепиано, синтезаторная подложка, низкий бас.</p>
+          <div class="prompt"><code>a red diamond of light moves through scattered documents, thin golden threads connect papers into an ordered architectural structure, chaos rearranging into a calm system, slow graceful motion</code><button class="copy" type="button">Копировать</button></div>
+        </div>
+      </article>
+
+      <article class="scene">
+        <svg viewBox="0 0 160 90" role="img" aria-label="Покой, человек работает, кот на папках">
+          <g fill="#ECE6DA"><circle cx="60" cy="58" r="1.4"/><rect x="59" y="60" width="2" height="6" rx=".6"/></g>
+          <rect x="54" y="66" width="22" height="1" fill="#D7A24C" opacity=".6"/>
+          <rect x="72" y="57" width="7" height="5" fill="none" stroke="#D7A24C" stroke-width=".5"/>
+          <g fill="none" stroke="#D7A24C" stroke-width=".5" opacity=".6"><rect x="110" y="62" width="22" height="6"/><rect x="112" y="68" width="20" height="6"/><rect x="109" y="74" width="24" height="6"/></g>
+          <g fill="#050506" stroke="#6F6961" stroke-width=".35">
+            <path d="M116 62c0-6 2-9 5-9 1-2 1.5-3 1.5-3l1.2 2h1.6l1.2-2s.5 1 1.5 3c3 0 3 3 3 9z"/>
+          </g>
+          <g fill="#D7A24C"><circle cx="122.6" cy="55.4" r=".55"/><circle cx="126.4" cy="55.4" r=".55"/></g>
+          <rect x="134" y="58" width="3.2" height="3.2" fill="#C4302B" transform="rotate(45 135.6 59.6)"/>
+        </svg>
+        <div>
+          <p class="tc">00:25 — 00:30</p>
+          <h3>Покой и Бегемот</h3>
+          <p class="what">Лабиринт растворяется, остаётся чистое тёмное пространство. Человек спокойно работает, красный ромб рядом. На стопке папок сидит чёрный кот и смотрит прямо в камеру, рядом лежит документ с маленьким красным ромбом. Кот появляется один раз, без акцента.</p>
+          <div class="onscreen"><small>Финальный экран</small>Ответ уже есть.<br>TAINA помогает его найти.</div>
+          <p class="sound"><b>Звук:</b> тема затихает, в конце едва слышный шорох бумаги.</p>
+          <div class="prompt"><code>calm empty dark space, the tiny human figure working peacefully at a simple desk in warm golden light, a black cat sitting on a neat stack of folders looking directly at the viewer, a document with a small red diamond mark beside the cat, stillness</code><button class="copy" type="button">Копировать</button></div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section class="style-block">
+    <h2>Общий стиль: добавлять в конец каждого промпта</h2>
+    <div class="prompt"><code>cinematic editorial animation, film noir, dark archive universe, near-black background #08080A, thin golden lines #D7A24C, amber accents #E8722E, single glowing red diamond, dust particles, film grain, soft haze, architectural diagram aesthetic, magical realism, tiny faceless human silhouette, no robots, no holograms, no blue light, no neon, no text</code><button class="copy" type="button">Копировать</button></div>
+    <p class="sound" style="margin-top:12px">Добавьте <code style="font-family:var(--mono)">no text</code>: генераторы искажают буквы, поэтому весь текст и окно ответа накладываются при монтаже.</p>
+  </section>
+
+  <section>
+    <h2>Ключевой арт бренда</h2>
+    <p class="lede" style="margin-top:0;margin-bottom:14px">Сначала сгенерируйте этот кадр. Он станет референсом стиля для всех сцен, иначе каждая сцена выйдет в своей палитре.</p>
+    <div class="prompt"><code>a vast dark space where thousands of documents, folders and archive cards form monumental architecture, a tiny faceless human figure stands inside, deep in the distance a single glowing red diamond, thin golden threads radiate from it and connect the documents into order, dust, film grain, cinematic editorial illustration, film noir, magical realism, near-black #08080A, gold #D7A24C --ar 16:9</code><button class="copy" type="button">Копировать</button></div>
+  </section>
+
+  <section>
+    <h2>Визуальная ДНК</h2>
+    <div class="palette" style="margin-bottom:18px">
+      <div class="chip"><i style="background:#08080A;border-bottom:1px solid var(--line)"></i><div>Неизвестность<br><code>#08080A</code></div></div>
+      <div class="chip"><i style="background:#D7A24C"></i><div>Знание<br><code>#D7A24C</code></div></div>
+      <div class="chip"><i style="background:#E8722E"></i><div>Энергия, действие<br><code>#E8722E</code></div></div>
+      <div class="chip"><i style="background:var(--diamond)"></i><div>Ромб<br><code>#C4302B</code> <span class="todo">временный, нужен фирменный</span></div></div>
+    </div>
+    <div class="dna">
+      <div><h3><span class="dia"></span>Красный ромб</h3><p>Главный символ и источник света, а не логотип в углу. Указывает путь, открывает пространство, соединяет информацию.</p></div>
+      <div><h3><span class="sw" style="background:#D7A24C"></span>Золотой свет</h3><p>Знание, найденный ответ. В начале ролика его почти нет, в конце им залит весь кадр.</p></div>
+      <div><h3><span class="sw" style="background:#08080A"></span>Чёрное пространство</h3><p>Сначала неизвестность, затем информационный шум, в конце место для решения.</p></div>
+      <div><h3>Бумага</h3><p>TAINA работает с реальными знаниями бизнеса, поэтому документы здесь фактура, а не фон.</p></div>
+      <div><h3>Нити</h3><p>Тонкие золотые линии: документ → правило → человек → ответ. Фирменный графический элемент.</p></div>
+      <div><h3>Архив → город → лабиринт</h3><p>Полки и папки складываются в архитектуру. Главная метафора.</p></div>
+      <div><h3>Маленький человек</h3><p>Огромная среда и крошечная фигура без лица. Проблема в объёме информации, а не в сотруднике.</p></div>
+      <div><h3>Кот Бегемот</h3><p>Редкая пасхалка, не маскот. Один раз за ролик, в спокойном кадре.</p></div>
+    </div>
+  </section>
+
+  <section class="two">
+    <div>
+      <h2>Что зритель должен подумать</h2>
+      <ul class="clean yes">
+        <li>«Чёрт. У нас реально так».</li>
+        <li>«У нас куча информации, которой никто нормально не пользуется».</li>
+        <li>Не «прикольный AI-ролик».</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Чего в кадре нет</h2>
+      <ul class="clean no">
+        <li>Роботы, гуманоиды, мозг из микросхем, нейросети</li>
+        <li>Голубые голограммы, неон, киберпанк, серверные</li>
+        <li>Мультяшные офисные работники, большие глаза</li>
+        <li>Человек, «общающийся с ChatGPT», надписи «AI magic»</li>
+        <li>Слоган «AI-решения для бизнеса»</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Как собрать ролик</h2>
+    <ol class="steps">
+      <li><div><b>Ключевой арт.</b> Сгенерировать в Midjourney по промпту выше и выбрать один кадр как эталон стиля.</div></li>
+      <li><div><b>Первые кадры сцен.</b> Шесть картинок с эталоном в качестве референса стиля (<code style="font-family:var(--mono)">--sref</code> в Midjourney).</div></li>
+      <li><div><b>Анимация.</b> Оживить каждую картинку в Kling, Runway или Veo (режим «из изображения в видео»), по 3–7 секунд. Силуэт без лица не «плывёт» между сценами.</div></li>
+      <li><div><b>Текст и окно ответа.</b> Накладываются на монтаже шрифтом Fraunces, как на сайте. Ролик должен читаться без звука.</div></li>
+      <li><div><b>Звук.</b> Шумы бумаги и уведомлений взять из стоковых библиотек или сгенерировать в ElevenLabs SFX, в финал поставить минималистичную тему. Монтаж в DaVinci Resolve или CapCut.</div></li>
+      <li><div><b>Два формата.</b> 16:9 для сайта и 9:16 для Reels и Shorts. Человек и ромб всегда в центре кадра, тогда вертикальную версию можно просто вырезать из горизонтальной.</div></li>
+    </ol>
+  </section>
+
+  <section class="final">
+    <p>Ответ уже есть.<br>TAINA помогает его найти.</p>
+    <span class="brand"><span class="dia"></span>TAINA</span>
+  </section>
+
+</div>
+
+<script>
+  document.querySelectorAll('.copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var code = btn.parentElement.querySelector('code');
+      var done = function () { btn.textContent = 'Скопировано'; setTimeout(function () { btn.textContent = 'Копировать'; }, 1600); };
+      var fallback = function () {
+        var r = document.createRange(); r.selectNodeContents(code);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent = 'Выделено — Ctrl+C';
+      };
+      try { navigator.clipboard.writeText(code.textContent).then(done, fallback); } catch (e) { fallback(); }
+    });
+  });
+</script>
