@@ -1,5 +1,5 @@
 // Покадровый рендер film.html. Использование:
-//   node render.mjs frames <outDir> [fps]        — все кадры ролика
+//   node render.mjs frames <outDir> [fps] [from] [to] — кадры ролика (можно диапазон секунд)
 //   node render.mjs stills <outDir> t1 t2 ...    — отдельные кадры
 import { createRequire } from 'node:module';
 import { execSync } from 'node:child_process';
@@ -41,7 +41,8 @@ if (mode === 'stills') {
   for (const t of rest) await shot(parseFloat(t), path.join(out, `t${t}.jpg`));
 } else {
   const fps = parseInt(rest[0] || '30', 10), n = fps * film.dur;
-  for (let i = 0; i < n; i++) {
+  const from = Math.floor(parseFloat(rest[1] || '0') * fps), to = Math.min(n, Math.ceil(parseFloat(rest[2] || String(film.dur)) * fps));
+  for (let i = from; i < to; i++) {
     await shot(i / fps, path.join(out, String(i).padStart(4, '0') + '.jpg'));
     if (i % 150 === 0) console.log(`frame ${i}/${n}`);
   }

@@ -210,6 +210,7 @@ function sSearch(t) { // 5.8–18.3 Поиск и Свет
   const shx = amp * Math.sin(t * 43), shy = amp * Math.cos(t * 37);
   const bright = lerp(.72, 1.02, seg(t, 15.4, 16.6));
   place(g, img, s, 560, fy, cx + shx, cy + shy, `brightness(${bright}) contrast(1.06) saturate(1.05)`);
+  { const top = cy + shy - fy * s; if (top > -320) featherY(top - 10, 1e5, 340); } // верхний край фото уходит в фон
   // верх скрыт, пока не поднимем камеру
   const hide = 1 - seg(t, 13.2, 15);
   if (hide > 0) { const gr = g.createLinearGradient(0, 0, 0, 640); gr.addColorStop(0, rgba(C.void, .96 * hide)); gr.addColorStop(1, rgba(C.void, 0)); g.fillStyle = gr; g.fillRect(0, 0, W, 640); }
