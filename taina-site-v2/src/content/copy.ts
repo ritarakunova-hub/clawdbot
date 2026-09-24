@@ -266,5 +266,41 @@ export const contact = {
     { label: 'Telegram @RitaRakunova', href: 'https://t.me/RitaRakunova' },
     { label: 'ritarakunova@gmail.com', href: 'mailto:ritarakunova@gmail.com' },
   ],
-  // Форма — Этап 10. Пока прямые ссылки на каналы, без формы-заглушки.
+  // Этап 10. Форма — не изобретение заново: те же имя формы и поля, что
+  // на taina-site/index.html (форма taina-diagnostic, три поля) — это
+  // единственная форма, про которую точно известно, что она работает и
+  // собирает заявки (см. docs/form-contract.md). Решение о выборе именно
+  // этой формы, а не варианта с одним полем «contact» из другого
+  // источника — от владелицы сайта.
+  form: {
+    netlifyName: 'taina-diagnostic',
+    nameLabel: 'Имя',
+    namePlaceholder: 'Как к вам обращаться',
+    contactLabel: 'Контакт',
+    contactPlaceholder: 'Telegram, телефон или почта',
+    messageLabel: 'Какой процесс беспокоит?',
+    messageOptionalNote: '(необязательно)',
+    messagePlaceholder: 'Например: менеджеры вручную ищут ответы клиентам',
+    consentLabel: 'Согласен(-на) на обработку персональных данных в соответствии с',
+    consentPrivacyLink: 'политикой конфиденциальности',
+    consentAnd: 'и',
+    consentOfferLink: 'договором-офертой',
+    submitLabel: 'Отправить и обсудить диагностику',
+    sendingLabel: 'Отправляем…',
+    // Дословно по смыслу с рабочей формы (taina-site/index.html).
+    successMessage: 'Готово. Отвечу лично.',
+    errorMessage:
+      'Не получилось отправить автоматически — напишите, пожалуйста, на ritarakunova@gmail.com напрямую.',
+    fallbackNote:
+      'Заявка сразу попадёт в систему, я свяжусь с вами в течение дня. Если что-то пошло не так — пишите на ritarakunova@gmail.com.',
+  },
+  // Тексты политики и оферты ещё не написаны — заглушка честно говорит
+  // об этом прямо в интерфейсе, ссылка чекбокса ведёт сюда же (см.
+  // Footer.astro). Статус зафиксирован в docs/approve-texts.md как
+  // [ЖДЁТ ТЕКСТА ОТ ВЛАДЕЛИЦЫ].
+  legal: {
+    privacyTitle: 'Политика конфиденциальности',
+    offerTitle: 'Договор-оферта',
+    placeholder: 'Текст будет добавлен.',
+  },
 };

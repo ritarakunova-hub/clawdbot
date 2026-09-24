@@ -57,6 +57,7 @@ import { faq } from '@/content/faq';
           <li
             class:list={['card', { 'card--recommended': pkg.recommended }]}
             data-reveal
+            data-package={pkg.title}
             style={`--reveal-delay: ${i * 80}ms`}
           >
             {pkg.tag && <p class="badge">{pkg.tag}</p>}
@@ -72,7 +73,7 @@ import { faq } from '@/content/faq';
       }
     </ul>
 
-    <div class="support" data-reveal>
+    <div class="support" data-reveal data-package={support.title}>
       <h3>{support.title}</h3>
       <p class="price">{support.price}</p>
       <p class="description">{support.description}</p>
@@ -184,6 +185,15 @@ import { faq } from '@/content/faq';
     };
     card.addEventListener('pointerup', release);
     card.addEventListener('pointercancel', release);
+  });
+
+  // «Кнопки... передают выбранный пакет» (PROMPTS.md, Этап 9) — запоминаем
+  // на сессию, форма в «Контакте» подставит его в сообщение (Этап 10).
+  document.querySelectorAll<HTMLElement>('[data-package]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const title = el.dataset.package;
+      if (title) sessionStorage.setItem('taina:package', title);
+    });
   });
 </script>
 
