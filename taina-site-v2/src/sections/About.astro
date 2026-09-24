@@ -1,0 +1,74 @@
+---
+import Section from '@/components/Section.astro';
+import Container from '@/components/Container.astro';
+import { about } from '@/content/copy';
+---
+
+<Section id="about" label={about.title}>
+  <Container>
+    <h2 data-reveal>{about.title}</h2>
+    <div class="body" data-reveal>
+      {/* Место под настоящий портрет (Этап 11) — пока честная заглушка
+         инициалом, как на старом сайте. Когда придёт фото — заменить
+         div.avatar на <img src="..." alt="Автор TAINA STUDIO" width height>,
+         остальную вёрстку менять не нужно. */}
+      <div class="avatar" aria-hidden="true">Т</div>
+      <div class="text">
+        {about.paragraphs.map((paragraph) => <p class="measure">{paragraph}</p>)}
+        <p class="philosophy measure">«{about.philosophy}»</p>
+      </div>
+    </div>
+  </Container>
+</Section>
+
+<style>
+  h2 {
+    font-size: var(--text-2xl);
+  }
+
+  .body {
+    margin-top: var(--space-6);
+    display: flex;
+    gap: var(--space-6);
+    align-items: flex-start;
+  }
+
+  @media (max-width: 640px) {
+    .body {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+  }
+
+  .avatar {
+    flex: none;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-serif);
+    font-size: var(--text-2xl);
+    color: var(--color-gold);
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+  }
+
+  .text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    font-size: var(--text-lg);
+    color: var(--color-sand);
+  }
+
+  .philosophy {
+    font-family: var(--font-serif);
+    font-style: italic;
+    color: var(--color-ivory);
+    border-left: 2px solid var(--color-gold);
+    padding-left: var(--space-4);
+  }
+</style>

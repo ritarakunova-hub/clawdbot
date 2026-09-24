@@ -1,0 +1,59 @@
+:root {
+  color-scheme: dark;
+
+  /* Цвет */
+  --color-bg: #0a0a0b;
+  --color-surface: #1a1a1f;
+  --color-line: #3a3a3f;
+  --color-gold: #d4af37;
+  --color-ivory: #ede8db;
+  --color-sand: #c9b99a;
+  --color-ruby: #e22c34;
+  --color-crimson: #8f1d24;
+
+  /* Шрифты. "Fallback" — метрически подогнанные резервные начертания
+     от fontaine (astro.config.mjs), чтобы при догрузке настоящего
+     шрифта не было сдвига текста (CLS). */
+  --font-serif: 'Cormorant Garamond', 'Cormorant Garamond Fallback', 'Times New Roman', serif;
+  --font-sans:
+    'Inter', 'Inter Fallback', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Типографика: clamp(min, предпочтительно, max) */
+  --text-xs: clamp(0.78rem, 0.74rem + 0.2vw, 0.86rem);
+  --text-sm: clamp(0.88rem, 0.84rem + 0.2vw, 0.95rem);
+  --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.1rem);
+  --text-lg: clamp(1.1rem, 1.02rem + 0.4vw, 1.3rem);
+  --text-xl: clamp(1.4rem, 1.2rem + 1vw, 2rem);
+  --text-2xl: clamp(2rem, 1.6rem + 2vw, 3.2rem);
+  --text-3xl: clamp(2.7rem, 1.9rem + 4vw, 6.4rem);
+
+  /* Отступы (шкала 4–64) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Радиусы */
+  --radius-pill: 999px;
+  --radius-card: 16px;
+
+  /* Максимальная длина строки для читаемого текста (65–75 знаков) */
+  --measure: 68ch;
+
+  /* Высота шапки (с запасом на safe-area-inset-top) — для
+     scroll-margin-top у якорных секций */
+  --header-height: 112px;
+
+  /* Easing (CSS-кривые из документа «Система движения») */
+  --ease-out: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --ease-in-out: cubic-bezier(0.645, 0.045, 0.355, 1);
+
+  /* Тайминги */
+  --duration-response: 200ms;
+  --duration-scene: 1.2s;
+  --duration-sweep: 2.3s;
+}

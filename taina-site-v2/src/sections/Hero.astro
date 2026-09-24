@@ -1,0 +1,339 @@
+---
+import Button from '@/components/Button.astro';
+import { hero } from '@/content/copy';
+---
+
+<section class="hero" id="hero" aria-label="Первый экран">
+  <div class="stage" id="hero-stage">
+    <div class="veil"></div>
+    <div class="copy" id="hero-copy">
+      <p class="eyebrow">{hero.eyebrow}</p>
+      <h1 id="hero-h1">{hero.title}</h1>
+      <p class="lead">{hero.lead}</p>
+      <div class="actions">
+        <Button href="#contact">{hero.primaryCta}</Button>
+        <Button href="#proyavka" variant="text">{hero.secondaryCta}</Button>
+      </div>
+      <ul class="facts" aria-label="Коротко">
+        {hero.facts.map((fact) => <li>{fact}</li>)}
+      </ul>
+    </div>
+    <div class="foot" aria-hidden="true">
+      <span>{hero.brandLine}</span>
+      <span class="scroll" id="hero-scroll-cue"><span>Прокрутите вниз</span><i></i></span>
+    </div>
+  </div>
+</section>
+
+<script>
+  // loop.ts/debugOverlay.ts лёгкие (без three.js) — грузим их сразу,
+  // независимо от тяжёлого 3D-чанка сцены. Один цикл на весь сайт,
+  // должен быть готов принимать сцены с самого начала.
+  import { start as startLoop } from '@/scene/loop';
+  import { initDebugOverlay } from '@/scene/debugOverlay';
+
+  startLoop();
+  initDebugOverlay();
+
+  // Загружаем 3D только после первого показа текста (он уже отрисован —
+  // текст лежит в обычном HTML/CSS выше, без сцены страница выглядит
+  // как в Этапе 2) и только после load, чтобы не конкурировать с LCP.
+  function boot() {
+    const hero = document.getElementById('hero');
+    const stage = document.getElementById('hero-stage');
+    const copy = document.getElementById('hero-copy');
+    const h1 = document.getElementById('hero-h1');
+    const cueScroll = document.getElementById('hero-scroll-cue');
+    if (!hero || !stage || !copy || !h1 || !cueScroll) return;
+
+    import('@/scene/scenes/hero')
+      .then(({ mountHeroScene }) => {
+        mountHeroScene({
+          hero,
+          stage,
+          copy,
+          h1,
+          cueScroll,
+          catImageUrl: '/img/cat-eyes.jpg',
+        });
+      })
+      .catch(() => {
+        // Нет WebGL2 или сцена упала при инициализации — статичный
+        // ромб на CSS, заголовок остаётся читаемым (уровни C/D из CLAUDE.md).
+        hero.classList.add('hero--nogl');
+        h1.style.setProperty('--s', '130%');
+        stage.classList.add('on');
+      });
+  }
+
+  if (document.readyState === 'complete') {
+    requestAnimationFrame(boot);
+  } else {
+    addEventListener('load', () => requestAnimationFrame(boot), { once: true });
+  }
+</script>
+
+<style>
+  .hero {
+    position: relative;
+    height: 340vh;
+    /* Прозрачный — хиро рисуется в общий холст сайта (#scene-gl,
+       Layout.astro), а не в свой canvas. Фон-заглушка на время загрузки
+       даёт html (base.css), тон совпадает с clearColor рендерера. */
+    margin-top: calc(-1 * var(--header-height));
+  }
+
+  .stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow: hidden;
+  }
+
+  .veil {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--color-bg) 90%, transparent) 0%,
+        color-mix(in srgb, var(--color-bg) 60%, transparent) 30%,
+        transparent 58%
+      ),
+      linear-gradient(0deg, color-mix(in srgb, var(--color-bg) 70%, transparent) 0%, transparent 30%);
+  }
+
+  .copy {
+    position: absolute;
+    left: clamp(20px, 6vw, 104px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(84px, 15svh, 150px));
+    width: min(41rem, 88vw);
+    will-change: transform, opacity;
+  }
+
+  .eyebrow {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--color-sand);
+    letter-spacing: 0.01em;
+    margin-bottom: 1.4rem;
+    opacity: 0;
+    transition: opacity 1.2s ease;
+  }
+
+  h1 {
+    text-wrap: balance;
+    font-size: clamp(2.7rem, 6.6vw, 6.4rem);
+    line-height: 1;
+    letter-spacing: -0.012em;
+    max-width: 9.6em;
+    --s: -25%;
+    color: transparent;
+    background: linear-gradient(
+      100deg,
+      var(--color-ivory) 0%,
+      var(--color-ivory) calc(var(--s) - 14%),
+      var(--color-gold) calc(var(--s) - 2%),
+      color-mix(in srgb, var(--color-ivory) 0%, transparent) calc(var(--s) + 0.01%)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    padding-bottom: 0.08em;
+  }
+
+  .lead {
+    margin-top: 1.7rem;
+    max-width: 34rem;
+    font-size: clamp(1rem, 1.25vw, 1.16rem);
+    line-height: 1.62;
+    color: var(--color-sand);
+    opacity: 0;
+    transition: opacity 1.3s ease;
+  }
+
+  .actions {
+    margin-top: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.6rem;
+    flex-wrap: wrap;
+    opacity: 0;
+    transition: opacity 1.2s ease;
+  }
+
+  .facts {
+    list-style: none;
+    margin: 2.4rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0;
+    font-size: 0.86rem;
+    color: var(--color-sand);
+    opacity: 0;
+    transition: opacity 1.4s ease;
+  }
+
+  .facts li {
+    padding-right: 1.1rem;
+    margin-right: 1.1rem;
+    border-right: 1px solid var(--color-line);
+  }
+
+  .facts li:last-child {
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .foot {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0 clamp(20px, 4vw, 56px) calc(env(safe-area-inset-bottom, 0px) + 26px);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    font-size: 0.78rem;
+    color: var(--color-sand);
+    pointer-events: none;
+  }
+
+  .foot .scroll {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: opacity 0.5s;
+  }
+
+  .foot .scroll i {
+    display: block;
+    width: 1px;
+    height: 44px;
+    background: linear-gradient(var(--color-gold), color-mix(in srgb, var(--color-gold) 0%, transparent));
+  }
+
+  .stage.on .eyebrow,
+  .stage.on .lead,
+  .stage.on .actions,
+  .stage.on .facts {
+    opacity: 1;
+  }
+
+  .stage.on .eyebrow {
+    transition-delay: 0s;
+  }
+  .stage.on .lead {
+    transition-delay: 0.15s;
+  }
+  .stage.on .actions {
+    transition-delay: 0.35s;
+  }
+  .stage.on .facts {
+    transition-delay: 0.55s;
+  }
+
+  /* Уровень C/D: WebGL недоступен или сцена упала — статичный красный
+     ромб на CSS вместо canvas, текст остаётся как есть. То же самое —
+     пока общий WebGL-контекст потерян (.hero--ctxlost, см. canvas.ts):
+     нужен свой непрозрачный фон, потому что общий холст сейчас пуст. */
+  .hero--nogl .stage,
+  .hero--ctxlost .stage {
+    background:
+      radial-gradient(
+        60vmax 60vmax at 74% 42%,
+        color-mix(in srgb, var(--color-crimson) 50%, transparent),
+        transparent 60%
+      ),
+      #030304;
+  }
+
+  .hero--nogl .stage::after,
+  .hero--ctxlost .stage::after {
+    content: '';
+    position: absolute;
+    left: 74%;
+    top: 42%;
+    width: min(15vmin, 120px);
+    height: min(24vmin, 190px);
+    transform: translate(-50%, -50%);
+    background: linear-gradient(180deg, var(--color-ruby) 0 50%, var(--color-crimson) 50% 100%);
+    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+    filter: drop-shadow(0 0 40px color-mix(in srgb, var(--color-ruby) 80%, transparent));
+  }
+
+  @media (max-width: 860px) {
+    .veil {
+      background: linear-gradient(
+        0deg,
+        color-mix(in srgb, var(--color-bg) 94%, transparent) 0%,
+        color-mix(in srgb, var(--color-bg) 78%, transparent) 34%,
+        transparent 66%
+      );
+    }
+    .copy {
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 74px);
+    }
+    h1 {
+      font-size: clamp(2.35rem, 11.2vw, 3.6rem);
+      max-width: 10em;
+    }
+    .lead {
+      margin-top: 1.1rem;
+      font-size: 0.98rem;
+      line-height: 1.55;
+    }
+    .actions {
+      margin-top: 1.4rem;
+    }
+    .facts {
+      margin-top: 1.5rem;
+      font-size: 0.8rem;
+    }
+    .foot .scroll {
+      display: none;
+    }
+  }
+
+  @media (max-width: 860px) and (max-height: 740px) {
+    .facts {
+      display: none;
+    }
+    .lead {
+      font-size: 0.92rem;
+      margin-top: 0.9rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero {
+      height: 100vh;
+      height: 100svh;
+    }
+    .eyebrow,
+    .lead,
+    .actions,
+    .facts {
+      transition: none;
+    }
+  }
+</style>
+
+<noscript>
+  <style>
+    /* Как в прототипе: без JS сцена не грузится совсем, световой фронт
+       по заголовку (--s) не запускается — раскрываем градиент сразу
+       и показываем текст, который иначе ждёт класса stage.on. */
+    #hero-h1 {
+      --s: 130%;
+    }
+    .hero .eyebrow,
+    .hero .lead,
+    .hero .actions,
+    .hero .facts {
+      opacity: 1;
+    }
+  </style>
+</noscript>

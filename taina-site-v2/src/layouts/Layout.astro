@@ -1,0 +1,132 @@
+---
+import '@/styles/tokens.css';
+import '@/styles/fonts.css';
+import '@/styles/base.css';
+import Header from '@/components/Header.astro';
+import Footer from '@/components/Footer.astro';
+
+import interLatin400 from '@fontsource/inter/files/inter-latin-400-normal.woff2?url';
+import interCyrillic400 from '@fontsource/inter/files/inter-cyrillic-400-normal.woff2?url';
+import serifLatin500 from '@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-normal.woff2?url';
+import serifCyrillic500 from '@fontsource/cormorant-garamond/files/cormorant-garamond-cyrillic-500-normal.woff2?url';
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+
+// Структурированные данные (Этап 14, SEO) — только подтверждённые факты
+// (CLAUDE.md, «Реальные данные»): название, описание, реальные каналы
+// связи. Никаких оценок, рейтингов и отзывов — их в структурированных
+// данных нет и не будет, пока владелица не разрешит публикацию отзыва
+// (см. reviewApproved в content/copy.ts — к JSON-LD это тоже относится).
+// @id/url без домена не добавляю — см. TODO(Этап 15, домен) ниже.
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'TAINA STUDIO',
+    description,
+    email: 'ritarakunova@gmail.com',
+    sameAs: ['https://t.me/RitaRakunova'],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'TAINA STUDIO',
+    description,
+    inLanguage: 'ru',
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    serviceType: 'AI-консалтинг и автоматизация бизнес-процессов',
+    description:
+      'AI-ассистенты и автоматизация, которые находят ответы в документах компании и честно говорят «этого нет в базе», а не выдумывают.',
+    provider: { '@type': 'Organization', name: 'TAINA STUDIO' },
+    areaServed: 'RU',
+  },
+];
+---
+
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    {/* Литеральное значение — атрибуты <meta> не читают CSS-переменные.
+       Должно совпадать с --color-bg в tokens.css. */}
+    <meta name="theme-color" content="#0a0a0b" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {/* TODO(Этап 14, SEO): сайт ещё черновик — убрать noindex,
+       когда будем готовы к индексации. См. также netlify.toml. */}
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    {/* Открытый граф — для превью ссылки в мессенджерах и соцсетях, не для
+       поиска (тот пока закрыт noindex выше). /img/og-cover.jpg — путь от
+       корня: заработает на любом домене, менять не придётся, когда домен
+       определится (см. TODO(Этап 15, домен) в конце файла).
+       og:url и <link rel="canonical"> здесь намеренно нет — им нужен
+       настоящий домен, которого пока нет; добавить вместе с доменом. */}
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="TAINA STUDIO" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content="/img/og-cover.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content="/img/og-cover.jpg" />
+
+    <link rel="preload" as="font" type="font/woff2" href={interLatin400} crossorigin="anonymous" />
+    <link rel="preload" as="font" type="font/woff2" href={interCyrillic400} crossorigin="anonymous" />
+    <link rel="preload" as="font" type="font/woff2" href={serifLatin500} crossorigin="anonymous" />
+    <link rel="preload" as="font" type="font/woff2" href={serifCyrillic500} crossorigin="anonymous" />
+
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  </head>
+  <body id="top">
+    <a class="skip-link" href="#main">Перейти к содержимому</a>
+    <canvas id="scene-gl" aria-hidden="true"></canvas>
+    <Header />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>
+
+<script>
+  // Появление обычных (не-3D) секций при скролле — единая утилита на
+  // всю страницу, см. lib/motion.ts.
+  import { initScrollReveal } from '@/lib/motion';
+
+  initScrollReveal();
+</script>
+
+<style>
+  #scene-gl {
+    /* Один холст на все 3D-сцены сайта (хиро, «Проявка», ...). z-index: -1
+       без position:relative у html/body/main достаточно, чтобы обычные
+       (не-3D) секции — они в потоке, без своего z-index — рисовались
+       поверх холста, а секции со сценой оставались прозрачными и
+       показывали холст (см. base.css, Section.astro, Footer.astro). */
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    display: block;
+    width: 100%;
+    /* lvh — самая большая высота видимой области, не меняется при
+       скрытии/показе адресной строки на телефоне (в отличие от svh/dvh) —
+       холст не пересоздаётся и не дёргается при скролле на мобильных. */
+    height: 100lvh;
+  }
+</style>

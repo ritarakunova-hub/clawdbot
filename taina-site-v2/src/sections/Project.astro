@@ -1,0 +1,340 @@
+---
+import Section from '@/components/Section.astro';
+import Container from '@/components/Container.astro';
+import { project } from '@/content/copy';
+---
+
+<section class="project-reveal" id="project" aria-label={project.title}>
+  <div class="reveal-scene" id="project-reveal">
+    <div class="reveal-stage">
+      <Container>
+        <h2 class="reveal-title">{project.title}</h2>
+        <div class="reveal-steps" id="project-steps">
+          {
+            project.case.cells.map((cell, i) => (
+              <div class="reveal-step" data-step={i}>
+                <p class="k">{cell.label}</p>
+                <p class="t">{cell.text}</p>
+              </div>
+            ))
+          }
+        </div>
+      </Container>
+    </div>
+  </div>
+</section>
+
+<script>
+  function boot() {
+    const root = document.getElementById('project-reveal');
+    const steps = Array.from(document.querySelectorAll<HTMLElement>('#project-steps .reveal-step'));
+    if (!root || !steps.length) return;
+
+    import('@/scene/scenes/project')
+      .then(({ mountProjectScene }) => {
+        mountProjectScene({ root, steps });
+      })
+      .catch(() => {
+        // Нет WebGL2 или сцена упала — статичный золотой фон, последний
+        // шаг сразу читаем (уровни C/D из CLAUDE.md).
+        root.classList.add('project-reveal--nogl');
+        steps[steps.length - 1]?.classList.add('is-active');
+      });
+  }
+
+  if (document.readyState === 'complete') {
+    requestAnimationFrame(boot);
+  } else {
+    addEventListener('load', () => requestAnimationFrame(boot), { once: true });
+  }
+</script>
+
+<Section id="project-more" label={`${project.title} — подробности`}>
+  <Container>
+    <div class="grid">
+      <article class="card hover-lift" data-reveal>
+        <p class="eyebrow">{project.case.eyebrow}</p>
+        <h3>{project.case.title}</h3>
+        <p class="lede">{project.case.lede}</p>
+
+        <dl class="cells">
+          {
+            project.case.cells.map((cell) => (
+              <div class="cell">
+                <dt>{cell.label}</dt>
+                <dd>{cell.text}</dd>
+              </div>
+            ))
+          }
+        </dl>
+
+        <p class="foot">{project.case.foot}</p>
+      </article>
+
+      <article class="card card--teaser" data-reveal style="--reveal-delay: 80ms" aria-hidden="true">
+        <p class="teaser">{project.teaser}</p>
+      </article>
+    </div>
+
+    <div class="block" data-reveal>
+      <p class="eyebrow">{project.market.eyebrow}</p>
+      <h3>{project.market.title}</h3>
+      <p class="lede measure">{project.market.lede}</p>
+
+      <div class="market">
+        <div class="stat">
+          <p class="num">{project.market.stat}</p>
+          <p class="src">{project.market.source}</p>
+        </div>
+        <p class="market-text measure">{project.market.text}</p>
+        <p class="fine measure">{project.market.fine}</p>
+      </div>
+    </div>
+  </Container>
+</Section>
+
+<style>
+  .project-reveal {
+    position: relative;
+    /* Прозрачный — сцена рисуется в общий холст сайта, см. Proyavka.astro. */
+  }
+
+  .reveal-scene {
+    height: 260vh;
+    position: relative;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal-scene {
+      height: 100vh;
+      height: 100svh;
+    }
+  }
+
+  .reveal-stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow: hidden;
+    /* grid, не flex: у Container нет своей ширины (только max-width +
+       margin-inline: auto для обычного блочного контекста) — во flex-ряду
+       он ужимается по содержимому и авто-отступы центрируют его целиком
+       по экрану, наезжая на стеллаж листов. Grid растягивает ячейку по
+       умолчанию, и колонка текста остаётся у левого края, как в обычной
+       секции. */
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: center;
+  }
+
+  /* Container.astro задаёт margin-inline: auto для обычного блочного
+     контекста (центрирование при max-width). В grid-ячейке auto-отступы
+     не растягивают элемент, а центрируют его по содержимому — тот же
+     эффект, что и раньше с flex, только по другой причине. Убираем
+     авто-отступы здесь, чтобы колонка текста осталась у левого края. */
+  .reveal-stage :global(.container) {
+    margin-inline: 0;
+  }
+
+  .reveal-title {
+    font-size: var(--text-2xl);
+    color: var(--color-ivory);
+    max-width: 20ch;
+  }
+
+  .reveal-steps {
+    position: relative;
+    margin-top: var(--space-6);
+    height: 7.5em;
+    max-width: 26ch;
+  }
+
+  .reveal-step {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 400ms var(--ease-out);
+  }
+
+  .reveal-step.is-active {
+    opacity: 1;
+  }
+
+  .reveal-step .k {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-gold);
+    margin-bottom: var(--space-2);
+  }
+
+  .reveal-step .t {
+    color: var(--color-sand);
+    font-size: var(--text-lg);
+  }
+
+  /* Уровень C/D: WebGL недоступен, сцена упала, или контекст потерян —
+     статичный золотой фон вместо холста, последний шаг читаем сразу. */
+  .project-reveal--nogl .reveal-stage,
+  .project-reveal--ctxlost .reveal-stage {
+    background: radial-gradient(60vmax 50vmax at 30% 55%, color-mix(in srgb, var(--color-gold) 18%, transparent), var(--color-bg) 68%);
+  }
+
+  h2 {
+    font-size: var(--text-2xl);
+  }
+
+  .eyebrow {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-gold);
+    margin-bottom: var(--space-3);
+  }
+
+  .grid {
+    margin-top: var(--space-7);
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-5);
+    align-items: start;
+  }
+
+  @media (max-width: 860px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    padding: var(--space-6);
+  }
+
+  .card h3 {
+    font-size: var(--text-xl);
+    max-width: var(--measure);
+  }
+
+  .card .lede {
+    margin-top: var(--space-3);
+    color: var(--color-sand);
+    max-width: var(--measure);
+  }
+
+  .cells {
+    margin: var(--space-5) 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .cell dt {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-sand);
+    margin-bottom: var(--space-1);
+  }
+
+  .cell dd {
+    margin: 0;
+    color: var(--color-ivory);
+  }
+
+  .foot {
+    margin-top: var(--space-5);
+    padding-top: var(--space-4);
+    border-top: 1px dashed var(--color-line);
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+    font-style: italic;
+  }
+
+  .card--teaser {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-style: dashed;
+  }
+
+  .teaser {
+    margin: 0;
+    color: var(--color-sand);
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+  }
+
+  .block {
+    margin-top: var(--space-8);
+    padding-top: var(--space-8);
+    border-top: 1px solid var(--color-line);
+  }
+
+  .block h3 {
+    font-size: var(--text-xl);
+    max-width: 22ch;
+  }
+
+  .lede {
+    margin-top: var(--space-4);
+    color: var(--color-sand);
+    font-size: var(--text-lg);
+  }
+
+  .market {
+    margin-top: var(--space-6);
+    border: 1px solid var(--color-line);
+    padding: var(--space-6);
+  }
+
+  .stat {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-5);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-4);
+  }
+
+  .stat .num {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    color: var(--color-gold);
+    line-height: 1;
+  }
+
+  .stat .src {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    color: var(--color-sand);
+    letter-spacing: 0.04em;
+  }
+
+  .market-text {
+    color: var(--color-sand);
+  }
+
+  .fine {
+    margin-top: var(--space-4);
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+    font-style: italic;
+  }
+</style>
+
+<noscript>
+  <style>
+    /* Без JS сцена не грузится совсем — показываем последний шаг сразу. */
+    #project-steps .reveal-step:last-child {
+      opacity: 1;
+    }
+  </style>
+</noscript>

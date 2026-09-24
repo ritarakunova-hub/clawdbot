@@ -1,0 +1,42 @@
+uniform sampler2D uAtlas;
+uniform vec3 uKeyPos;
+uniform vec3 uCurPos;
+uniform float uKeyI;
+uniform float uKeyR;
+uniform float uCurI;
+uniform float uReveal;
+uniform float uPortrait;
+varying vec2 vUv;
+varying vec3 vW;
+varying vec3 vN;
+varying float vCell;
+varying vec4 vClip;
+
+void main(){
+  vec3 N=normalize(vN);if(!gl_FrontFacing)N=-N;
+  vec3 Lk=uKeyPos-vW;float dk=length(Lk);Lk/=dk;
+  float ak=exp(-dk*dk/(uKeyR*uKeyR));
+  float wk=max(dot(N,Lk),0.)*.6+.4;
+  vec3 Lc=uCurPos-vW;float dc=length(Lc);Lc/=dc;
+  float ac=exp(-dc*dc/(3.6*3.6));
+  float wc=max(dot(N,Lc),0.)*.6+.4;
+  float lk=ak*wk*uKeyI;float lc=ac*wc*uCurI;
+  float cx=mod(vCell,4.);float cy=floor(vCell/4.);
+  vec2 auv=vec2(cx+vUv.x,(3.-cy)+vUv.y)/4.;
+  vec3 tx=texture2D(uAtlas,auv).rgb;
+  vec3 keyCol=vec3(1.,.24,.14);vec3 curCol=vec3(1.,.74,.36);
+  vec3 lit=keyCol*lk+curCol*lc;
+  vec3 paper=vec3(.032,.026,.03);
+  vec3 col=paper*(1.+lit*.9);
+  col+=tx.g*.12*lit;col+=tx.b*.3*lit;
+  float lum=lk+lc;
+  float wv=smoothstep(.05,.42,lum);
+  col+=tx.r*vec3(.98,.76,.36)*wv*(lk*1.3+lc*1.5+.08);
+  vec2 ndc=vClip.xy/vClip.w;
+  float zone=uPortrait>.5?smoothstep(.1,-.4,ndc.y):smoothstep(-.02,-.5,ndc.x)*(1.-smoothstep(.55,.8,ndc.y));
+  col*=1.-zone*.8;
+  float dr=distance(vW,uKeyPos);
+  col*=1.-smoothstep(uReveal-4.,uReveal,dr);
+  float dcam=length(vW-cameraPosition);col*=exp(-dcam*.014);
+  gl_FragColor=vec4(col,1.);
+}

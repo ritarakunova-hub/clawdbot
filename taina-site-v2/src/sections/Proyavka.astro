@@ -1,0 +1,372 @@
+---
+import Section from '@/components/Section.astro';
+import Container from '@/components/Container.astro';
+import { proyavka, reviewApproved } from '@/content/copy';
+---
+
+<section class="proyavka-reveal" id="proyavka" aria-label={proyavka.title}>
+  <div class="reveal-scene" id="proyavka-reveal">
+    <div class="reveal-stage" id="proyavka-stage">
+      <h2 class="phrase" id="proyavka-phrase">{proyavka.title}</h2>
+    </div>
+  </div>
+</section>
+
+<script>
+  function boot() {
+    const root = document.getElementById('proyavka-reveal');
+    const stage = document.getElementById('proyavka-stage');
+    const phrase = document.getElementById('proyavka-phrase');
+    if (!root || !stage || !phrase) return;
+
+    import('@/scene/scenes/proyavka')
+      .then(({ mountProyavkaScene }) => {
+        mountProyavkaScene({ root, phrase });
+      })
+      .catch(() => {
+        // Нет WebGL2 или сцена упала — статичная проявленная картинка на
+        // CSS, фраза остаётся читаемой (уровни C/D из CLAUDE.md).
+        root.classList.add('proyavka-reveal--nogl');
+        phrase.style.setProperty('--s', '130%');
+      });
+  }
+
+  // Хиро грузит 3D после load; «Проявка» — сразу после, чтобы соседняя
+  // сцена (loop.ts) была готова заранее и переход был без мерцания.
+  if (document.readyState === 'complete') {
+    requestAnimationFrame(boot);
+  } else {
+    addEventListener('load', () => requestAnimationFrame(boot), { once: true });
+  }
+</script>
+
+<Section id="proyavka-more" label={`${proyavka.title} — подробности`}>
+  <Container>
+    <div class="text" data-reveal>
+      {proyavka.paragraphs.map((paragraph) => <p class="measure">{paragraph}</p>)}
+    </div>
+
+    <div class="block" data-reveal>
+      <p class="eyebrow">{proyavka.problem.eyebrow}</p>
+      <h3>{proyavka.problem.title}</h3>
+      <p class="lede measure">{proyavka.problem.lede}</p>
+
+      <div class="before-after">
+        <div class="cell">
+          <p class="k">Было</p>
+          <p>{proyavka.problem.before}</p>
+        </div>
+        <div class="cell cell--now">
+          <p class="k">Стало</p>
+          <p>{proyavka.problem.after}</p>
+        </div>
+      </div>
+
+      <p class="transition measure">{proyavka.problem.transition}</p>
+
+      <ul class="scenarios">
+        {
+          proyavka.problem.scenarios.map((scenario, i) => (
+            <li class="scenario hover-lift" data-reveal style={`--reveal-delay: ${i * 80}ms`}>
+              <p class="k">{scenario.label}</p>
+              <h4>{scenario.title}</h4>
+              <p>{scenario.text}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <div class="block" data-reveal>
+      <p class="eyebrow">{proyavka.comparison.eyebrow}</p>
+      <h3>{proyavka.comparison.title}</h3>
+      <p class="lede measure">{proyavka.comparison.lede}</p>
+
+      <table class="compare">
+        <thead>
+          <tr>
+            {proyavka.comparison.columns.map((column) => <th>{column}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {
+            proyavka.comparison.rows.map(([left, right]) => (
+              <tr>
+                <td>{left}</td>
+                <td>{right}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+
+      <p class="quote">{proyavka.comparison.quote}</p>
+
+      {
+        reviewApproved && (
+          <blockquote class="review">
+            <p>«{proyavka.testimonial.quote}»</p>
+            <cite>{proyavka.testimonial.attribution}</cite>
+          </blockquote>
+        )
+      }
+    </div>
+  </Container>
+</Section>
+
+<style>
+  .proyavka-reveal {
+    position: relative;
+    /* Прозрачный — сцена рисуется в общий холст сайта (#scene-gl,
+       Layout.astro), см. комментарий в Hero.astro про тот же приём. */
+  }
+
+  .reveal-scene {
+    height: 220vh;
+    position: relative;
+  }
+
+  .reveal-stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .phrase {
+    font-size: clamp(2.6rem, 7vw, 5.6rem);
+    text-align: center;
+    --s: -25%;
+    color: transparent;
+    background: linear-gradient(
+      100deg,
+      var(--color-ivory) 0%,
+      var(--color-ivory) calc(var(--s) - 14%),
+      var(--color-gold) calc(var(--s) - 2%),
+      color-mix(in srgb, var(--color-ivory) 0%, transparent) calc(var(--s) + 0.01%)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    padding-bottom: 0.08em;
+  }
+
+  /* Уровень C/D: WebGL недоступен, сцена упала, или контекст потерян —
+     статичная проявленная картинка на CSS вместо холста, фраза читаема. */
+  .proyavka-reveal--nogl .reveal-stage,
+  .proyavka-reveal--ctxlost .reveal-stage {
+    background: radial-gradient(60vmax 50vmax at 50% 55%, color-mix(in srgb, var(--color-sand) 24%, transparent), var(--color-bg) 68%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal-scene {
+      height: 100vh;
+      height: 100svh;
+    }
+  }
+
+  h2 {
+    font-size: var(--text-2xl);
+  }
+
+  .text {
+    margin-top: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    font-size: var(--text-lg);
+    color: var(--color-sand);
+  }
+
+  .block {
+    margin-top: var(--space-8);
+    padding-top: var(--space-8);
+    border-top: 1px solid var(--color-line);
+  }
+
+  .eyebrow {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-gold);
+    margin-bottom: var(--space-3);
+  }
+
+  h3 {
+    font-size: var(--text-xl);
+    max-width: 20ch;
+  }
+
+  .lede {
+    margin-top: var(--space-4);
+    color: var(--color-sand);
+    font-size: var(--text-lg);
+  }
+
+  .before-after {
+    margin-top: var(--space-6);
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--color-line);
+    border: 1px solid var(--color-line);
+  }
+
+  @media (max-width: 700px) {
+    .before-after {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .cell {
+    background: var(--color-bg);
+    padding: var(--space-5);
+  }
+
+  .cell .k {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-sand);
+    margin-bottom: var(--space-2);
+  }
+
+  .cell--now p:last-child {
+    color: var(--color-gold);
+  }
+
+  .transition {
+    margin-top: var(--space-6);
+    color: var(--color-sand);
+  }
+
+  .scenarios {
+    margin: var(--space-5) 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--color-line);
+    border: 1px solid var(--color-line);
+  }
+
+  @media (max-width: 820px) {
+    .scenarios {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .scenario {
+    background: var(--color-bg);
+    padding: var(--space-5);
+  }
+
+  .scenario .k {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-sand);
+    margin-bottom: var(--space-2);
+  }
+
+  .scenario h4 {
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--color-gold);
+    margin-bottom: var(--space-2);
+  }
+
+  .scenario p:last-child {
+    color: var(--color-sand);
+  }
+
+  .compare {
+    margin-top: var(--space-6);
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--color-line);
+  }
+
+  .compare th,
+  .compare td {
+    padding: var(--space-3) var(--space-4);
+    text-align: left;
+    font-size: var(--text-sm);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .compare th {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-sand);
+    font-weight: 600;
+  }
+
+  .compare td:first-child {
+    color: var(--color-sand);
+    border-right: 1px solid var(--color-line);
+  }
+
+  .compare td:last-child {
+    color: var(--color-gold);
+  }
+
+  .compare tr:last-child td {
+    border-bottom: none;
+  }
+
+  .quote {
+    margin-top: var(--space-6);
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 500;
+    font-size: var(--text-xl);
+    color: var(--color-ivory);
+    max-width: 32ch;
+    border-left: 2px solid var(--color-ruby);
+    padding-left: var(--space-4);
+  }
+
+  .review {
+    margin: var(--space-6) 0 0;
+    padding: var(--space-5) var(--space-6);
+    border: 1px solid var(--color-line);
+  }
+
+  .review p {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: var(--text-lg);
+    color: var(--color-gold);
+    max-width: var(--measure);
+  }
+
+  .review cite {
+    display: block;
+    margin-top: var(--space-3);
+    font-family: var(--font-sans);
+    font-style: normal;
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+  }
+</style>
+
+<noscript>
+  <style>
+    /* Без JS сцена не грузится совсем — раскрываем градиент фразы сразу,
+       как в Hero.astro. */
+    #proyavka-phrase {
+      --s: 130%;
+    }
+  </style>
+</noscript>

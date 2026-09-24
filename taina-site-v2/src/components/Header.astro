@@ -1,0 +1,113 @@
+---
+import Button from './Button.astro';
+
+const navLinks = [
+  { href: '#proyavka', label: 'Проявка' },
+  { href: '#territories', label: 'Три территории' },
+  { href: '#demo', label: 'Демо' },
+  { href: '#packages', label: 'Пакеты' },
+];
+---
+
+<header class="header" id="site-header">
+  <a class="brand" href="#top" aria-label="TAINA STUDIO — на главную">
+    <svg viewBox="0 0 40 60" aria-hidden="true" focusable="false">
+      <polygon points="20,0 38,30 2,30" fill="var(--color-ruby)"></polygon>
+      <polygon points="38,30 20,60 2,30" fill="var(--color-crimson)"></polygon>
+    </svg>
+    <span>Taina Studio</span>
+  </a>
+  <nav class="nav" aria-label="Разделы">
+    {navLinks.map((link) => <a href={link.href}>{link.label}</a>)}
+  </nav>
+  <Button href="#contact" variant="outline" size="sm">AI-аудит</Button>
+</header>
+
+<script>
+  // Шапка прозрачная, пока за ней виден хиро (сцена на весь экран),
+  // и возвращает свой обычный фон, как только хиро уходит из вида.
+  // IntersectionObserver вместо чтения scrollY в цикле — дешевле и не
+  // конфликтует с общим циклом сцены (loop.ts).
+  const header = document.getElementById('site-header');
+  const hero = document.getElementById('hero');
+  if (header && hero && 'IntersectionObserver' in window) {
+    new IntersectionObserver(
+      ([entry]) => header.classList.toggle('header--over-hero', entry.isIntersecting),
+      { threshold: 0 },
+    ).observe(hero);
+  }
+</script>
+
+<style>
+  .header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-6);
+    padding: calc(var(--space-5) + env(safe-area-inset-top, 0px)) calc(clamp(20px, 4vw, 56px) + env(safe-area-inset-right, 0px))
+      var(--space-5) calc(clamp(20px, 4vw, 56px) + env(safe-area-inset-left, 0px));
+    background: color-mix(in srgb, var(--color-bg) 85%, transparent);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--color-line);
+    transition:
+      background var(--duration-response) var(--ease-out),
+      border-color var(--duration-response) var(--ease-out);
+  }
+
+  /* Пока за шапкой виден хиро (сцена на весь экран, см. Hero.astro) —
+     шапка прозрачная, как в reference/taina-hero.html. Ниже по странице
+     (класс снимается) — обычный сплошной фон. */
+  .header--over-hero {
+    background: transparent;
+    backdrop-filter: none;
+    border-bottom-color: transparent;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 1.15rem;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--color-gold);
+  }
+
+  .brand svg {
+    width: 11px;
+    height: 17px;
+    flex: none;
+  }
+
+  .nav {
+    display: flex;
+    gap: clamp(18px, 2.4vw, 36px);
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+  }
+
+  .nav a {
+    /* ≥44px — минимальная зона нажатия (CLAUDE.md, Этап 13). */
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    transition: color var(--duration-response) var(--ease-out);
+  }
+
+  .nav a:hover {
+    color: var(--color-ivory);
+  }
+
+  @media (max-width: 860px) {
+    .nav {
+      display: none;
+    }
+  }
+</style>

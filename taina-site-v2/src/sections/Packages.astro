@@ -1,0 +1,562 @@
+---
+import Section from '@/components/Section.astro';
+import Container from '@/components/Container.astro';
+import Button from '@/components/Button.astro';
+import { packages, support, comparisonTable, chooseHelp, segments, infrastructure } from '@/content/prices';
+import { faq } from '@/content/faq';
+---
+
+<Section id="packages" label="Пакеты">
+  <Container>
+    <h2 data-reveal>Пакеты</h2>
+
+    <div class="segments">
+      {
+        segments.items.map((item, i) => (
+          <div class="segment" data-reveal style={`--reveal-delay: ${i * 80}ms`}>
+            <p class="k">{item.label}</p>
+            <p>{item.text}</p>
+          </div>
+        ))
+      }
+    </div>
+
+    <table class="compare" data-reveal>
+      <thead>
+        <tr>
+          <th><span class="sr-only">Параметр</span></th>
+          {
+            comparisonTable.columns.map((column, i) => (
+              <th class:list={{ rec: i === comparisonTable.recommendedIndex }}>
+                {i === comparisonTable.recommendedIndex && <span class="badge">Рекомендуем</span>}
+                {column}
+              </th>
+            ))
+          }
+        </tr>
+      </thead>
+      <tbody>
+        {
+          comparisonTable.rows.map((row) => (
+            <tr>
+              <td class="row-label">{row.label}</td>
+              {row.values.map((value) => (
+                <td class:list={{ check: value === true }}>
+                  {value === true ? '✓' : value === false ? '—' : value}
+                </td>
+              ))}
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+
+    <ul class="grid" id="packages-grid">
+      {
+        packages.map((pkg, i) => (
+          <li
+            class:list={['card', { 'card--recommended': pkg.recommended }]}
+            data-reveal
+            data-package={pkg.title}
+            style={`--reveal-delay: ${i * 80}ms`}
+          >
+            {pkg.tag && <p class="badge">{pkg.tag}</p>}
+            <h3>{pkg.title}</h3>
+            <p class="for-whom">{pkg.forWhom}</p>
+            <p class="price">{pkg.price}</p>
+            <p class="description">{pkg.description}</p>
+            <Button href="#contact" variant={pkg.recommended ? 'solid' : 'outline'} size="sm">
+              {pkg.cta}
+            </Button>
+          </li>
+        ))
+      }
+    </ul>
+
+    <div class="support" data-reveal data-package={support.title}>
+      <h3>{support.title}</h3>
+      <p class="price">{support.price}</p>
+      <p class="description">{support.description}</p>
+      <Button href="#contact" variant="text" size="sm">
+        {support.cta}
+      </Button>
+    </div>
+
+    <div class="choose" data-reveal>
+      <h3>{chooseHelp.title}</h3>
+      <p>{chooseHelp.text}</p>
+      <Button href="#contact" variant="solid" size="sm">
+        {chooseHelp.cta}
+      </Button>
+      <p class="fine">{chooseHelp.fine}</p>
+    </div>
+
+    <div class="infra" data-reveal>
+      <p class="eyebrow">{infrastructure.eyebrow}</p>
+      <h3>{infrastructure.title}</h3>
+      <p class="lede measure">{infrastructure.lede}</p>
+
+      <ul class="checklist">
+        {infrastructure.checklist.map((item) => <li>{item}</li>)}
+      </ul>
+
+      <div class="infra-note measure">
+        {infrastructure.note.map((paragraph) => <p>{paragraph}</p>)}
+      </div>
+    </div>
+
+    <div class="faq" data-reveal>
+      <h3>Вопросы</h3>
+      {
+        faq.map((item) => (
+          <details class="faq-item">
+            <summary>{item.question}</summary>
+            <p>{item.answer}</p>
+          </details>
+        ))
+      }
+    </div>
+  </Container>
+</Section>
+
+<script>
+  import { isReducedMotion } from '@/lib/a11y';
+
+  const cards = document.querySelectorAll<HTMLLIElement>('#packages-grid .card');
+  const canTilt = matchMedia('(pointer: fine)').matches;
+  const MAX_TILT = 4; // «наклон до 4°»
+  const LIFT_PX = 3;
+  const PRESS_SCALE = 0.985;
+
+  cards.forEach((card) => {
+    let raf = 0;
+    let tiltX = 0;
+    let tiltY = 0;
+    let pressed = false;
+
+    function paint() {
+      raf = 0;
+      const scale = pressed && !isReducedMotion() ? PRESS_SCALE : 1;
+      const lift = canTilt && !isReducedMotion() ? LIFT_PX : 0;
+      card.style.transform = `perspective(900px) rotateX(${tiltY}deg) rotateY(${tiltX}deg) translateY(${-lift}px) scale(${scale})`;
+    }
+
+    function schedule() {
+      if (!raf) raf = requestAnimationFrame(paint);
+    }
+
+    function onMove(e: PointerEvent) {
+      if (!canTilt || isReducedMotion()) return;
+      const rect = card.getBoundingClientRect();
+      const px = (e.clientX - rect.left) / rect.width;
+      const py = (e.clientY - rect.top) / rect.height;
+      tiltX = (px - 0.5) * 2 * MAX_TILT;
+      tiltY = -(py - 0.5) * 2 * MAX_TILT;
+      // «обновляемые раз за кадр» — пишем CSS-переменные для светлого
+      // пятна прямо тут (дёшево), а сам transform — через rAF ниже.
+      card.style.setProperty('--mx', `${px * 100}%`);
+      card.style.setProperty('--my', `${py * 100}%`);
+      schedule();
+    }
+
+    card.addEventListener('pointerenter', (e) => {
+      card.classList.add('is-tilting');
+      onMove(e);
+    });
+    card.addEventListener('pointermove', onMove);
+    card.addEventListener('pointerleave', () => {
+      card.classList.remove('is-tilting');
+      tiltX = 0;
+      tiltY = 0;
+      pressed = false;
+      card.style.transitionDuration = '';
+      card.style.transform = '';
+    });
+    card.addEventListener('pointerdown', () => {
+      pressed = true;
+      card.style.transitionDuration = '90ms';
+      schedule();
+    });
+    const release = () => {
+      if (!pressed) return;
+      pressed = false;
+      card.style.transitionDuration = '';
+      schedule();
+    };
+    card.addEventListener('pointerup', release);
+    card.addEventListener('pointercancel', release);
+  });
+
+  // «Кнопки... передают выбранный пакет» (PROMPTS.md, Этап 9) — запоминаем
+  // на сессию, форма в «Контакте» подставит его в сообщение (Этап 10).
+  document.querySelectorAll<HTMLElement>('[data-package]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const title = el.dataset.package;
+      if (title) sessionStorage.setItem('taina:package', title);
+    });
+  });
+</script>
+
+<style>
+  h2 {
+    font-size: var(--text-2xl);
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .eyebrow {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-gold);
+    margin-bottom: var(--space-3);
+  }
+
+  .segments {
+    margin-top: var(--space-7);
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--color-line);
+    border: 1px solid var(--color-line);
+  }
+
+  @media (max-width: 700px) {
+    .segments {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .segment {
+    background: var(--color-bg);
+    padding: var(--space-5);
+  }
+
+  .segment .k {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-sand);
+    margin-bottom: var(--space-2);
+  }
+
+  .segment p:last-child {
+    color: var(--color-ivory);
+  }
+
+  .compare {
+    margin-top: var(--space-7);
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--color-line);
+  }
+
+  .compare th,
+  .compare td {
+    padding: var(--space-3) var(--space-4);
+    text-align: center;
+    border-bottom: 1px solid var(--color-line);
+    border-right: 1px solid var(--color-line);
+    font-size: var(--text-sm);
+  }
+
+  .compare th:first-child,
+  .compare td:first-child {
+    text-align: left;
+  }
+
+  .compare th:last-child,
+  .compare td:last-child {
+    border-right: none;
+  }
+
+  .compare th {
+    font-family: var(--font-serif);
+    font-size: var(--text-base);
+    font-weight: 600;
+    padding-top: var(--space-4);
+  }
+
+  .compare th.rec {
+    color: var(--color-gold);
+  }
+
+  .compare .badge {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    letter-spacing: 0.06em;
+    /* Не ruby: 4.38:1 на чёрном, ниже AA для текста; золото — 9.41:1,
+       и так уже отмечен «рекомендуем» у карточек ниже. */
+    color: var(--color-gold);
+    margin-bottom: var(--space-1);
+    text-transform: none;
+  }
+
+  .compare .row-label {
+    color: var(--color-sand);
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+  }
+
+  .compare .check {
+    /* Не ruby: на чёрном фоне у него контраст 4.38:1 — ниже AA для текста
+       (CLAUDE.md требует не ниже 4.5:1); золото даёт 9.41:1. */
+    color: var(--color-gold);
+  }
+
+  .compare tr:last-child td {
+    border-bottom: none;
+  }
+
+  @media (max-width: 640px) {
+    .compare {
+      font-size: var(--text-xs);
+    }
+    .compare th,
+    .compare td {
+      padding: var(--space-2);
+    }
+  }
+
+  .grid {
+    margin: var(--space-7) 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-5);
+  }
+
+  @media (max-width: 1024px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .card {
+    position: relative;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: flex-start;
+    /* Наклон и лёгкий подъём ведёт JS (см. <script> ниже) — он же пишет
+       inline transform, поэтому transition здесь применяется что к
+       наведению, что к возврату, что к нажатию (там JS меняет только
+       transition-duration на 90мс). */
+    transition:
+      transform var(--duration-response) var(--ease-out),
+      border-color var(--duration-response) var(--ease-out);
+  }
+
+  .card:hover {
+    border-color: var(--color-gold);
+  }
+
+  .card--recommended {
+    border-color: var(--color-gold);
+  }
+
+  /* Светлое пятно за курсором — координаты через --mx/--my, JS обновляет
+     их не чаще раза за кадр (см. <script>). */
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      220px circle at var(--mx, 50%) var(--my, 50%),
+      color-mix(in srgb, var(--color-gold) 16%, transparent),
+      transparent 65%
+    );
+    opacity: 0;
+    transition: opacity var(--duration-response) var(--ease-out);
+    pointer-events: none;
+  }
+
+  .card.is-tilting::before {
+    opacity: 1;
+  }
+
+  .badge {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-gold);
+    font-weight: 600;
+  }
+
+  .card h3,
+  .support h3,
+  .choose h3 {
+    font-size: var(--text-xl);
+  }
+
+  .for-whom {
+    color: var(--color-sand);
+    font-size: var(--text-sm);
+    font-style: italic;
+  }
+
+  .price {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: var(--text-lg);
+    color: var(--color-gold);
+  }
+
+  .description {
+    color: var(--color-sand);
+  }
+
+  .support {
+    margin-top: var(--space-6);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-line);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .choose {
+    margin-top: var(--space-7);
+    padding: var(--space-6) var(--space-7);
+    border: 1px solid var(--color-line);
+    text-align: center;
+  }
+
+  .choose p {
+    margin-top: var(--space-3);
+    color: var(--color-sand);
+    max-width: 56ch;
+    margin-inline: auto;
+  }
+
+  .choose .btn {
+    margin-top: var(--space-5);
+  }
+
+  .choose .fine {
+    margin-top: var(--space-4);
+    font-size: var(--text-sm);
+    font-style: italic;
+    color: var(--color-sand);
+  }
+
+  .infra {
+    margin-top: var(--space-8);
+    padding-top: var(--space-8);
+    border-top: 1px solid var(--color-line);
+  }
+
+  .infra h3 {
+    font-size: var(--text-xl);
+    max-width: 22ch;
+  }
+
+  .lede {
+    margin-top: var(--space-4);
+    color: var(--color-sand);
+    font-size: var(--text-lg);
+  }
+
+  .checklist {
+    margin: var(--space-5) 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-width: var(--measure);
+  }
+
+  .checklist li {
+    padding-left: var(--space-5);
+    position: relative;
+    color: var(--color-sand);
+  }
+
+  .checklist li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    /* Не ruby: на чёрном фоне контраст 4.38:1, ниже AA-порога для текста. */
+    color: var(--color-gold);
+  }
+
+  .infra-note {
+    margin-top: var(--space-6);
+    padding: var(--space-5) var(--space-6);
+    border: 1px solid var(--color-line);
+    background: color-mix(in srgb, var(--color-ruby) 4%, transparent);
+  }
+
+  .infra-note p {
+    color: var(--color-sand);
+  }
+
+  .infra-note p + p {
+    margin-top: var(--space-3);
+    font-style: italic;
+    color: var(--color-ivory);
+  }
+
+  .faq {
+    margin-top: var(--space-8);
+    padding-top: var(--space-8);
+    border-top: 1px solid var(--color-line);
+  }
+
+  .faq h3 {
+    font-size: var(--text-xl);
+    margin-bottom: var(--space-4);
+  }
+
+  .faq-item {
+    border-top: 1px solid var(--color-line);
+    padding-block: var(--space-4);
+  }
+
+  .faq-item:last-child {
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .faq-item summary {
+    cursor: pointer;
+    font-weight: 600;
+    /* ≥44px — минимальная зона нажатия (CLAUDE.md, Этап 13): у <summary>
+       по умолчанию высота строчки текста, без явной высоты кликабельная
+       область меньше, чем кажется по отступам родителя. */
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  .faq-item summary::marker {
+    color: var(--color-gold);
+  }
+
+  .faq-item p {
+    margin-top: var(--space-3);
+    color: var(--color-sand);
+    max-width: var(--measure);
+  }
+</style>

@@ -1,0 +1,351 @@
+---
+import Section from '@/components/Section.astro';
+import Container from '@/components/Container.astro';
+import Button from '@/components/Button.astro';
+import { contact } from '@/content/copy';
+
+const f = contact.form;
+---
+
+<Section id="contact" label={contact.title}>
+  <Container>
+    <h2 data-reveal>{contact.title}</h2>
+    <p class="lead measure" data-reveal>{contact.lead}</p>
+    <div class="channels" data-reveal style="--reveal-delay: 80ms">
+      {
+        // Оба канала равнозначны (CLAUDE.md) — одинаковый вариант кнопки.
+        contact.channels.map((channel) => (
+          <Button href={channel.href} variant="outline">
+            {channel.label}
+          </Button>
+        ))
+      }
+    </div>
+
+    <form
+      class="form"
+      id="diagnostic-form"
+      name={f.netlifyName}
+      method="POST"
+      data-netlify="true"
+      netlify-honeypot="bot-field"
+      data-reveal
+      style="--reveal-delay: 160ms"
+    >
+      <input type="hidden" name="form-name" value={f.netlifyName} />
+      {
+        // UTM — если пришли по ссылке с метками, сохраняем их вместе с
+        // заявкой; JS заполняет значения при загрузке (см. <script> ниже).
+        ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'].map((key) => (
+          <input type="hidden" name={key} value="" />
+        ))
+      }
+      <input type="hidden" name="territory" value="" />
+      <input type="hidden" name="package" value="" />
+
+      <p class="honeypot-field">
+        <label>
+          Не заполняйте это поле: <input name="bot-field" tabindex="-1" autocomplete="off" />
+        </label>
+      </p>
+
+      <div class="field">
+        <label for="f-name">{f.nameLabel}</label>
+        <input id="f-name" name="name" type="text" placeholder={f.namePlaceholder} autocomplete="name" required />
+      </div>
+
+      <div class="field">
+        <label for="f-contact">{f.contactLabel}</label>
+        <input
+          id="f-contact"
+          name="contact"
+          type="text"
+          placeholder={f.contactPlaceholder}
+          autocomplete="email"
+          required
+        />
+      </div>
+
+      <div class="field">
+        <label for="f-message">
+          {f.messageLabel} <span class="optional">{f.messageOptionalNote}</span>
+        </label>
+        <textarea id="f-message" name="message" rows="3" placeholder={f.messagePlaceholder} />
+      </div>
+
+      <label class="consent">
+        <input type="checkbox" name="consent" id="f-consent" required />
+        <span>
+          {f.consentLabel} <a href="#legal-privacy">{f.consentPrivacyLink}</a> {f.consentAnd}{' '}
+          <a href="#legal-offer">{f.consentOfferLink}</a>.
+        </span>
+      </label>
+
+      <button type="submit" class="submit" id="form-submit">
+        <span class="submit-bar" aria-hidden="true" />
+        <span class="submit-label">{f.submitLabel}</span>
+      </button>
+
+      <p class="status" id="form-status" role="status" aria-live="polite" />
+      <p class="fallback">{f.fallbackNote}</p>
+    </form>
+  </Container>
+</Section>
+
+<script
+  define:vars={{
+    sendingLabel: f.sendingLabel,
+    successMessage: f.successMessage,
+    errorMessage: f.errorMessage,
+  }}
+>
+  const form = document.getElementById('diagnostic-form');
+  const status = document.getElementById('form-status');
+  const submitBtn = document.getElementById('form-submit');
+
+  if (form && status && submitBtn) {
+    // Предзаполнение — берём выбор, уже сохранённый на «Трёх территориях»
+    // и в «Пакетах» (sessionStorage), и подставляем как читаемую фразу в
+    // само сообщение: пользователь видит и может поправить перед отправкой,
+    // а мини-CRM получает это как обычный текст в уже знакомом поле
+    // message — новых полей на её стороне заводить не нужно (см.
+    // docs/form-contract.md).
+    const territory = sessionStorage.getItem('taina:territory');
+    const chosenPackage = sessionStorage.getItem('taina:package');
+    const territoryNames = {
+      meanings: 'Смыслы',
+      images: 'Образы',
+      systems: 'Системы',
+    };
+
+    const messageEl = form.querySelector('#f-message');
+    if (messageEl && !messageEl.value) {
+      const bits = [];
+      if (chosenPackage) bits.push(`Интересует: ${chosenPackage}.`);
+      if (territory && territoryNames[territory]) bits.push(`Территория «${territoryNames[territory]}».`);
+      if (bits.length) messageEl.value = bits.join(' ') + ' ';
+    }
+    form.querySelector('input[name="territory"]').value = territory ?? '';
+    form.querySelector('input[name="package"]').value = chosenPackage ?? '';
+
+    const params = new URLSearchParams(location.search);
+    for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']) {
+      const value = params.get(key);
+      if (value) {
+        const input = form.querySelector(`input[name="${key}"]`);
+        if (input) input.value = value;
+      }
+    }
+
+    function encode(data) {
+      return Object.keys(data)
+        .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(data[key])}`)
+        .join('&');
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      form.classList.remove('is-done');
+      form.classList.add('is-sending');
+      submitBtn.disabled = true;
+      status.textContent = sendingLabel;
+      status.className = 'status';
+
+      const formData = new FormData(form);
+      const payload = {};
+      formData.forEach((value, key) => {
+        payload[key] = String(value);
+      });
+
+      fetch('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: encode(payload),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error(`статус ${res.status}`);
+          form.classList.remove('is-sending');
+          form.classList.add('is-done');
+          status.textContent = successMessage;
+          status.className = 'status ok';
+          form.reset();
+        })
+        .catch(() => {
+          form.classList.remove('is-sending');
+          submitBtn.disabled = false;
+          status.textContent = errorMessage;
+          status.className = 'status err';
+        });
+    });
+  }
+</script>
+
+<style>
+  h2 {
+    font-size: var(--text-2xl);
+  }
+
+  .lead {
+    margin-top: var(--space-5);
+    font-size: var(--text-lg);
+    color: var(--color-sand);
+  }
+
+  .channels {
+    margin-top: var(--space-6);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+
+  .form {
+    margin-top: var(--space-8);
+    padding-top: var(--space-8);
+    border-top: 1px solid var(--color-line);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    max-width: 560px;
+  }
+
+  .honeypot-field {
+    /* Та же скрытая ловушка от ботов, что и на работающей форме
+       taina-site/index.html — реальные посетители её не видят. */
+    position: absolute;
+    left: -9999px;
+    top: -9999px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .field label {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+  }
+
+  .optional {
+    font-style: italic;
+    font-weight: 400;
+  }
+
+  .field input,
+  .field textarea {
+    font: inherit;
+    font-size: var(--text-base);
+    color: var(--color-ivory);
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    padding: var(--space-3) var(--space-4);
+    transition: border-color 260ms var(--ease-out);
+  }
+
+  .field textarea {
+    resize: vertical;
+    min-height: 5em;
+  }
+
+  .field input:focus-visible,
+  .field textarea:focus-visible {
+    outline: none;
+    border-color: var(--color-gold);
+  }
+
+  .consent {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+  }
+
+  .consent input {
+    margin-top: 0.2em;
+    accent-color: var(--color-gold);
+  }
+
+  .consent a {
+    color: var(--color-gold);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--color-gold) 40%, transparent);
+  }
+
+  .consent a:hover {
+    text-decoration-color: var(--color-gold);
+  }
+
+  .submit {
+    position: relative;
+    align-self: flex-start;
+    overflow: hidden;
+    min-height: 52px;
+    padding: 0 var(--space-6);
+    font: inherit;
+    font-weight: 600;
+    color: var(--color-bg);
+    background: var(--color-gold);
+    border: none;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: opacity var(--duration-response) var(--ease-out);
+  }
+
+  .submit:disabled {
+    cursor: default;
+  }
+
+  .submit-label {
+    position: relative;
+    z-index: 1;
+  }
+
+  .submit-bar {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      100deg,
+      transparent 30%,
+      color-mix(in srgb, var(--color-ivory) 55%, transparent) 50%,
+      transparent 70%
+    );
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  /* «Свет по рамке кнопки 1,2с» — во время отправки лёгкий блик
+     пробегает по кнопке, зацикленно, пока не пришёл ответ. */
+  .form.is-sending .submit-bar {
+    opacity: 1;
+    animation: submit-sweep 1.2s linear infinite;
+  }
+
+  @keyframes submit-sweep {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  .status {
+    min-height: 1.4em;
+    font-size: var(--text-sm);
+    color: var(--color-gold);
+  }
+
+  /* Ошибка — без движения, только понятный текст (раздел «Движение», Этап 10). */
+  .status.err {
+    color: var(--color-sand);
+  }
+
+  .fallback {
+    font-size: var(--text-xs);
+    color: var(--color-sand);
+  }
+</style>

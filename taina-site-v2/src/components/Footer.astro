@@ -1,0 +1,159 @@
+---
+import { contact } from '@/content/copy';
+---
+
+<footer class="footer">
+  <div class="mark">Taina<span class="dot">.</span></div>
+  <p class="tagline">AI и автоматизация для сильного бизнеса.</p>
+  <p class="contacts">
+    <a href="https://t.me/RitaRakunova">Telegram @RitaRakunova</a>
+    <span aria-hidden="true"> · </span>
+    <a href="mailto:ritarakunova@gmail.com">ritarakunova@gmail.com</a>
+  </p>
+  <button type="button" class="motion-toggle" id="motion-toggle" aria-pressed="false">
+    Остановить анимацию
+  </button>
+
+  <div class="legal">
+    <p class="legal-links">
+      <a href="#legal-privacy">{contact.legal.privacyTitle}</a>
+      <span aria-hidden="true"> · </span>
+      <a href="#legal-offer">{contact.legal.offerTitle}</a>
+    </p>
+    <div class="legal-stub" id="legal-privacy">
+      <p class="legal-heading">{contact.legal.privacyTitle}</p>
+      <p>{contact.legal.placeholder}</p>
+    </div>
+    <div class="legal-stub" id="legal-offer">
+      <p class="legal-heading">{contact.legal.offerTitle}</p>
+      <p>{contact.legal.placeholder}</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+  import { isAnimationStoppedByUser, toggleAnimationStopped } from '@/lib/a11y';
+
+  const button = document.getElementById('motion-toggle');
+  if (button) {
+    const render = () => {
+      const stopped = isAnimationStoppedByUser();
+      button.textContent = stopped ? 'Возобновить анимацию' : 'Остановить анимацию';
+      button.setAttribute('aria-pressed', String(stopped));
+    };
+    render();
+    button.addEventListener('click', () => {
+      toggleAnimationStopped();
+      render();
+    });
+  }
+</script>
+
+<style>
+  .footer {
+    /* html/body/main прозрачные — подвал не 3D-сцена, перекрывает
+       холст сам (см. комментарий в Section.astro). */
+    background: var(--color-bg);
+    padding-block: var(--space-7) var(--space-8);
+    padding-inline: clamp(20px, 4vw, 56px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    border-top: 1px solid var(--color-line);
+  }
+
+  .mark {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: var(--text-lg);
+  }
+
+  .dot {
+    color: var(--color-gold);
+  }
+
+  .tagline,
+  .contacts {
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+  }
+
+  .contacts a {
+    text-decoration: underline;
+    text-decoration-color: var(--color-line);
+  }
+
+  .contacts a:hover {
+    color: var(--color-ivory);
+  }
+
+  .motion-toggle {
+    align-self: flex-start;
+    margin-top: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    /* ≥44px — минимальная зона нажатия (CLAUDE.md, Этап 13). */
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    font: inherit;
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+    background: transparent;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition:
+      color var(--duration-response) var(--ease-out),
+      border-color var(--duration-response) var(--ease-out);
+  }
+
+  .motion-toggle:hover {
+    color: var(--color-ivory);
+    border-color: var(--color-gold);
+  }
+
+  .legal {
+    margin-top: var(--space-5);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--color-line);
+  }
+
+  .legal-links {
+    font-size: var(--text-xs);
+  }
+
+  .legal-links a {
+    color: var(--color-sand);
+    text-decoration: underline;
+    text-decoration-color: var(--color-line);
+    scroll-margin-top: var(--header-height);
+  }
+
+  .legal-links a:hover {
+    color: var(--color-ivory);
+  }
+
+  .legal-stub {
+    margin-top: var(--space-3);
+    padding: var(--space-4);
+    max-width: var(--measure);
+    border: 1px dashed var(--color-line);
+    scroll-margin-top: var(--header-height);
+  }
+
+  .legal-heading {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-gold);
+    margin-bottom: var(--space-2);
+  }
+
+  .legal-stub p:last-child {
+    font-size: var(--text-sm);
+    font-style: italic;
+    color: var(--color-sand);
+  }
+</style>
