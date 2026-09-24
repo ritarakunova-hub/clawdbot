@@ -94,7 +94,10 @@ const navLinks = [
   }
 
   .nav a {
-    padding-block: var(--space-2);
+    /* ≥44px — минимальная зона нажатия (CLAUDE.md, Этап 13). */
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
     transition: color var(--duration-response) var(--ease-out);
   }
 

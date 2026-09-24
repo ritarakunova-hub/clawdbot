@@ -13,56 +13,58 @@ import { territories } from '@/content/copy';
       <ul class="filmstrip" id="territories-strip">
         {
           territories.items.map((item) => (
-            <li
-              class="frame"
-              data-territory={item.id}
-              tabindex="0"
-              role="button"
-              aria-label={`Открыть «${item.title}» на весь экран`}
-            >
-              <div class:list={['visual', `visual--${item.id}`]} aria-hidden="true">
-                {item.id === 'meanings' && (
-                  <svg viewBox="0 0 200 200" class="motif">
-                    <polygon
-                      points="100,20 170,80 140,180 60,180 30,80"
-                      fill="none"
-                      stroke="var(--color-gold)"
-                      stroke-width="1.5"
-                    />
-                    <polygon points="100,20 170,80 100,110 30,80" fill="color-mix(in srgb, var(--color-gold) 16%, transparent)" />
-                    <polygon points="30,80 100,110 60,180" fill="color-mix(in srgb, var(--color-ruby) 22%, transparent)" />
-                    <polygon points="100,110 140,180 60,180" fill="color-mix(in srgb, var(--color-ruby) 14%, transparent)" />
-                    <polygon points="100,110 170,80 140,180" fill="color-mix(in srgb, var(--color-gold) 10%, transparent)" />
-                  </svg>
-                )}
-                {item.id === 'images' && (
-                  <div class="film">
-                    <div class="film-sprockets" />
-                    <div class="film-grain" />
-                    <div class="film-sprockets film-sprockets--bottom" />
-                  </div>
-                )}
-                {item.id === 'systems' && (
-                  <svg viewBox="0 0 200 200" class="motif">
-                    <line x1="40" y1="40" x2="100" y2="100" stroke="var(--color-line)" stroke-width="1.5" />
-                    <line x1="100" y1="100" x2="165" y2="55" stroke="var(--color-line)" stroke-width="1.5" />
-                    <line x1="100" y1="100" x2="55" y2="160" stroke="var(--color-line)" stroke-width="1.5" />
-                    <line x1="100" y1="100" x2="155" y2="150" stroke="var(--color-line)" stroke-width="1.5" />
-                    <path id={`path-${item.id}`} d="M40,40 L100,100 L165,55" fill="none" stroke="none" />
-                    <circle cx="40" cy="40" r="5" fill="var(--color-sand)" />
-                    <circle cx="100" cy="100" r="6" fill="var(--color-gold)" />
-                    <circle cx="165" cy="55" r="5" fill="var(--color-sand)" />
-                    <circle cx="55" cy="160" r="5" fill="var(--color-sand)" />
-                    <circle cx="155" cy="150" r="5" fill="var(--color-sand)" />
-                    <circle class="graph-light" r="4" fill="var(--color-ruby)" />
-                  </svg>
-                )}
-              </div>
-              <div class="dim" />
-              <div class="copy">
-                <h3>{item.title}</h3>
-                <p>{item.text}</p>
-              </div>
+            <li class="frame" data-territory={item.id}>
+              {/* <button>, не role="button" на <li> — axe (aria-allowed-role,
+                 list/only-listitems) справедливо против роли button на
+                 прямом ребёнке <ul>: она вытесняет его собственную
+                 listitem-роль и ломает структуру списка для скринридера.
+                 Настоящая кнопка внутри — валидно, доступно из коробки
+                 (клавиатура, Enter/Space) и без лишних aria-атрибутов. */}
+              <button type="button" class="hit" aria-label={`Открыть «${item.title}» на весь экран`}>
+                <div class:list={['visual', `visual--${item.id}`]} aria-hidden="true">
+                  {item.id === 'meanings' && (
+                    <svg viewBox="0 0 200 200" class="motif">
+                      <polygon
+                        points="100,20 170,80 140,180 60,180 30,80"
+                        fill="none"
+                        stroke="var(--color-gold)"
+                        stroke-width="1.5"
+                      />
+                      <polygon points="100,20 170,80 100,110 30,80" fill="color-mix(in srgb, var(--color-gold) 16%, transparent)" />
+                      <polygon points="30,80 100,110 60,180" fill="color-mix(in srgb, var(--color-ruby) 22%, transparent)" />
+                      <polygon points="100,110 140,180 60,180" fill="color-mix(in srgb, var(--color-ruby) 14%, transparent)" />
+                      <polygon points="100,110 170,80 140,180" fill="color-mix(in srgb, var(--color-gold) 10%, transparent)" />
+                    </svg>
+                  )}
+                  {item.id === 'images' && (
+                    <div class="film">
+                      <div class="film-sprockets" />
+                      <div class="film-grain" />
+                      <div class="film-sprockets film-sprockets--bottom" />
+                    </div>
+                  )}
+                  {item.id === 'systems' && (
+                    <svg viewBox="0 0 200 200" class="motif">
+                      <line x1="40" y1="40" x2="100" y2="100" stroke="var(--color-line)" stroke-width="1.5" />
+                      <line x1="100" y1="100" x2="165" y2="55" stroke="var(--color-line)" stroke-width="1.5" />
+                      <line x1="100" y1="100" x2="55" y2="160" stroke="var(--color-line)" stroke-width="1.5" />
+                      <line x1="100" y1="100" x2="155" y2="150" stroke="var(--color-line)" stroke-width="1.5" />
+                      <path id={`path-${item.id}`} d="M40,40 L100,100 L165,55" fill="none" stroke="none" />
+                      <circle cx="40" cy="40" r="5" fill="var(--color-sand)" />
+                      <circle cx="100" cy="100" r="6" fill="var(--color-gold)" />
+                      <circle cx="165" cy="55" r="5" fill="var(--color-sand)" />
+                      <circle cx="55" cy="160" r="5" fill="var(--color-sand)" />
+                      <circle cx="155" cy="150" r="5" fill="var(--color-sand)" />
+                      <circle class="graph-light" r="4" fill="var(--color-ruby)" />
+                    </svg>
+                  )}
+                </div>
+                <div class="dim" />
+                <div class="copy">
+                  <h3>{item.title}</h3>
+                  <p>{item.text}</p>
+                </div>
+              </button>
             </li>
           ))
         }
@@ -213,13 +215,9 @@ import { territories } from '@/content/copy';
     }
 
     frames.forEach((frame) => {
-      frame.addEventListener('click', () => openFrame(frame));
-      frame.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          openFrame(frame);
-        }
-      });
+      // Настоящая <button> внутри — Enter/Space уже работают сами,
+      // отдельный keydown-обработчик не нужен.
+      frame.querySelector('.hit')?.addEventListener('click', () => openFrame(frame));
     });
 
     expandedClose?.addEventListener('click', closeExpanded);
@@ -302,7 +300,6 @@ import { territories } from '@/content/copy';
     overflow: hidden;
     border: 1px solid var(--color-line);
     background: var(--color-surface);
-    cursor: pointer;
     transform: scale(0.94);
     transition: transform var(--duration-scene) var(--ease-out);
   }
@@ -321,6 +318,28 @@ import { territories } from '@/content/copy';
     }
   }
 
+  /* Сброс браузерных стилей кнопки — .hit заполняет всю карточку и несёт
+     фокус/клик; сама карточка (.frame, выше) остаётся обычным <li>. */
+  .hit {
+    display: block;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .hit:focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: -2px;
+  }
+
   .visual {
     position: absolute;
     inset: 0;
@@ -335,8 +354,8 @@ import { territories } from '@/content/copy';
     animation: territory-orbit 16s var(--ease-in-out) infinite;
   }
 
-  .frame:hover .motif,
-  .frame:focus-visible .motif,
+  .hit:hover .motif,
+  .hit:focus-visible .motif,
   .frame.is-active .motif {
     animation-duration: calc(16s / 2.2);
   }
@@ -383,8 +402,8 @@ import { territories } from '@/content/copy';
     animation: territory-orbit 18s var(--ease-in-out) infinite;
   }
 
-  .frame:hover .film,
-  .frame:focus-visible .film,
+  .hit:hover .film,
+  .hit:focus-visible .film,
   .frame.is-active .film {
     animation-duration: calc(18s / 2.2);
   }
@@ -430,8 +449,8 @@ import { territories } from '@/content/copy';
   }
 
   .frame.is-active .dim,
-  .frame:hover .dim,
-  .frame:focus-visible .dim {
+  .hit:hover .dim,
+  .hit:focus-visible .dim {
     opacity: 0;
   }
 
@@ -538,8 +557,9 @@ import { territories } from '@/content/copy';
     top: var(--space-4);
     right: var(--space-4);
     z-index: 2;
-    width: 40px;
-    height: 40px;
+    /* ≥44px — минимальная зона нажатия (CLAUDE.md, Этап 13). */
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     border: 1px solid var(--color-line);
     background: var(--color-bg);

@@ -547,6 +547,10 @@ const { people, questions, minutes, rate } = demo.roi.fields;
     border: 1px solid var(--color-line);
     border-radius: var(--radius-pill);
     padding: var(--space-2) var(--space-4);
+    /* ≥44px — минимальная зона нажатия (CLAUDE.md, Этап 13). */
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
     cursor: pointer;
     transition:
       color var(--duration-response) var(--ease-out),
@@ -791,6 +795,10 @@ const { people, questions, minutes, rate } = demo.roi.fields;
     align-self: flex-start;
     margin-top: var(--space-2);
     padding: var(--space-2) var(--space-4);
+    /* ≥44px — минимальная зона нажатия (CLAUDE.md, Этап 13). */
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
     font: inherit;
     font-size: var(--text-sm);
     color: var(--color-sand);

@@ -72,7 +72,8 @@ const { href, variant = 'solid', size = 'md', class: className, id } = Astro.pro
   }
 
   .btn--sm {
-    min-height: 40px;
+    /* ≥44px — минимальная зона нажатия (CLAUDE.md, Этап 13). */
+    min-height: 44px;
     padding: 0 var(--space-5);
     font-size: var(--text-sm);
   }

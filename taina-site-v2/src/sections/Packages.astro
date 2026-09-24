@@ -24,7 +24,7 @@ import { faq } from '@/content/faq';
     <table class="compare" data-reveal>
       <thead>
         <tr>
-          <th />
+          <th><span class="sr-only">Параметр</span></th>
           {
             comparisonTable.columns.map((column, i) => (
               <th class:list={{ rec: i === comparisonTable.recommendedIndex }}>
@@ -200,6 +200,18 @@ import { faq } from '@/content/faq';
 <style>
   h2 {
     font-size: var(--text-2xl);
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   .eyebrow {
@@ -530,6 +542,12 @@ import { faq } from '@/content/faq';
   .faq-item summary {
     cursor: pointer;
     font-weight: 600;
+    /* ≥44px — минимальная зона нажатия (CLAUDE.md, Этап 13): у <summary>
+       по умолчанию высота строчки текста, без явной высоты кликабельная
+       область меньше, чем кажется по отступам родителя. */
+    min-height: 44px;
+    display: flex;
+    align-items: center;
   }
 
   .faq-item summary::marker {

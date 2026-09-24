@@ -91,6 +91,10 @@ import { contact } from '@/content/copy';
     align-self: flex-start;
     margin-top: var(--space-3);
     padding: var(--space-2) var(--space-4);
+    /* ≥44px — минимальная зона нажатия (CLAUDE.md, Этап 13). */
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
     font: inherit;
     font-size: var(--text-sm);
     color: var(--color-sand);
