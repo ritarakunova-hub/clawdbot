@@ -16,6 +16,39 @@ interface Props {
 }
 
 const { title, description } = Astro.props;
+
+// Структурированные данные (Этап 14, SEO) — только подтверждённые факты
+// (CLAUDE.md, «Реальные данные»): название, описание, реальные каналы
+// связи. Никаких оценок, рейтингов и отзывов — их в структурированных
+// данных нет и не будет, пока владелица не разрешит публикацию отзыва
+// (см. reviewApproved в content/copy.ts — к JSON-LD это тоже относится).
+// @id/url без домена не добавляю — см. TODO(Этап 15, домен) ниже.
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'TAINA STUDIO',
+    description,
+    email: 'ritarakunova@gmail.com',
+    sameAs: ['https://t.me/RitaRakunova'],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'TAINA STUDIO',
+    description,
+    inLanguage: 'ru',
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    serviceType: 'AI-консалтинг и автоматизация бизнес-процессов',
+    description:
+      'AI-ассистенты и автоматизация, которые находят ответы в документах компании и честно говорят «этого нет в базе», а не выдумывают.',
+    provider: { '@type': 'Organization', name: 'TAINA STUDIO' },
+    areaServed: 'RU',
+  },
+];
 ---
 
 <!doctype html>
@@ -57,6 +90,8 @@ const { title, description } = Astro.props;
     <link rel="preload" as="font" type="font/woff2" href={interCyrillic400} crossorigin="anonymous" />
     <link rel="preload" as="font" type="font/woff2" href={serifLatin500} crossorigin="anonymous" />
     <link rel="preload" as="font" type="font/woff2" href={serifCyrillic500} crossorigin="anonymous" />
+
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   </head>
   <body id="top">
     <a class="skip-link" href="#main">Перейти к содержимому</a>
