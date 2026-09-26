@@ -1,11 +1,11 @@
 /*
-  TAINA STUDIO — трейлер-премьера направления «Имиджевые фильмы». 30 с, 1080×1920.
-  0–3.6    Заставка  — луч кинопроектора, Бегемот на кинобобинах. «TAINA STUDIO представляет»
-  3.6–8.4  Вопрос    — «Что остаётся от бренда, когда реклама закончилась?»
-  8.4–15   Плёнка    — лента кадров ускоряется: Свет. Ритм. Тишина. Характер. Смысл.
-  15–19    Ответ     — «Ощущение. Его невозможно объяснить. Его можно снять.»
-  19–24.5  Занавес   — красный бархат раскрывается: ромб в арке, TAINA STUDIO, «Имиджевые фильмы»
-  24.5–30  Премьера  — «Премьера направления. Ваша история — следующая.»
+  TAINA — трейлер-премьера направления «AI-автоматизация». 30 с, 1080×1920.
+  0–3.6    Заставка  — луч света, Бегемот на стопке документов. «TAINA представляет»
+  3.6–8.4  Вопрос    — «Сколько раз за день ваша команда ищет то, что уже знает?»
+  8.4–15   Документы — лента документов ускоряется: Найти. Открыть. Снова. Проверить. Переслать.
+  15–19    Ответ     — «Ответ уже есть. Он просто лежит не в том документе.»
+  19–24.5  Занавес   — раскрывается: ромб в арке, ответ со ссылкой на источник, TAINA · AI-автоматизация
+  24.5–30  Премьера  — «Премьера направления. Ответ уже есть — TAINA помогает его найти.»
   30–32    (только для тизеров) финальная карточка «Премьера · скоро»
   40       (только для постера) ключевой визуал
 */
@@ -31,20 +31,16 @@ function goldWord(str, y, size, ls, a, shine) {
   g.drawImage(metal, 0, y - 210); g.restore();
 }
 
-function reel(x, y, rx, a = 1) { // кинобобина в перспективе
-  const ry = rx * .3, th = rx * .16;
+function docStack(x, y, w, a = 1) { // стопка папок и документов
+  const rows = [[0, 0, 1], [8, -34, .94], [-10, -66, 1.04], [4, -96, .9]];
   g.save(); g.globalAlpha = a;
-  g.fillStyle = '#0B0908'; g.beginPath(); g.ellipse(x, y + th, rx, ry, 0, 0, Math.PI); g.lineTo(x - rx, y); g.ellipse(x, y, rx, ry, 0, Math.PI, 0, true); g.closePath(); g.fill();
-  g.strokeStyle = rgba(C.gold, .55); g.lineWidth = 1.6;
-  g.beginPath(); g.ellipse(x, y + th, rx, ry, 0, 0, Math.PI); g.stroke();
-  g.fillStyle = '#0E0B09'; g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, 7); g.fill();
-  const gr = g.createLinearGradient(x - rx, 0, x + rx, 0);
-  gr.addColorStop(0, rgba(C.goldHi, .9)); gr.addColorStop(.5, rgba(C.gold, .35)); gr.addColorStop(1, rgba(C.goldDk, .6));
-  g.strokeStyle = gr; g.lineWidth = 2.2; g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, 7); g.stroke();
-  g.strokeStyle = rgba(C.gold, .35); g.lineWidth = 1.2; g.beginPath(); g.ellipse(x, y, rx * .82, ry * .82, 0, 0, 7); g.stroke();
-  for (let i = 0; i < 5; i++) { const an = i / 5 * 6.283 + .4;
-    g.beginPath(); g.ellipse(x + Math.cos(an) * rx * .5, y + Math.sin(an) * ry * .5, rx * .13, ry * .13, 0, 0, 7); g.fillStyle = '#050404'; g.fill(); g.strokeStyle = rgba(C.gold, .4); g.stroke(); }
-  g.beginPath(); g.ellipse(x, y, rx * .1, ry * .1, 0, 0, 7); g.fillStyle = rgba(C.goldHi, .6); g.fill();
+  for (const [dx, dy, k] of rows) {
+    const ww = w * k, bx = x - ww / 2 + dx, by = y + dy - 30;
+    g.fillStyle = '#0D0A08'; g.fillRect(bx, by, ww, 30);
+    g.strokeStyle = rgba(C.gold, .55); g.lineWidth = 1.4; g.strokeRect(bx, by, ww, 30);
+    g.fillStyle = rgba(C.goldHi, .35); g.fillRect(bx + ww * .1, by + 13, ww * .5, 2);
+  }
+  g.save(); g.translate(x + w * .42, y - 44); g.rotate(Math.PI / 4); g.fillStyle = C.red; g.shadowColor = C.red; g.shadowBlur = 14; g.fillRect(-5, -5, 10, 10); g.restore();
   g.restore();
 }
 function beam(sx, sy, ex, ey, spread, a) { // луч проектора из точки
@@ -60,35 +56,19 @@ function beam(sx, sy, ex, ey, spread, a) { // луч проектора из т�
 }
 const flick = t => .82 + .18 * rng(Math.floor(t * 24) + 7)(); // мерцание проектора 24 к/с
 
-// Иконки для кадров плёнки — золотая графика
-function icon(kind, x, y, s, a, t) {
-  g.save(); g.globalAlpha = a; g.strokeStyle = C.goldHi; g.fillStyle = C.goldHi; g.lineWidth = 2.4; g.lineCap = 'round';
-  g.shadowColor = rgba(C.gold, .8); g.shadowBlur = 18;
-  const S = s;
-  switch (kind) {
-    case 'eye':
-      g.beginPath(); g.moveTo(x - 110 * S, y); g.quadraticCurveTo(x, y - 90 * S, x + 110 * S, y); g.quadraticCurveTo(x, y + 90 * S, x - 110 * S, y); g.stroke();
-      g.beginPath(); g.ellipse(x, y, 12 * S, 40 * S, 0, 0, 7); g.fill(); break;
-    case 'key':
-      g.beginPath(); g.arc(x - 70 * S, y, 34 * S, 0, 7); g.stroke();
-      g.beginPath(); g.moveTo(x - 36 * S, y); g.lineTo(x + 110 * S, y); g.moveTo(x + 70 * S, y); g.lineTo(x + 70 * S, y + 30 * S); g.moveTo(x + 95 * S, y); g.lineTo(x + 95 * S, y + 22 * S); g.stroke(); break;
-    case 'wave':
-      for (let k = 0; k < 5; k++) { g.beginPath(); for (let i = 0; i <= 40; i++) { const u = i / 40; const xx = x - 130 * S + u * 260 * S, yy = y + Math.sin(u * 7 + k * .5 + t * 2) * 30 * S + (k - 2) * 12 * S; i ? g.lineTo(xx, yy) : g.moveTo(xx, yy); } g.globalAlpha = a * (.3 + .15 * k); g.stroke(); } break;
-    case 'curtain':
-      g.beginPath(); g.moveTo(x - 130 * S, y - 90 * S); g.lineTo(x + 130 * S, y - 90 * S); g.stroke();
-      for (let k = -4; k <= 4; k++) { g.beginPath(); g.moveTo(x + k * 28 * S, y - 90 * S); g.quadraticCurveTo(x + k * 32 * S, y, x + k * 26 * S + Math.sign(k) * 10 * S, y + 90 * S); g.stroke(); } break;
-    case 'spark':
-      g.restore(); star4(x, y, 60 * S, a); star4(x + 90 * S, y - 50 * S, 22 * S, a * .7); star4(x - 80 * S, y + 40 * S, 16 * S, a * .6); return;
-    case 'gem':
-      g.restore(); gem(x, y, 90 * S, 160 * S, a); return;
-    case 'arch':
-      g.restore(); arch(x, y + 110 * S, y - 110 * S, 80 * S, 1, a, 2.4); gem(x, y + 10 * S, 34 * S, 60 * S, a * .9); return;
-    case 'reel':
-      g.restore(); reel(x, y, 110 * S, a); return;
-  }
+// Карточка документа для ленты
+function docCard(fx, y, fw, fh, title, hot, a) {
+  const vg = g.createRadialGradient(fx + fw / 2, y + fh / 2, 40, fx + fw / 2, y + fh / 2, fw * .7);
+  vg.addColorStop(0, '#22170C'); vg.addColorStop(1, '#080605');
+  g.fillStyle = vg; g.fillRect(fx, y, fw, fh);
+  g.strokeStyle = rgba(C.gold, .35); g.lineWidth = 1; g.strokeRect(fx + .5, y + .5, fw - 1, fh - 1);
+  text(title, fx + fw / 2, y + 110, 58, C.goldHi, a, { weight: 600, glowA: .5 });
+  g.save(); g.globalAlpha = a;
+  for (let i = 0; i < 7; i++) { g.fillStyle = rgba(C.gold, .22); g.fillRect(fx + 80, y + 190 + i * 38, (fw - 160) * (i % 3 === 2 ? .55 : .9), 3); }
   g.restore();
+  if (hot) { g.save(); g.translate(fx + fw - 60, y + 56); g.rotate(Math.PI / 4); g.fillStyle = C.red; g.shadowColor = C.red; g.shadowBlur = 16; g.fillRect(-8, -8, 16, 16); g.restore(); }
 }
-const FRAMES = ['eye', 'wave', 'key', 'arch', 'curtain', 'spark', 'reel', 'gem'];
+const FRAMES = ['Регламент', 'Договор', 'Прайс-лист', 'FAQ', 'Инструкция', 'Протокол', 'Переписка', 'Скрипт продаж'];
 
 // Прокрутка плёнки: интегрируем скорость (с остановкой на «Тишине»)
 const SCROLL = (() => {
@@ -128,16 +108,16 @@ function curtain(open, t, a = 1) {
 function sIdent(t) { // 0–3.6
   const a = seg(t, .15, .9) * flick(t);
   beam(-40, 260, 760, 1500, 330, a);
-  reel(540, 1330, 190, seg(t, .3, 1.2)); reel(540, 1270, 176, seg(t, .3, 1.2));
-  silhouette(TAIL, 540, 1262, 2.1, { light: [-.8, -.7], rimA: .9 * a, fur: 1.2, glowA: .2 });
-  silhouette(CAT, 540, 1262, 2.1, { light: [-.8, -.7], rimA: a, fur: 1.5, glowA: .45 });
-  catFace(540, 1262, 2.1, eo(seg(t, 1.0, 1.5)) * (t > 2.6 && t < 2.75 ? .1 : 1), .1, 1, bell(t, 1.5, 2.3, .2, .5));
-  text('TAINA STUDIO', W / 2, 1560, 40, C.gold, bell(t, 1.8, 3.6, .5, .4), { caps: true, ls: 18, weight: 600, glowA: .3 });
+  docStack(540, 1370, 420, seg(t, .3, 1.2));
+  silhouette(TAIL, 540, 1244, 2.1, { light: [-.8, -.7], rimA: .9 * a, fur: 1.2, glowA: .2 });
+  silhouette(CAT, 540, 1244, 2.1, { light: [-.8, -.7], rimA: a, fur: 1.5, glowA: .45 });
+  catFace(540, 1244, 2.1, eo(seg(t, 1.0, 1.5)) * (t > 2.6 && t < 2.75 ? .1 : 1), .1, 1, bell(t, 1.5, 2.3, .2, .5));
+  text('TAINA', W / 2, 1560, 44, C.gold, bell(t, 1.8, 3.6, .5, .4), { caps: true, ls: 18, weight: 600, glowA: .3 });
   text('представляет', W / 2, 1625, 44, C.ink, bell(t, 2.1, 3.6, .5, .4), { italic: true });
   g.fillStyle = rgba(C.void, seg(t, 3.25, 3.6)); g.fillRect(0, 0, W, H);
 }
 
-const QUESTION = [['Что', 'остаётся'], ['от', 'бренда,'], ['когда', 'реклама'], ['закончилась?']];
+const QUESTION = [['Сколько', 'раз', 'за', 'день'], ['ваша', 'команда', 'ищет'], ['то,', 'что'], ['уже', 'знает?']];
 function sQuestion(t) { // 3.6–8.4
   const z = lerp(1, 1.05, seg(t, 3.6, 8.4));
   g.save(); g.translate(W / 2, H / 2); g.scale(z, z); g.translate(-W / 2, -H / 2);
@@ -149,9 +129,9 @@ function sQuestion(t) { // 3.6–8.4
     const full = line.join(' '), wFull = g.measureText(full).width;
     let x = W / 2 - wFull / 2;
     line.forEach(word => {
-      const s0 = 3.9 + k * .38, a = seg(t, s0, s0 + .5) * (1 - seg(t, 7.9, 8.4));
+      const s0 = 3.9 + k * .3, a = seg(t, s0, s0 + .5) * (1 - seg(t, 7.9, 8.4));
       const ww = g.measureText(word + ' ').width;
-      const hot = word === 'остаётся';
+      const hot = li === 3;
       g.save(); g.globalAlpha = a; g.textAlign = 'left'; g.textBaseline = 'middle';
       g.fillStyle = hot ? C.goldHi : C.ink; g.shadowColor = rgba(C.gold, hot ? .8 : .3); g.shadowBlur = hot ? 50 : 30;
       g.fillText(word, x, y + (1 - eo(seg(t, s0, s0 + .5))) * 18); g.restore();
@@ -161,7 +141,7 @@ function sQuestion(t) { // 3.6–8.4
   g.restore();
 }
 
-const BEATS = [[9.2, 'Свет.'], [10.2, 'Ритм.'], [11.2, 'Тишина.'], [12.4, 'Характер.'], [13.3, 'Смысл.']];
+const BEATS = [[9.2, 'Найти.'], [10.2, 'Открыть.'], [11.2, 'Снова.'], [12.4, 'Проверить.'], [13.3, 'Переслать.']];
 function sFilm(t) { // 8.4–15
   const sc = SCROLL(t), pitch = 600, fw = 700, fh = 520, x0 = W / 2 - fw / 2 - 50;
   const speed = (SCROLL(Math.min(15, t + 1 / 60)) - SCROLL(t)) * 60;
@@ -182,12 +162,8 @@ function sFilm(t) { // 8.4–15
   for (let i = first; i < first + 5; i++) {
     const y = i * pitch - sc + 200;
     if (y > H || y + fh < 0) continue;
-    const fx = x0 + 50, kind = FRAMES[((i % FRAMES.length) + FRAMES.length) % FRAMES.length];
-    const vg = g.createRadialGradient(fx + fw / 2, y + fh / 2, 40, fx + fw / 2, y + fh / 2, fw * .7);
-    vg.addColorStop(0, '#2A1A0C'); vg.addColorStop(1, '#070504');
-    g.fillStyle = vg; g.fillRect(fx, y, fw, fh);
-    g.strokeStyle = rgba(C.gold, .3); g.lineWidth = 1; g.strokeRect(fx + .5, y + .5, fw - 1, fh - 1);
-    g.save(); g.filter = 'none'; icon(kind, fx + fw / 2, y + fh / 2, 1.3, .95, t); g.restore();
+    const fx = x0 + 50, title = FRAMES[((i % FRAMES.length) + FRAMES.length) % FRAMES.length];
+    g.save(); g.filter = 'none'; docCard(fx, y, fw, fh, title, i % 8 === 3, .95); g.restore();
     text(String(((i % 99) + 99) % 99 + 1).padStart(2, '0'), fx + 40, y + 36, 26, C.gold, .6, { weight: 600, glowA: 0 });
   }
   g.restore();
@@ -207,36 +183,61 @@ function sAnswer(t) { // 15–19
   glow(W / 2, 860, 800, '#6A3A10', .3 * seg(t, 15, 16), 'source-over');
   const a1 = seg(t, 15.2, 16);
   g.save(); g.globalAlpha = a1; g.translate(W / 2, 840); const sc = lerp(1.08, 1, eo(seg(t, 15.2, 17))); g.scale(sc, sc);
-  text('Ощущение.', 0, 0, 150, C.goldHi, 1, { italic: true, weight: 500, glowA: .9 }); g.restore();
+  text('Ответ уже есть.', 0, 0, 120, C.goldHi, 1, { italic: true, weight: 500, glowA: .9 }); g.restore();
   divider(960, 220, seg(t, 16.1, 16.9), 1);
-  text('Его невозможно объяснить.', W / 2, 1060, 64, C.ink, seg(t, 16.5, 17.2), { italic: true });
-  text('Его можно снять.', W / 2, 1150, 72, C.ink, seg(t, 17.4, 18.1), { weight: 600, glowA: .5 });
+  text('Он просто лежит', W / 2, 1060, 66, C.ink, seg(t, 16.5, 17.2), { italic: true });
+  text('не в том документе.', W / 2, 1140, 66, C.ink, seg(t, 16.9, 17.6), { italic: true });
   g.fillStyle = rgba(C.void, seg(t, 18.6, 19)); g.fillRect(0, 0, W, H);
+}
+
+// Ответ ассистента со ссылкой на источник
+function answerCard(y, a, t, t0) {
+  if (a <= 0) return;
+  const x = 130, w = 820, h = 330;
+  g.save(); g.globalAlpha = a; g.translate(0, (1 - eo(a)) * 24);
+  g.fillStyle = 'rgba(14,10,9,.94)'; g.fillRect(x, y, w, h);
+  g.strokeStyle = rgba(C.gold, .55); g.lineWidth = 1.4; g.strokeRect(x, y, w, h);
+  g.restore();
+  const q = 'Какая схема приёма для повторных пациентов?';
+  const n = Math.floor(q.length * seg(t, t0 + .2, t0 + 1.1));
+  const cut = 'Какая схема приёма '.length;
+  g.save(); g.textAlign = 'left';
+  text('ВОПРОС', x + 150, y + 50, 24, C.gold, a, { weight: 600, ls: 6, glowA: 0 });
+  g.restore();
+  const tl = (str, yy, size, col, aa, opt = {}) => { g.save(); g.globalAlpha = aa; g.font = `${opt.italic ? 'italic ' : ''}${opt.w || 500} ${size}px ${SERIF}`; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillStyle = col; g.shadowColor = rgba(C.gold, .3); g.shadowBlur = 16; g.fillText(str, x + 44, yy); g.restore(); };
+  tl(q.slice(0, Math.min(n, cut)), y + 104, 44, C.ink, a, { w: 600 });
+  tl(n > cut ? q.slice(cut, n) : '', y + 154, 44, C.ink, a, { w: 600 });
+  tl('Повторный приём — по записи, без направления.', y + 220, 34, C.goldHi, a * seg(t, t0 + 1.2, t0 + 1.6), { italic: true });
+  g.save(); g.globalAlpha = a * seg(t, t0 + 1.6, t0 + 2); g.fillStyle = rgba(C.gold, .3); g.fillRect(x + 44, y + 256, w - 88, 1); g.restore();
+  tl('↳ Источник: Регламент приёма, п. 3.2', y + 290, 32, C.gold, a * seg(t, t0 + 1.7, t0 + 2.1), { w: 600 });
 }
 
 function sReveal(t) { // 19–24.5 и дальше — фон премьеры
   const open = seg(t, 19.5, 21.6);
-  const D = { x: 540, y: 760 };
-  // сцена за занавесом
-  glow(W / 2, 820, 900, '#5A1A08', .5 * seg(t, 19.6, 21), 'source-over');
-  arch(540, 1330, 330, 330, eo(seg(t, 20.2, 21.8)), .8, 2);
-  arch(540, 1330, 380, 290, eo(seg(t, 20.4, 22)), .35, 1.2);
+  const D = { x: 540, y: 700 };
+  glow(W / 2, 780, 900, '#5A1A08', .5 * seg(t, 19.6, 21), 'source-over');
+  arch(540, 1330, 290, 330, eo(seg(t, 20.2, 21.8)), .8, 2);
+  arch(540, 1330, 340, 290, eo(seg(t, 20.4, 22)), .35, 1.2);
   const gA = eo(seg(t, 20.6, 21.4));
   gem(D.x, D.y, 150 * gA + 1, 270 * gA + 1, gA);
   flare(D.x, D.y, lerp(200, 700, eo(seg(t, 20.9, 22))), bell(t, 20.9, 23.2, .25, 1.2) * .95);
   for (let i = 0; i < 9; i++) star4(D.x + Math.cos(i * 2.1 + t * .4) * (230 + i * 15), D.y + Math.sin(i * 2.1 + t * .4) * 180, 6 + i % 3 * 3, seg(t, 21.5, 22.5) * (.4 + .4 * Math.sin(t * 3 + i)));
-  ribbon(t, 1680, 70, 110, C.red, '#FF6A5A', seg(t, 21.5, 23) * .8, 0, .5);
-  goldWord('TAINA', 1090, 230, 10, seg(t, 21.9, 22.8), seg(t, 22.2, 23.6));
-  goldWord('STUDIO', 1250, 76, 32, seg(t, 22.3, 23), seg(t, 22.6, 24));
-  text('Имиджевые фильмы для брендов', W / 2, 1360, 33, C.goldHi, seg(t, 22.8, 23.5), { caps: true, ls: 5, weight: 600, glowA: .3 });
+  ribbon(t, 1690, 70, 110, C.red, '#FF6A5A', seg(t, 21.5, 23) * .8, 0, .5);
+  // ответ со ссылкой на источник, затем знак
+  answerCard(980, bell(t, 21.6, 23.9, .45, .45), t, 21.6);
+  const lg = seg(t, 23.6, 24.4);
+  goldWord('TAINA', 1080, 230, 10, lg, seg(t, 23.8, 25.2));
+  text('AI-автоматизация', W / 2, 1240, 46, C.goldHi, seg(t, 23.9, 24.6), { caps: true, ls: 12, weight: 600, glowA: .4 });
+  text('Ассистент, который отвечает по документам компании', W / 2, 1318, 38, C.ink, seg(t, 24.1, 24.8), { italic: true, glowA: .2 });
   curtain(open, t); // раскрытый занавес остаётся по краям кадра
 }
 
 function sPremiere(t) { // 24.5–30
   sReveal(t);
-  divider(1470, 280, seg(t, 24.5, 25.3), 1);
-  text('Премьера направления', W / 2, 1550, 50, C.goldHi, seg(t, 24.8, 25.5), { caps: true, ls: 12, weight: 600, glowA: .5 });
-  text('Ваша история — следующая.', W / 2, 1650, 70, C.ink, seg(t, 25.8, 26.6), { italic: true });
+  divider(1440, 280, seg(t, 24.6, 25.4), 1);
+  text('Премьера направления', W / 2, 1520, 50, C.goldHi, seg(t, 24.9, 25.6), { caps: true, ls: 12, weight: 600, glowA: .5 });
+  text('Ответ уже есть.', W / 2, 1610, 66, C.ink, seg(t, 25.8, 26.5), { italic: true });
+  text('TAINA помогает его найти.', W / 2, 1690, 66, C.goldHi, seg(t, 26.4, 27.1), { italic: true, glowA: .5 });
 }
 
 function sTeaserEnd(t) { // 30–32
@@ -244,20 +245,21 @@ function sTeaserEnd(t) { // 30–32
   gem(540, 780, 110 * a + 1, 190 * a + 1, a);
   flare(540, 780, 420, bell(t, 30.1, 31.4, .2, .8) * .8);
   goldWord('TAINA', 1040, 200, 10, a, seg(t, 30.2, 31.5));
-  goldWord('STUDIO', 1180, 66, 30, a, seg(t, 30.4, 31.7));
+  text('AI-автоматизация', W / 2, 1180, 44, C.goldHi, a, { caps: true, ls: 12, weight: 600, glowA: .4 });
   divider(1300, 220, seg(t, 30.3, 31), 1);
   text('Премьера · скоро', W / 2, 1390, 58, C.ink, seg(t, 30.5, 31.1), { italic: true });
 }
 
 function sPoster() { // ключевой визуал
-  const t = 23.6;
+  const t = 25.4;
   beam(-40, 180, 820, 1700, 360, .7);
   sReveal(t);
-  text('Премьера направления', W / 2, 1480, 46, C.goldHi, 1, { caps: true, ls: 12, weight: 600, glowA: .5 });
-  text('Ваша история — следующая.', W / 2, 1565, 62, C.ink, 1, { italic: true });
-  reel(955, 1895, 92, 1); reel(955, 1866, 84, 1);
-  silhouette(CAT, 955, 1860, .74, { light: [-.8, -.7], rimA: 1, fur: .8, glowA: .45 });
-  catFace(955, 1860, .74, 1, .1, 1, .8);
+  text('Премьера направления', W / 2, 1420, 46, C.goldHi, 1, { caps: true, ls: 12, weight: 600, glowA: .5 });
+  text('Ответ уже есть.', W / 2, 1505, 62, C.ink, 1, { italic: true });
+  text('TAINA помогает его найти.', W / 2, 1580, 62, C.goldHi, 1, { italic: true, glowA: .5 });
+  docStack(962, 1912, 220, 1);
+  silhouette(CAT, 962, 1820, .6, { light: [-.8, -.7], rimA: 1, fur: .7, glowA: .45 });
+  catFace(962, 1820, .6, 1, .1, 1, .8);
 }
 
 /* ---------- кадр ---------- */
