@@ -174,9 +174,9 @@ while t < 23.5:  # искры
     t += rng.exponential(.15)
 add(whoosh(1.4, 3000, 12000, True), 21.8, .08)
 for k in range(12):  # печать вопроса в карточке
-    add(band(rng.standard_normal(int(.012 * SR)), 2500, 9000) * np.exp(-np.arange(int(.012 * SR)) / (.002 * SR)), 21.8 + k * .075, .12)
-add(bell_tone(hz(88), 2, 1.5), 23.3, .05)  # ссылка на источник
-hit(23.7, .4, 44)  # появление знака
+    add(band(rng.standard_normal(int(.012 * SR)), 2500, 9000) * np.exp(-np.arange(int(.012 * SR)) / (.002 * SR)), 21.6 + k * .075, .12)
+add(bell_tone(hz(88), 2, 1.5), 23.1, .05)  # ссылка на источник
+hit(23.9, .4, 44)  # появление знака
 
 # 24.5–30 премьера
 add(pad([41, 48, 57, 60, 64], 2.6, .8, 1.0), 24.4, .28)

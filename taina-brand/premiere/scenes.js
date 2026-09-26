@@ -224,11 +224,11 @@ function sReveal(t) { // 19–24.5 и дальше — фон премьеры
   for (let i = 0; i < 9; i++) star4(D.x + Math.cos(i * 2.1 + t * .4) * (230 + i * 15), D.y + Math.sin(i * 2.1 + t * .4) * 180, 6 + i % 3 * 3, seg(t, 21.5, 22.5) * (.4 + .4 * Math.sin(t * 3 + i)));
   ribbon(t, 1690, 70, 110, C.red, '#FF6A5A', seg(t, 21.5, 23) * .8, 0, .5);
   // ответ со ссылкой на источник, затем знак
-  answerCard(980, bell(t, 21.6, 23.9, .45, .45), t, 21.6);
-  const lg = seg(t, 23.6, 24.4);
-  goldWord('TAINA', 1080, 230, 10, lg, seg(t, 23.8, 25.2));
-  text('AI-автоматизация', W / 2, 1240, 46, C.goldHi, seg(t, 23.9, 24.6), { caps: true, ls: 12, weight: 600, glowA: .4 });
-  text('Ассистент, который отвечает по документам компании', W / 2, 1318, 38, C.ink, seg(t, 24.1, 24.8), { italic: true, glowA: .2 });
+  answerCard(980, bell(t, 21.4, 24.2, .45, .35), t, 21.4);
+  const lg = seg(t, 23.9, 24.5);
+  goldWord('TAINA', 1080, 230, 10, lg, seg(t, 24.0, 25.4));
+  text('AI-автоматизация', W / 2, 1240, 46, C.goldHi, seg(t, 24.1, 24.7), { caps: true, ls: 12, weight: 600, glowA: .4 });
+  text('Ассистент, который отвечает по документам компании', W / 2, 1318, 38, C.ink, seg(t, 24.3, 24.9), { italic: true, glowA: .2 });
   curtain(open, t); // раскрытый занавес остаётся по краям кадра
 }
 
