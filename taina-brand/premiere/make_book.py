@@ -139,7 +139,7 @@ page = f'''<title>Премьера TAINA STUDIO</title>
   </section>
 
   <section>
-    <p class="eyebrow">Прогрев · три тизера по 9 секунд</p>
+    <p class="eyebrow">Прогрев · три тизера по 5–8 секунд</p>
     <h2>Три дня до премьеры</h2>
     <div class="teasers">
       <figure><video controls playsinline preload="metadata" src="{vid('teaser-1.mp4')}"></video><figcaption><b>−3 · «Взгляд»</b>Бегемот в луче проектора. Кто-то всегда видит больше.</figcaption></figure>

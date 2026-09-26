@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Сборка материалов премьеры TAINA STUDIO:
 #   out/taina-studio-trailer.mp4        трейлер 30 с, 1080×1920
-#   out/taina-studio-teaser-{1,2,3}.mp4  тизеры 9 с (фрагмент трейлера + карточка «Премьера · скоро»)
+#   out/taina-studio-teaser-{1,2,3}.mp4  тизеры 5–8 с (фрагмент трейлера + карточка «Премьера · скоро»)
 #   out/poster-9x16.jpg, out/poster-4x5.jpg
 #   out/campaign-book.html              кампейн-бук со встроенными материалами
 # Нужно: node + глобальный playwright, python3 + numpy + imageio-ffmpeg
