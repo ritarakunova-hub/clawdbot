@@ -1,0 +1,17 @@
+{
+  "name": "taina-content-engine",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TAINA Content Engine — генерация постов Claude + публикация в Telegram-канал и VK с обязательным одобрением",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node test/run.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.125.0",
+    "express": "^4.19.2",
+    "googleapis": "^140.0.1",
+    "zod": "^3.24.1"
+  }
+}

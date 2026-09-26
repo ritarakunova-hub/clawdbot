@@ -1,0 +1,13 @@
+meta:
+  environment: node
+  toolchain:
+    name: npm
+    version: 18
+
+build:
+  install: npm install
+
+run:
+  scriptName: index.js
+  containerPort: 3000
+  persistent: false
