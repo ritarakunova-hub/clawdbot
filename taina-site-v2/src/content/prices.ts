@@ -109,7 +109,7 @@ export const segments = {
 // (docs/content-comparison.md): безусловное «без VPN» нигде не используется.
 export const infrastructure = {
   eyebrow: 'Инфраструктура',
-  title: 'AI без VPN и зависимости от зарубежной платформы',
+  title: 'AI без лишней зависимости от зарубежной платформы',
   lede: 'Решения TAINA можно строить на базе GigaChat и российской инфраструктуры.',
   checklist: [
     'GigaChat в качестве языковой модели',
