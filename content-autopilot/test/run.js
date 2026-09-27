@@ -1,6 +1,10 @@
-// Простые проверки без обращения к реальным Telegram/VK — запускаются: npm test
+// Простые проверки без обращения к реальным Telegram/VK/Claude — запускаются: npm test
 const assert = require('node:assert');
-const { getPostForDate, loadPosts, todayInTimezone } = require('../src/posts');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || 'test-key';
+const { getPostForDate, loadPosts, savePosts, setPostText, todayInTimezone } = require('../src/posts');
 const {
   formatDraftPreview,
   formatTopicReminder,
@@ -94,4 +98,70 @@ const { formatPublishSummary } = require('../src/publisher');
   console.log('OK: todayInTimezone — корректный формат даты');
 }
 
-console.log('\nВсе проверки пройдены.');
+// 10. setPostText — дописывает текст и меняет type "topic" → "full",
+// работает на временном файле, чтобы не трогать реальный календарь
+{
+  const tmpPath = path.join(os.tmpdir(), `posts-test-${Date.now()}.json`);
+  savePosts(
+    [
+      { date: '2099-01-01', rubric: 'Путь', title: 'Тема без текста', type: 'topic' },
+      { date: '2099-01-03', rubric: 'Система', title: 'Уже с текстом', type: 'full', text: 'старый текст' },
+    ],
+    tmpPath
+  );
+
+  const updated = setPostText('2099-01-01', 'Новый текст поста', tmpPath);
+  assert.ok(updated);
+  assert.strictEqual(updated.type, 'full');
+  assert.strictEqual(updated.text, 'Новый текст поста');
+
+  const reloaded = loadPosts(tmpPath);
+  assert.strictEqual(getPostForDate('2099-01-01', reloaded).text, 'Новый текст поста');
+
+  assert.strictEqual(setPostText('2099-06-30', 'текст', tmpPath), null);
+
+  fs.unlinkSync(tmpPath);
+  console.log('OK: setPostText — дописывает текст на временном файле, не трогая реальный календарь');
+}
+
+// 11. claude.generateText — без реального обращения к API (global.fetch подменяем,
+// именно на нём в итоге работает SDK), проверяем, что рубрика/тема/заметки
+// попадают в тело запроса и что ответ API корректно разбирается в текст
+{
+  (async () => {
+    const originalFetch = global.fetch;
+    let capturedBody = null;
+
+    // Клиент Anthropic SDK захватывает global.fetch в момент создания —
+    // подменяем ДО первого require('../src/claude'), иначе мок не подхватится.
+    global.fetch = async (url, options) => {
+      capturedBody = JSON.parse(options.body);
+      const payload = { content: [{ type: 'text', text: 'Сгенерированный текст поста' }] };
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => payload,
+        text: async () => JSON.stringify(payload),
+      };
+    };
+    delete require.cache[require.resolve('../src/claude')];
+    const claude = require('../src/claude');
+
+    try {
+      const text = await claude.generateText({ rubric: 'Технология', title: 'Тестовая тема', notes: 'важная деталь' });
+      assert.strictEqual(text, 'Сгенерированный текст поста');
+      assert.ok(capturedBody.messages[0].content.includes('Рубрика: Технология'));
+      assert.ok(capturedBody.messages[0].content.includes('Тестовая тема'));
+      assert.ok(capturedBody.messages[0].content.includes('важная деталь'));
+      console.log('OK: claude.generateText — рубрика/тема/заметки попадают в запрос, ответ разобран верно');
+    } finally {
+      global.fetch = originalFetch;
+    }
+  })().then(() => {
+    console.log('\nВсе проверки пройдены.');
+  }).catch((err) => {
+    console.error('ОШИБКА в тестах:', err);
+    process.exit(1);
+  });
+}
