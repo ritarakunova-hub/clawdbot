@@ -1,15 +1,19 @@
 const express = require('express');
 const cron = require('node-cron');
-const { getPostForDate, todayInTimezone } = require('./src/posts');
+const { getPostForDate, loadPosts, setPostText, todayInTimezone } = require('./src/posts');
 const telegram = require('./src/telegram');
 const { publish, formatPublishSummary } = require('./src/publisher');
 const { loadPending, savePending, clearPending } = require('./src/pending');
+const claude = require('./src/claude');
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 const PORT = process.env.PORT || 3000;
 const TIMEZONE = process.env.TIMEZONE || 'Europe/Moscow';
+const APP_USERNAME = process.env.APP_USERNAME || '';
+const APP_PASSWORD = process.env.APP_PASSWORD || '';
 // По умолчанию — каждый день в 9:00 по МСК; cron сам проверяет, есть ли
 // на сегодня пост, дни без публикации просто пропускаются.
 const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '0 9 * * *';
@@ -23,6 +27,108 @@ const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || '';
 const timers = new Map();
 
 app.get('/health', (req, res) => res.status(200).json({ ok: true }));
+
+// Простая защита формы паролем через стандартное окно браузера (Basic Auth) —
+// чтобы случайный человек в интернете не мог тратить ANTHROPIC_API_KEY за ваш счёт.
+// Если APP_USERNAME/APP_PASSWORD не заданы — защита выключена (только для локальных тестов).
+function requireAuth(req, res, next) {
+  if (!APP_USERNAME || !APP_PASSWORD) return next();
+
+  const header = req.headers.authorization || '';
+  const [, encoded] = header.split(' ');
+  const decoded = encoded ? Buffer.from(encoded, 'base64').toString('utf-8') : '';
+  const [user, pass] = decoded.split(':');
+
+  if (user === APP_USERNAME && pass === APP_PASSWORD) return next();
+
+  res.set('WWW-Authenticate', 'Basic realm="TAINA Content Autopilot"');
+  return res.status(401).send('Требуется авторизация');
+}
+
+/**
+ * Форма для дозаписи текста к теме из календаря — темы без текста
+ * (type: "topic") показаны как варианты выбора.
+ */
+app.get('/', requireAuth, (req, res) => {
+  const topics = loadPosts().filter((p) => p.type === 'topic');
+  const options = topics
+    .map((p) => `<option value="${p.date}">${p.date} · ${p.rubric} · ${p.title}</option>`)
+    .join('\n');
+
+  res.status(200).send(`<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>TAINA Content Autopilot</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 480px; margin: 60px auto; padding: 0 16px; }
+  h1 { font-size: 20px; }
+  label { display: block; margin-top: 16px; font-size: 14px; color: #333; }
+  select, textarea { width: 100%; padding: 8px; font-size: 16px; box-sizing: border-box; margin-top: 4px; font-family: inherit; }
+  textarea { resize: vertical; }
+  button { margin-top: 24px; padding: 12px 20px; font-size: 16px; background: #111; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+  button:hover { background: #333; }
+  p.hint { color: #666; font-size: 13px; }
+</style>
+</head>
+<body>
+  <h1>✍️ Дописать текст к теме</h1>
+  <p class="hint">Claude напишет текст в голосе Маргариты для выбранной темы из
+  календаря и сохранит его в <code>data/posts.json</code> — дальше тема пойдёт
+  по обычному расписанию (черновик в Telegram → таймер → публикация).</p>
+  ${topics.length ? `<form method="POST" action="/generate-text">
+    <label>Тема из календаря (${topics.length} без текста)
+      <select name="date" required>
+        ${options}
+      </select>
+    </label>
+    <label>Заметки/детали (необязательно)
+      <textarea name="notes" rows="4" placeholder="что важно упомянуть, конкретный факт, тон..."></textarea>
+    </label>
+    <button type="submit">Сгенерировать текст</button>
+  </form>` : '<p class="hint">Все темы в календаре уже с текстом.</p>'}
+</body>
+</html>`);
+});
+
+app.post('/generate-text', requireAuth, async (req, res) => {
+  const date = String(req.body.date || '').trim();
+  const notes = String(req.body.notes || '').trim();
+
+  const post = getPostForDate(date);
+  if (!post) {
+    return res.status(400).send('Дата не найдена в календаре.');
+  }
+
+  try {
+    const text = await claude.generateText({ rubric: post.rubric, title: post.title, notes });
+    setPostText(date, text);
+
+    try {
+      await telegram.sendPlainMessage(
+        `✍️ Текст к теме «${post.title}» (${post.rubric}, ${date}) готов и сохранён в календаре:\n\n${text}`
+      );
+    } catch (err) {
+      console.error('[content-autopilot] Не удалось отправить предпросмотр в Telegram:', err.message);
+    }
+
+    res.status(200).send(`<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Готово</title></head>
+<body style="font-family: system-ui, sans-serif; max-width: 480px; margin: 60px auto; padding: 0 16px;">
+<h2>Текст сохранён ✅</h2>
+<p>Тема «${post.title}» (${date}) теперь с текстом — придёт черновиком в Telegram
+в свой день по расписанию. Копия текста для проверки прямо сейчас пришла вам в Telegram.</p>
+<p style="color:#a60;">⚠️ Текст сохранён на диске контейнера, не в репозитории.
+Если сервис перезапустится/передеплоится раньше, чем эта тема будет опубликована —
+текст пропадёт. Чтобы закрепить навсегда, скопируйте его из Telegram в
+<code>data/posts.json</code> в репозитории и запушьте (или попросите меня).</p>
+<p><a href="/">← Дописать ещё одну тему</a></p>
+</body></html>`);
+  } catch (err) {
+    console.error('[content-autopilot] Ошибка генерации текста:', err.message);
+    res.status(500).send(`Ошибка генерации: ${err.message}`);
+  }
+});
 
 /**
  * Публикует черновик (вручную или по таймеру), убирает кнопки с
