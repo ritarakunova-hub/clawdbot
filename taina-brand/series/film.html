@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Бегемот — мини-сериал TAINA (исходник)</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  html,body{ margin:0; background:#040304; height:100%; }
+  canvas{ display:block; height:100vh; width:auto; max-width:100vw; margin:0 auto; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script src="kit.js"></script>
+<script src="brand.js"></script>
+<script src="lib.js"></script>
+<script>
+  // film.html?ep=1|2|3[&t=секунда]
+  const qs = new URLSearchParams(location.search), ep = qs.get('ep') || '1';
+  window.ready = new Promise(ok => {
+    const s = document.createElement('script'); s.src = `ep${ep}.js`;
+    s.onload = () => Promise.all(['500 80px', 'italic 500 80px', '600 58px'].map(f => document.fonts.load(`${f} ${SERIF}`, 'Ответ TAINA'))).then(() => document.fonts.ready).then(ok);
+    document.body.appendChild(s);
+  });
+  if (!navigator.webdriver) window.ready.then(() => {
+    const qt = qs.get('t');
+    if (qt !== null) return render(parseFloat(qt));
+    const t0 = performance.now();
+    const loop = now => { render(((now - t0) / 1000) % EP.dur); requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+  });
+</script>
+</body>
+</html>
