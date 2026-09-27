@@ -3,7 +3,7 @@
 const W = 1080, H = 1920, DUR = 30;
 window.FILM = { w: W, h: H, dur: DUR };
 const cv = document.getElementById('c'); cv.width = W; cv.height = H;
-const g = cv.getContext('2d');
+let g = cv.getContext('2d'); // let: слои-кэши временно подменяют контекст
 
 const C = { void:'#040304', gold:'#C9974A', goldHi:'#F2CF8A', goldDk:'#6B4A1E', red:'#D0141C', ink:'#EFE6D6', amber:'#F0A83A', fur:'#050404' };
 const SERIF = '"Cormorant Garamond", Georgia, serif';

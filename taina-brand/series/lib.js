@@ -353,12 +353,22 @@ function clapper(x, y, s, a = 1) {
 }
 // Горы бумаг
 const PILE = (() => { const r = rng(61); return Array.from({ length: 150 }, () => ({ x: r(), y: r(), rot: r() * 6.28, w: 40 + r() * 60, lit: .4 + r() * .6 })); })();
+const PILE_CACHE = {};
 function paperPile(cx, base, wid, hgt, a = 1, order = 1) {
-  for (const p of PILE) {
-    const px = cx + (p.x - .5) * wid * (1 - p.y * .6), py = base - p.y * hgt * (1 - Math.abs(p.x - .5) * 1.2);
-    if (py > base + 5) continue;
-    paperQuad(px, py, p.w, p.rot, a * order, p.lit, p.y < .5 ? 1 : 0);
+  // Гора статична: рисуем один раз в отдельный слой (размытие листов дорогое), дальше только накладываем
+  const key = [cx, base, wid, hgt].join(':');
+  if (!PILE_CACHE[key]) {
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const saved = g; g = c.getContext('2d');
+    for (const p of PILE) {
+      const px = cx + (p.x - .5) * wid * (1 - p.y * .6), py = base - p.y * hgt * (1 - Math.abs(p.x - .5) * 1.2);
+      if (py > base + 5) continue;
+      paperQuad(px, py, p.w, p.rot, 1, p.lit, p.y < .5 ? 1 : 0);
+    }
+    g = saved; PILE_CACHE[key] = c;
   }
+  if (a * order <= 0) return;
+  g.save(); g.globalAlpha = a * order; g.drawImage(PILE_CACHE[key], 0, 0); g.restore();
 }
 // Стена-библиотека в форме арки: fill 0..1 — сколько ячеек заполнено
 const SHELF = { x: 540, base: 1400, top: 360, half: 380, rows: 9, cols: 7 };
