@@ -31,7 +31,7 @@
 ```
 src/
   components/   Header, Footer, Button, Section, Faq, Calculator, ...
-  sections/     Hero, Proyavka, Territories, Demo, Project, Behemoth, Packages, About, Contact
+  sections/     Hero, Problem, Territories, Demo, Project, Packages, About, Contact
   scene/        renderer.ts, loop.ts, quality.ts, scroll.ts, scenes/, objects/, materials/, shaders/
   styles/       tokens.css, base.css, type.css
   content/      тексты, prices.ts, faq.ts
