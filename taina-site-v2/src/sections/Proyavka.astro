@@ -7,6 +7,7 @@ import { proyavka, reviewApproved } from '@/content/copy';
 <section class="proyavka-reveal" id="proyavka" aria-label={proyavka.title}>
   <div class="reveal-scene" id="proyavka-reveal">
     <div class="reveal-stage" id="proyavka-stage">
+      <div class="phrase-scrim" aria-hidden="true"></div>
       <h2 class="phrase" id="proyavka-phrase">{proyavka.title}</h2>
     </div>
   </div>
@@ -136,7 +137,28 @@ import { proyavka, reviewApproved } from '@/content/copy';
     justify-content: center;
   }
 
+  /* Лист проявляется до тёплого светлого тона (proyavkaSheet.frag.glsl) —
+     без страховки текст поверх него в конце сцены теряет контраст
+     (светлое на светлом). Мягкое затемнение позади фразы держит контраст
+     на всём диапазоне скролла, не трогая саму 3D-сцену. */
+  .phrase-scrim {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(86vw, 900px);
+    height: min(52vh, 380px);
+    background: radial-gradient(
+      ellipse at center,
+      color-mix(in srgb, var(--color-bg) 62%, transparent) 0%,
+      color-mix(in srgb, var(--color-bg) 34%, transparent) 55%,
+      transparent 78%
+    );
+    pointer-events: none;
+  }
+
   .phrase {
+    position: relative;
     font-size: clamp(2.6rem, 7vw, 5.6rem);
     text-align: center;
     --s: -25%;
@@ -151,6 +173,7 @@ import { proyavka, reviewApproved } from '@/content/copy';
     -webkit-background-clip: text;
     background-clip: text;
     padding-bottom: 0.08em;
+    text-shadow: 0 2px 28px color-mix(in srgb, var(--color-bg) 85%, transparent);
   }
 
   /* Уровень C/D: WebGL недоступен, сцена упала, или контекст потерян —
