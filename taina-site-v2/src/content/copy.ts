@@ -84,7 +84,7 @@ export const proyavka = {
 };
 
 export const territories = {
-  title: 'Три территории',
+  title: 'О нас',
   // Текст подтверждён владелицей сайта (прислан прямо в задаче) — заменяет
   // прежний черновик [НА УТВЕРЖДЕНИЕ], см. docs/approve-texts.md.
   items: [
