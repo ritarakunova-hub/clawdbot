@@ -4,6 +4,10 @@
 и решений — список шагов ниже, по порядку. Ни один из этих шагов я
 сама выполнить не могу (нужен доступ к вашему Netlify/домену/n8n).
 
+**Текущий деплой:** `https://glistening-otter-432ff8.netlify.app` (ветка
+`claude/inspiring-newton-wp3tq6`) — сайт уже подключён к Netlify, шаг 1
+ниже пройден.
+
 ## Что уже готово в коде
 
 - `netlify.toml`: команда сборки (`npm run build`), папка публикации
@@ -29,11 +33,11 @@
 
 ## Шаги, которые нужны от вас
 
-### 1. Подключить репозиторий
-В Netlify: **Add new site → Import an existing project** → выбрать этот
-GitHub-репозиторий, ветку `claude/inspiring-newton-wp3tq6` (или `main`,
-если решите слить туда). Настройки сборки Netlify подхватит сам из
-`netlify.toml` — менять ничего не нужно.
+### 1. Подключить репозиторий — готово ✓
+Сайт уже подключён и открывается по адресу
+`https://glistening-otter-432ff8.netlify.app` (ветка
+`claude/inspiring-newton-wp3tq6`). Настройки сборки Netlify подхватывает
+сам из `netlify.toml` — менять ничего не нужно.
 
 ### 2. Домен и HTTPS
 - Свой домен: **Site settings → Domain management → Add a domain** →
