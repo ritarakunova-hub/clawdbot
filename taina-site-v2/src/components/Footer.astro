@@ -1,5 +1,7 @@
 ---
 import { contact } from '@/content/copy';
+import PrivacyPolicyDoc from './PrivacyPolicyDoc.astro';
+import OfertaDoc from './OfertaDoc.astro';
 ---
 
 <footer class="footer">
@@ -19,15 +21,21 @@ import { contact } from '@/content/copy';
       <a href="#legal-privacy">{contact.legal.privacyTitle}</a>
       <span aria-hidden="true"> · </span>
       <a href="#legal-offer">{contact.legal.offerTitle}</a>
+      <span aria-hidden="true"> · </span>
+      <span class="legal-status">черновик для юридической проверки</span>
     </p>
-    <div class="legal-stub" id="legal-privacy">
-      <p class="legal-heading">{contact.legal.privacyTitle}</p>
-      <p>{contact.legal.placeholder}</p>
-    </div>
-    <div class="legal-stub" id="legal-offer">
-      <p class="legal-heading">{contact.legal.offerTitle}</p>
-      <p>{contact.legal.placeholder}</p>
-    </div>
+    <details class="legal-doc" id="legal-privacy">
+      <summary>{contact.legal.privacyTitle}</summary>
+      <div class="legal-doc-body">
+        <PrivacyPolicyDoc />
+      </div>
+    </details>
+    <details class="legal-doc" id="legal-offer">
+      <summary>{contact.legal.offerTitle}</summary>
+      <div class="legal-doc-body">
+        <OfertaDoc />
+      </div>
+    </details>
   </div>
 </footer>
 
@@ -47,6 +55,21 @@ import { contact } from '@/content/copy';
       render();
     });
   }
+
+  // Ссылки на политику/оферту (здесь и в чекбоксе согласия, Contact.astro)
+  // ведут на #legal-privacy/#legal-offer — id стоит прямо на <details>.
+  // Автораскрытие <details> по фрагменту браузер гарантирует только для
+  // элементов ВНУТРИ закрытого <details>, не для него самого — поэтому
+  // раскрываем явно, чтобы клик по ссылке точно показывал текст, а не
+  // сворачивал документ.
+  function openLegalDocFromHash() {
+    const id = location.hash.slice(1);
+    if (id !== 'legal-privacy' && id !== 'legal-offer') return;
+    const details = document.getElementById(id);
+    if (details instanceof HTMLDetailsElement) details.open = true;
+  }
+  openLegalDocFromHash();
+  addEventListener('hashchange', openLegalDocFromHash);
 </script>
 
 <style>
@@ -133,27 +156,111 @@ import { contact } from '@/content/copy';
     color: var(--color-ivory);
   }
 
-  .legal-stub {
+  .legal-status {
+    font-style: italic;
+  }
+
+  .legal-doc {
     margin-top: var(--space-3);
-    padding: var(--space-4);
-    max-width: var(--measure);
-    border: 1px dashed var(--color-line);
     scroll-margin-top: var(--header-height);
   }
 
-  .legal-heading {
+  .legal-doc summary {
+    cursor: pointer;
     font-family: var(--font-sans);
     font-size: var(--text-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--color-gold);
+    /* ≥44px — минимальная зона нажатия (CLAUDE.md, Этап 13), как у
+       .faq-item summary в Packages.astro. */
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  .legal-doc summary::marker {
+    color: var(--color-gold);
+  }
+
+  .legal-doc-body {
+    margin-top: var(--space-3);
+    padding: var(--space-5);
+    max-width: var(--measure);
+    border: 1px solid var(--color-line);
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+  }
+
+  .legal-doc-body :global(h4) {
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    color: var(--color-ivory);
+    margin-bottom: var(--space-3);
+  }
+
+  .legal-doc-body :global(h5) {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-gold);
+    margin-top: var(--space-6);
     margin-bottom: var(--space-2);
   }
 
-  .legal-stub p:last-child {
-    font-size: var(--text-sm);
-    font-style: italic;
+  .legal-doc-body :global(p),
+  .legal-doc-body :global(li) {
+    margin-top: var(--space-2);
+  }
+
+  .legal-doc-body :global(ul),
+  .legal-doc-body :global(ol) {
+    padding-left: var(--space-5);
+  }
+
+  .legal-doc-body :global(a) {
+    color: var(--color-gold);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--color-gold) 40%, transparent);
+  }
+
+  .legal-doc-body :global(table) {
+    margin-top: var(--space-4);
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .legal-doc-body :global(th),
+  .legal-doc-body :global(td) {
+    padding: var(--space-2) var(--space-3);
+    text-align: left;
+    font-size: var(--text-xs);
+    border: 1px solid var(--color-line);
+  }
+
+  .legal-doc-body :global(th) {
+    color: var(--color-ivory);
+    font-weight: 600;
+  }
+
+  /* Черновик, ещё не прошёл юрпроверку — предупреждение того же вида,
+     что «Демо»/«Проявка» (ромб-акцент рубином по краю), но текст в
+     sand/ivory: Ruby/Crimson как текст ниже AA (CLAUDE.md, «Бренд»). */
+  .legal-doc-body :global(.legal-draft-notice) {
+    margin-top: var(--space-4);
+    padding-left: var(--space-4);
+    border-left: 2px solid var(--color-ruby);
     color: var(--color-sand);
+    font-style: italic;
+  }
+
+  .legal-doc-body :global(.legal-doc-date) {
+    margin-top: var(--space-6);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-line);
+    font-size: var(--text-xs);
+    color: var(--color-sand);
+    font-style: italic;
   }
 </style>

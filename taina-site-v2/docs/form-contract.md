@@ -146,6 +146,6 @@ name | email | phone | message | form_name | received_at | status | last_status_
 доработки `mini-crm/src/lead.js`.
 
 Чекбокс согласия добавлен и обязателен для отправки. Ссылки на политику
-конфиденциальности и оферту ведут на честные заглушки в подвале сайта
-(`Footer.astro`, `#legal-privacy`/`#legal-offer`) — текстов пока нет, см.
-`docs/approve-texts.md`.
+конфиденциальности и оферту ведут на раскрывающиеся блоки в подвале сайта
+(`Footer.astro`, `#legal-privacy`/`#legal-offer`) — тексты получены от
+владелицы (черновики, ждут юрпроверки), см. `docs/approve-texts.md`.

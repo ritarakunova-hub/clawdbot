@@ -63,14 +63,22 @@ test.describe('Форма заявки (taina-diagnostic)', () => {
     await expect(page.locator('#form-status')).not.toHaveText('', { timeout: 10_000 });
   });
 
-  test('ссылки согласия ведут на честные заглушки политики и оферты', async ({ page }) => {
+  test('ссылки согласия ведут на раскрытые тексты политики и оферты (черновик)', async ({ page }) => {
     await page.goto('/');
     await page.click('a[href="#legal-privacy"]');
-    await expect(page.locator('#legal-privacy')).toBeVisible();
-    await expect(page.locator('#legal-privacy')).toContainText('Текст будет добавлен');
+    const privacy = page.locator('#legal-privacy');
+    await expect(privacy).toBeVisible();
+    await expect(privacy).toHaveJSProperty('open', true);
+    await expect(privacy).toContainText('Политика в отношении обработки персональных данных');
+    await expect(privacy).toContainText('Черновик для юридической проверки');
+    await expect(privacy).toContainText('[ЗАПОЛНИТЬ при публикации');
 
     await page.click('a[href="#legal-offer"]');
-    await expect(page.locator('#legal-offer')).toBeVisible();
-    await expect(page.locator('#legal-offer')).toContainText('Текст будет добавлен');
+    const offer = page.locator('#legal-offer');
+    await expect(offer).toBeVisible();
+    await expect(offer).toHaveJSProperty('open', true);
+    await expect(offer).toContainText('Публичная оферта на оказание услуг');
+    await expect(offer).toContainText('Черновик для юридической проверки');
+    await expect(offer).toContainText('[ЗАПОЛНИТЬ при публикации');
   });
 });
