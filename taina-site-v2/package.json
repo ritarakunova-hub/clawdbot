@@ -1,0 +1,36 @@
+{
+  "name": "taina-site",
+  "type": "module",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "lint": "eslint .",
+    "contrast": "node scripts/contrast.mjs",
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "@fontsource/cormorant-garamond": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "astro": "^7.3.3",
+    "three": "0.147.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "1.56.1",
+    "@types/node": "^22.20.4",
+    "@types/three": "0.147.1",
+    "astro-eslint-parser": "^3.1.0",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-astro": "^3.2.1",
+    "fontaine": "^0.8.2",
+    "prettier": "^3.9.8",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.70.0"
+  }
+}

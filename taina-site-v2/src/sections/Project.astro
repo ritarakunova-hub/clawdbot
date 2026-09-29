@@ -1,0 +1,382 @@
+---
+import Section from '@/components/Section.astro';
+import Container from '@/components/Container.astro';
+import { project } from '@/content/copy';
+---
+
+<section class="project-reveal" id="project" aria-label={project.title}>
+  <div class="reveal-scene" id="project-reveal">
+    <div class="reveal-stage">
+      <Container class="reveal-grid">
+        <div class="reveal-copy">
+          <h2 class="reveal-title">{project.title}</h2>
+          <div class="reveal-steps" id="project-steps">
+            {
+              project.case.cells.map((cell, i) => (
+                <div class="reveal-step" data-step={i}>
+                  <p class="k">{cell.label}</p>
+                  <p class="t">{cell.text}</p>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+
+        {/* Простая статичная стопка документов вместо прежней 3D-сцены
+           (хаос листов на GPU, оседающий в стеллаж) — та не читалась
+           аккуратно на живом деплое. Четыре прямоугольника со сдвигом,
+           без анимации; верхний лист — с золотой «шапкой» как акцент. */}
+        <div class="doc-stack" aria-hidden="true">
+          <span class="doc-stack-sheet" />
+          <span class="doc-stack-sheet" />
+          <span class="doc-stack-sheet" />
+          <span class="doc-stack-sheet" />
+        </div>
+      </Container>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Подписи шагов («Задача» → «Получили») переключаются по ходу скролла —
+  // тот же общий scroll/loop-инфраструктура, что и в Territories.astro
+  // (без WebGL, просто DOM): 3D для этого больше не нужен.
+  import * as loop from '@/scene/loop';
+  import * as scroll from '@/scene/scroll';
+  import { isReducedMotion } from '@/lib/a11y';
+
+  const SCENE_ID = 'project';
+  const root = document.getElementById('project-reveal');
+  const steps = Array.from(document.querySelectorAll<HTMLElement>('#project-steps .reveal-step'));
+
+  if (root && steps.length) {
+    let activeIndex = -1;
+
+    function setActiveStep(index: number) {
+      if (index === activeIndex) return;
+      activeIndex = index;
+      steps.forEach((el, i) => el.classList.toggle('is-active', i === index));
+    }
+
+    function update() {
+      // reduced-motion: сразу последний шаг («Получили»), без ожидания скролла.
+      const p = isReducedMotion() ? 1 : scroll.getSmoothedProgress(SCENE_ID);
+      setActiveStep(Math.min(steps.length - 1, Math.floor(p * steps.length)));
+    }
+
+    scroll.registerTarget(SCENE_ID, root);
+    loop.onFrameStats(update);
+    loop.start();
+  }
+</script>
+
+<Section id="project-more" label={`${project.title} — подробности`}>
+  <Container>
+    <article class="card hover-lift" data-reveal>
+      <p class="eyebrow">{project.case.eyebrow}</p>
+      <h3>{project.case.title}</h3>
+      <p class="lede">{project.case.lede}</p>
+
+      <dl class="cells">
+        {
+          project.case.cells.map((cell) => (
+            <div class="cell">
+              <dt>{cell.label}</dt>
+              <dd>{cell.text}</dd>
+            </div>
+          ))
+        }
+      </dl>
+
+      <p class="foot">{project.case.foot}</p>
+    </article>
+
+    <div class="block" data-reveal>
+      <p class="eyebrow">{project.market.eyebrow}</p>
+      <h3>{project.market.title}</h3>
+      <p class="lede measure">{project.market.lede}</p>
+
+      <div class="market">
+        <div class="stat">
+          <p class="num">{project.market.stat}</p>
+          <p class="src">{project.market.source}</p>
+        </div>
+        <p class="market-text measure">{project.market.text}</p>
+        <p class="fine measure">{project.market.fine}</p>
+      </div>
+    </div>
+  </Container>
+</Section>
+
+<style>
+  .project-reveal {
+    position: relative;
+  }
+
+  .reveal-scene {
+    height: 260vh;
+    position: relative;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal-scene {
+      height: 100vh;
+      height: 100svh;
+    }
+  }
+
+  .reveal-stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    /* Больше не 3D-сцена на общем холсте — свой непрозрачный фон. */
+    background: var(--color-bg);
+  }
+
+  /* :global — этот класс передан в Container через class="reveal-grid",
+     а компонент рендерит свой <div> со СВОИМ scope-атрибутом (не этого
+     файла), обычный скоуп-селектор его не находит. */
+  :global(.reveal-grid) {
+    display: grid;
+    grid-template-columns: max-content max-content;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-8);
+  }
+
+  @media (max-width: 700px) {
+    :global(.reveal-grid) {
+      grid-template-columns: 1fr;
+      justify-content: start;
+    }
+  }
+
+  .reveal-title {
+    font-size: var(--text-2xl);
+    color: var(--color-ivory);
+    max-width: 20ch;
+  }
+
+  .reveal-steps {
+    position: relative;
+    margin-top: var(--space-6);
+    height: 7.5em;
+    max-width: 26ch;
+  }
+
+  .reveal-step {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 400ms var(--ease-out);
+  }
+
+  .reveal-step.is-active {
+    opacity: 1;
+  }
+
+  .reveal-step .k {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-gold);
+    margin-bottom: var(--space-2);
+  }
+
+  .reveal-step .t {
+    color: var(--color-sand);
+    font-size: var(--text-lg);
+  }
+
+  .doc-stack {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    flex: none;
+  }
+
+  @media (max-width: 700px) {
+    .doc-stack {
+      display: none;
+    }
+  }
+
+  .doc-stack-sheet {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 118px;
+    height: 154px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+  }
+
+  .doc-stack-sheet::before {
+    content: '';
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--color-line);
+  }
+
+  .doc-stack-sheet:nth-child(1) {
+    transform: translate(-50%, -50%) translate(-16px, 12px) rotate(-6deg);
+  }
+
+  .doc-stack-sheet:nth-child(2) {
+    transform: translate(-50%, -50%) translate(-6px, 4px) rotate(-2deg);
+  }
+
+  .doc-stack-sheet:nth-child(3) {
+    transform: translate(-50%, -50%) translate(4px, -4px) rotate(3deg);
+  }
+
+  .doc-stack-sheet:nth-child(4) {
+    transform: translate(-50%, -50%) translate(14px, -12px) rotate(7deg);
+    border-color: var(--color-gold);
+  }
+
+  .doc-stack-sheet:nth-child(4)::before {
+    background: var(--color-gold);
+  }
+
+  h2 {
+    font-size: var(--text-2xl);
+  }
+
+  .eyebrow {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-gold);
+    margin-bottom: var(--space-3);
+  }
+
+  .card {
+    margin-top: var(--space-7);
+    max-width: 640px;
+    margin-inline: auto;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    padding: var(--space-6);
+  }
+
+  .card h3 {
+    font-size: var(--text-xl);
+    max-width: var(--measure);
+  }
+
+  .card .lede {
+    margin-top: var(--space-3);
+    color: var(--color-sand);
+    max-width: var(--measure);
+  }
+
+  .cells {
+    margin: var(--space-5) 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .cell dt {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-sand);
+    margin-bottom: var(--space-1);
+  }
+
+  .cell dd {
+    margin: 0;
+    color: var(--color-ivory);
+  }
+
+  .foot {
+    margin-top: var(--space-5);
+    padding-top: var(--space-4);
+    border-top: 1px dashed var(--color-line);
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+    font-style: italic;
+  }
+
+  .block {
+    margin-top: var(--space-8);
+    padding-top: var(--space-8);
+    border-top: 1px solid var(--color-line);
+  }
+
+  .block h3 {
+    font-size: var(--text-xl);
+    max-width: 22ch;
+  }
+
+  .lede {
+    margin-top: var(--space-4);
+    color: var(--color-sand);
+    font-size: var(--text-lg);
+  }
+
+  .market {
+    margin-top: var(--space-6);
+    border: 1px solid var(--color-line);
+    padding: var(--space-6);
+  }
+
+  .stat {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-5);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-4);
+  }
+
+  .stat .num {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    color: var(--color-gold);
+    line-height: 1;
+  }
+
+  .stat .src {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    color: var(--color-sand);
+    letter-spacing: 0.04em;
+  }
+
+  .market-text {
+    color: var(--color-sand);
+  }
+
+  .fine {
+    margin-top: var(--space-4);
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+    font-style: italic;
+  }
+</style>
+
+<noscript>
+  <style>
+    /* Без JS сцена не грузится совсем — показываем последний шаг сразу. */
+    #project-steps .reveal-step:last-child {
+      opacity: 1;
+    }
+  </style>
+</noscript>

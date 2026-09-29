@@ -1,0 +1,140 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Фон задан именно на html (не на body): при пустом фоне html и
+     непустом — на body браузер поднимает фон body на холст страницы
+     (viewport) — это буквально самый нижний слой отрисовки, ниже даже
+     элементов с отрицательным z-index. Так холст 3D-сцен (#scene-gl,
+     z-index:-1, см. Layout.astro) остаётся поверх этого фона и виден,
+     а до его первой отрисовки (или пока сцена ещё грузится) страница
+     не мелькает белым — сразу тёмная. Обычные секции и подвал сами
+     перекрывают холст собственным непрозрачным фоном (Section.astro,
+     Footer.astro); секции со сценой (хиро, «Проявка») — нет. */
+  background: var(--color-bg);
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  color: var(--color-ivory);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  line-height: 1.1;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Контейнер может быть широким (1440px), но строка текста внутри
+   него должна остаться читаемой — не длиннее 65–75 знаков. */
+.measure {
+  max-width: var(--measure);
+}
+
+/* Шапка теперь position:fixed (см. Header.astro) и не занимает места
+   в потоке — компенсируем отступом сверху для всего контента.
+   Хиро сам отменяет этот отступ (margin-top отрицательный), чтобы
+   уйти на весь экран под прозрачную шапку. */
+#main {
+  padding-top: var(--header-height);
+}
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: var(--space-4);
+  z-index: 100;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-gold);
+  color: var(--color-bg);
+  border-radius: var(--radius-card);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  transition: top var(--duration-response) var(--ease-out);
+}
+
+.skip-link:focus {
+  top: var(--space-4);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ivory);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* Появление контента при скролле (lib/motion.ts). Класс .js-motion
+   ставит только сама утилита, после первого кадра — без JS (уровень D)
+   этого класса нет, и [data-reveal] ничем не отличается от обычных
+   элементов, то есть виден сразу. Только opacity/transform — по правилам
+   системы движения (CLAUDE.md). */
+/* :where() вокруг [data-reveal] убирает его вклад в специфичность (иначе
+   .is-in ниже — (0,3,0) — перебивал бы .hover-lift:hover — (0,2,0) — и
+   transform:none держал бы карточку прижатой даже при наведении).
+   .is-in при этом остаётся (0,2,0) — как раз наравне с .hover-lift:hover,
+   и по порядку в файле выигрывает у базового состояния (0,1,0), но
+   уступает :hover, объявленному ниже. */
+.js-motion :where([data-reveal]) {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity var(--duration-scene) var(--ease-out),
+    transform var(--duration-scene) var(--ease-out);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.js-motion :where([data-reveal]).is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Лёгкий отклик на курсор для карточек — единая утилита вместо
+   повторения в каждой секции. */
+.hover-lift {
+  transition:
+    transform var(--duration-response) var(--ease-out),
+    border-color var(--duration-response) var(--ease-out);
+}
+
+/* .hover-lift.hover-lift (класс дважды) — приём для (0,3,0): секции
+   задают карточкам border тем же (0,2,0) через свой border-color в
+   скоуп-CSS Astro, и кто победит на равной специфичности — вопрос
+   порядка сборки, а не логики. Так побеждаем предсказуемо, без !important. */
+.hover-lift.hover-lift:hover {
+  transform: translateY(-3px);
+  border-color: var(--color-gold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
