@@ -9,6 +9,7 @@ const f = contact.form;
 
 <Section id="contact" label={contact.title}>
   <Container>
+    <div class="contact-col">
     <h2 data-reveal>{contact.title}</h2>
     <p class="lead measure" data-reveal>{contact.lead}</p>
     <div class="channels" data-reveal style="--reveal-delay: 80ms">
@@ -89,6 +90,7 @@ const f = contact.form;
       <p class="status" id="form-status" role="status" aria-live="polite" />
       <p class="fallback">{f.fallbackNote}</p>
     </form>
+    </div>
   </Container>
 </Section>
 
@@ -181,6 +183,15 @@ const f = contact.form;
 </script>
 
 <style>
+  /* Форма (max-width 560) сама по себе много уже контейнера (1440) —
+     без этого на широком экране слева текст и поля, а справа пустота
+     на половину экрана. Центрируем читаемую колонку, а не растягиваем
+     форму — так остаётся комфортная ширина полей ввода. */
+  .contact-col {
+    max-width: 640px;
+    margin-inline: auto;
+  }
+
   h2 {
     font-size: var(--text-2xl);
   }
@@ -205,7 +216,6 @@ const f = contact.form;
     display: flex;
     flex-direction: column;
     gap: var(--space-5);
-    max-width: 560px;
   }
 
   .honeypot-field {
