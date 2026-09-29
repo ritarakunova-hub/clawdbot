@@ -316,6 +316,19 @@ import { territories } from '@/content/copy';
       min-height: 320px;
       transform: none;
     }
+
+    /* Баг: .hit { height: 100% } не резолвится от .frame с height: auto
+       (у процентной высоты просто нет базы для расчёта — правило CSS,
+       не про min-height) — .hit схлопывался в 0, а .copy с
+       position: absolute; bottom: 0 отсчитывал «низ» от этого 0 и
+       рисовал текст карточки выше видимой области, где .frame (со
+       своим overflow: hidden) её обрезал. Текст был в DOM и в разметке
+       всё верно, просто визуально невидим. Даём .hit собственную
+       min-height — теперь она не зависит от родителя. */
+    .hit {
+      height: auto;
+      min-height: 320px;
+    }
   }
 
   /* Сброс браузерных стилей кнопки — .hit заполняет всю карточку и несёт

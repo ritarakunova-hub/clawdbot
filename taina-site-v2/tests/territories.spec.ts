@@ -76,5 +76,21 @@ test.describe('Сцена «Три территории»', () => {
       () => getComputedStyle(document.querySelector('.frame .dim')!).opacity,
     );
     expect(dim).toBe('0');
+
+    // Регресс: .hit (кнопка-карточка) внутри .frame с height: auto
+    // схлопывалась в 0 (height: 100% не резолвится от auto-родителя),
+    // из-за чего .copy (position: absolute; bottom: 0) рисовался выше
+    // видимой области и обрезался overflow: hidden — заголовок и текст
+    // карточки были в DOM, но никогда не попадали в кадр. Проверяем не
+    // «хоть один пиксель пересёкся» (при баге верх .frame и низ .copy
+    // касаются в одной точке — формальное пересечение есть), а что
+    // видимая часть текста — это реально большая доля его высоты.
+    const overlapRatio = await page.evaluate(() => {
+      const frame = document.querySelector('.frame')!.getBoundingClientRect();
+      const copy = document.querySelector('.frame .copy')!.getBoundingClientRect();
+      const overlap = Math.min(frame.bottom, copy.bottom) - Math.max(frame.top, copy.top);
+      return Math.max(0, overlap) / copy.height;
+    });
+    expect(overlapRatio).toBeGreaterThan(0.9);
   });
 });
