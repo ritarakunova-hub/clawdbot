@@ -22,15 +22,17 @@ import { project } from '@/content/copy';
           </div>
         </div>
 
-        {/* Простая статичная стопка документов вместо прежней 3D-сцены
-           (хаос листов на GPU, оседающий в стеллаж) — та не читалась
-           аккуратно на живом деплое. Четыре прямоугольника со сдвигом,
-           без анимации; верхний лист — с золотой «шапкой» как акцент. */}
+        {/* Простая стопка документов вместо прежней 3D-сцены (хаос листов
+           на GPU, оседающий в стеллаж) — та не читалась аккуратно на живом
+           деплое. Четыре прямоугольника со сдвигом; при скролле листы
+           появляются по очереди (data-reveal + стаггер, lib/motion.ts);
+           верхний лист — с золотой «шапкой» как акцент. */}
         <div class="doc-stack" aria-hidden="true">
-          <span class="doc-stack-sheet" />
-          <span class="doc-stack-sheet" />
-          <span class="doc-stack-sheet" />
-          <span class="doc-stack-sheet" />
+          {
+            [0, 1, 2, 3].map((i) => (
+              <span class="doc-stack-sheet" data-reveal style={`--reveal-delay: ${i * 80}ms`} />
+            ))
+          }
         </div>
       </Container>
     </div>

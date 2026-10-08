@@ -363,7 +363,9 @@ import { faq } from '@/content/faq';
        transition-duration на 90мс). */
     transition:
       transform var(--duration-response) var(--ease-out),
-      border-color var(--duration-response) var(--ease-out);
+      border-color var(--duration-response) var(--ease-out),
+      opacity var(--duration-reveal) var(--ease-out) var(--reveal-delay, 0ms),
+      translate var(--duration-reveal) var(--ease-out) var(--reveal-delay, 0ms);
   }
 
   .card:hover {

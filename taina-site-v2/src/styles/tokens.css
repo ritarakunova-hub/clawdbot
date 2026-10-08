@@ -60,6 +60,7 @@
 
   /* Тайминги */
   --duration-response: 200ms;
+  --duration-reveal: 450ms; /* появление блоков при скролле */
   --duration-scene: 1.2s;
   --duration-sweep: 2.3s;
 }
