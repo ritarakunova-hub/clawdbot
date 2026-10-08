@@ -1,0 +1,47 @@
+---
+import Container from './Container.astro';
+import { trustLine } from '@/content/copy';
+---
+
+{
+  trustLine.approved && (
+    <div class="trust">
+      <Container>
+        <p class="trust-line" data-reveal>
+          <span class="value">{trustLine.value}</span>
+          <span class="text">{trustLine.text}</span>
+        </p>
+      </Container>
+    </div>
+  )
+}
+
+<style>
+  .trust {
+    /* Не 3D-сцена — перекрывает общий холст своим фоном, как Section.astro. */
+    background: var(--color-bg);
+    padding-block: var(--space-6);
+    border-top: 1px solid var(--color-line);
+  }
+
+  .trust-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-2) var(--space-4);
+  }
+
+  .value {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: var(--text-2xl);
+    line-height: 1;
+    color: var(--color-gold);
+  }
+
+  .text {
+    font-size: var(--text-lg);
+    color: var(--color-sand);
+    max-width: var(--measure);
+  }
+</style>
