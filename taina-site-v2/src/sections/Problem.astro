@@ -1,7 +1,8 @@
 ---
 import Section from '@/components/Section.astro';
 import Container from '@/components/Container.astro';
-import { problem, reviewApproved } from '@/content/copy';
+import Button from '@/components/Button.astro';
+import { mainCta, problem, reviewApproved } from '@/content/copy';
 ---
 
 <Section id="problem" label={problem.problem.eyebrow}>
@@ -72,6 +73,10 @@ import { problem, reviewApproved } from '@/content/copy';
           </blockquote>
         )
       }
+    </div>
+
+    <div class="cta" data-reveal>
+      <Button href="#contact">{mainCta}</Button>
     </div>
   </Container>
 </Section>
@@ -261,6 +266,10 @@ import { problem, reviewApproved } from '@/content/copy';
     font-size: var(--text-lg);
     color: var(--color-gold);
     max-width: var(--measure);
+  }
+
+  .cta {
+    margin-top: var(--space-7);
   }
 
   .review cite {

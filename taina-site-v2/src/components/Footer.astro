@@ -1,5 +1,6 @@
 ---
-import { contact } from '@/content/copy';
+import { contact, mainCta } from '@/content/copy';
+import Button from './Button.astro';
 import PrivacyPolicyDoc from './PrivacyPolicyDoc.astro';
 import OfertaDoc from './OfertaDoc.astro';
 ---
@@ -12,6 +13,9 @@ import OfertaDoc from './OfertaDoc.astro';
     <span aria-hidden="true"> · </span>
     <a href="mailto:ritarakunova@gmail.com">ritarakunova@gmail.com</a>
   </p>
+  <div class="cta">
+    <Button href="#contact">{mainCta}</Button>
+  </div>
   <button type="button" class="motion-toggle" id="motion-toggle" aria-pressed="false">
     Остановить анимацию
   </button>
@@ -108,6 +112,10 @@ import OfertaDoc from './OfertaDoc.astro';
 
   .contacts a:hover {
     color: var(--color-ivory);
+  }
+
+  .cta {
+    margin-top: var(--space-4);
   }
 
   .motion-toggle {
