@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 4321;
-const CHROMIUM_PATH = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const CHROMIUM_PATH = process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium';
 // SwiftShader — программный WebGL2, нужен в headless-окружениях без GPU
 // (CI, песочница). На реальном железе с GPU эти флаги ничего не портят.
 const SWIFTSHADER_ARGS = [
