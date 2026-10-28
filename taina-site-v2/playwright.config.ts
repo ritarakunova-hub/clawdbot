@@ -1,7 +1,24 @@
 import { defineConfig, devices } from '@playwright/test';
+import { existsSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 const PORT = 4321;
-const CHROMIUM_PATH = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+// Путь к Chromium в песочнице меняется между сессиями (версия в имени
+// папки обновляется вместе с окружением) — ищем реальный бинарник вместо
+// того, чтобы хранить версию в коде.
+function findSandboxChromium(): string | undefined {
+  const base = '/opt/pw-browsers';
+  if (!existsSync(base)) return undefined;
+  for (const entry of readdirSync(base)) {
+    if (!entry.startsWith('chromium-')) continue;
+    for (const sub of ['chrome-linux64', 'chrome-linux']) {
+      const candidate = join(base, entry, sub, 'chrome');
+      if (existsSync(candidate)) return candidate;
+    }
+  }
+  return undefined;
+}
+const CHROMIUM_PATH = findSandboxChromium();
 // SwiftShader — программный WebGL2, нужен в headless-окружениях без GPU
 // (CI, песочница). На реальном железе с GPU эти флаги ничего не портят.
 const SWIFTSHADER_ARGS = [
