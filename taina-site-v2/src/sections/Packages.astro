@@ -21,35 +21,37 @@ import { faq } from '@/content/faq';
       }
     </div>
 
-    <table class="compare" data-reveal>
-      <thead>
-        <tr>
-          <th><span class="sr-only">Параметр</span></th>
+    <div class="compare-wrap" data-reveal tabindex="0" role="region" aria-label="Сравнение пакетов">
+      <table class="compare">
+        <thead>
+          <tr>
+            <th><span class="sr-only">Параметр</span></th>
+            {
+              comparisonTable.columns.map((column, i) => (
+                <th class:list={{ rec: i === comparisonTable.recommendedIndex }}>
+                  {i === comparisonTable.recommendedIndex && <span class="badge">Рекомендуем</span>}
+                  {column}
+                </th>
+              ))
+            }
+          </tr>
+        </thead>
+        <tbody>
           {
-            comparisonTable.columns.map((column, i) => (
-              <th class:list={{ rec: i === comparisonTable.recommendedIndex }}>
-                {i === comparisonTable.recommendedIndex && <span class="badge">Рекомендуем</span>}
-                {column}
-              </th>
+            comparisonTable.rows.map((row) => (
+              <tr>
+                <td class="row-label">{row.label}</td>
+                {row.values.map((value) => (
+                  <td class:list={{ check: value === true }}>
+                    {value === true ? '✓' : value === false ? '—' : value}
+                  </td>
+                ))}
+              </tr>
             ))
           }
-        </tr>
-      </thead>
-      <tbody>
-        {
-          comparisonTable.rows.map((row) => (
-            <tr>
-              <td class="row-label">{row.label}</td>
-              {row.values.map((value) => (
-                <td class:list={{ check: value === true }}>
-                  {value === true ? '✓' : value === false ? '—' : value}
-                </td>
-              ))}
-            </tr>
-          ))
-        }
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
 
     <ul class="grid" id="packages-grid">
       {
@@ -255,8 +257,15 @@ import { faq } from '@/content/faq';
     color: var(--color-ivory);
   }
 
-  .compare {
+  /* На узком телефоне четыре колонки не помещаются даже с меньшими
+     отступами: таблица прокручивается внутри себя, а страница не уезжает
+     вбок. */
+  .compare-wrap {
     margin-top: var(--space-7);
+    overflow-x: auto;
+  }
+
+  .compare {
     width: 100%;
     border-collapse: collapse;
     border: 1px solid var(--color-line);
@@ -274,6 +283,13 @@ import { faq } from '@/content/faq';
   .compare th:first-child,
   .compare td:first-child {
     text-align: left;
+  }
+
+  @media (max-width: 480px) {
+    .compare th,
+    .compare td {
+      padding: var(--space-3) var(--space-2);
+    }
   }
 
   .compare th:last-child,

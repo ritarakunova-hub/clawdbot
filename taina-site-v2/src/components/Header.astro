@@ -76,7 +76,29 @@ const navLinks = [
     font-size: var(--text-lg);
     letter-spacing: 0.26em;
     text-transform: uppercase;
+    white-space: nowrap;
     color: var(--color-gold);
+  }
+
+  /* На узком телефоне логотип и кнопка «Диагностика» должны уместиться
+     в одну строку: разрядка и кегль знака чуть меньше. */
+  @media (max-width: 480px) {
+    .header {
+      gap: var(--space-4);
+    }
+
+    .brand {
+      font-size: var(--text-base);
+      letter-spacing: 0.18em;
+    }
+  }
+
+  /* Совсем узкие экраны (320 px): пусть знак лучше встанет в две строки,
+     чем шапка вылезет за край. */
+  @media (max-width: 359px) {
+    .brand {
+      white-space: normal;
+    }
   }
 
   .brand svg {
