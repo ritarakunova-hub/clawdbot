@@ -99,10 +99,7 @@ import { project } from '@/content/copy';
       <p class="lede measure">{project.market.lede}</p>
 
       <div class="market">
-        <div class="stat">
-          <p class="num">{project.market.stat}</p>
-          <p class="src">{project.market.source}</p>
-        </div>
+        <p class="src">{project.market.source}</p>
         <p class="market-text measure">{project.market.text}</p>
         <p class="fine measure">{project.market.fine}</p>
       </div>
@@ -339,27 +336,11 @@ import { project } from '@/content/copy';
     padding: var(--space-6);
   }
 
-  .stat {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-5);
-    flex-wrap: wrap;
-    margin-bottom: var(--space-4);
-  }
-
-  .stat .num {
-    font-family: var(--font-serif);
-    font-weight: 700;
-    font-size: var(--text-2xl);
-    color: var(--color-gold);
-    line-height: 1;
-  }
-
-  .stat .src {
+  .src {
     font-family: var(--font-sans);
     font-size: var(--text-sm);
     color: var(--color-sand);
-    letter-spacing: 0.04em;
+    margin-bottom: var(--space-3);
   }
 
   .market-text {
