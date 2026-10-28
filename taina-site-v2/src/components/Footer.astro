@@ -178,8 +178,7 @@ import OfertaDoc from './OfertaDoc.astro';
     font-family: var(--font-sans);
     font-size: var(--text-sm);
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.02em;
     color: var(--color-gold);
     /* ≥44px — минимальная зона нажатия (CLAUDE.md, Этап 13), как у
        .faq-item summary в Packages.astro. */
@@ -202,7 +201,8 @@ import OfertaDoc from './OfertaDoc.astro';
   }
 
   .legal-doc-body :global(h4) {
-    font-family: var(--font-serif);
+    font-family: var(--font-sans);
+    font-weight: 600;
     font-size: var(--text-lg);
     color: var(--color-ivory);
     margin-bottom: var(--space-3);
