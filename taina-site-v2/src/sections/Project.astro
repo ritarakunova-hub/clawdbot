@@ -138,9 +138,12 @@ import { project } from '@/content/copy';
   /* :global — этот класс передан в Container через class="reveal-grid",
      а компонент рендерит свой <div> со СВОИМ scope-атрибутом (не этого
      файла), обычный скоуп-селектор его не находит. */
+  /* Первая колонка — фиксированной ширины: шаги лежат друг на друге и
+     сами ширину не задают. При max-content колонка сжималась до слова
+     «Проект», и текст шёл по одному слову в строку. */
   :global(.reveal-grid) {
     display: grid;
-    grid-template-columns: max-content max-content;
+    grid-template-columns: minmax(0, 30rem) max-content;
     align-items: center;
     justify-content: center;
     gap: var(--space-8);
@@ -159,16 +162,15 @@ import { project } from '@/content/copy';
     max-width: 20ch;
   }
 
+  /* Шаги в одной ячейке сетки друг на друге: высота блока — по самому
+     длинному шагу, текст не вылезает и ничего не прыгает. */
   .reveal-steps {
-    position: relative;
+    display: grid;
     margin-top: var(--space-6);
-    height: 7.5em;
-    max-width: 26ch;
   }
 
   .reveal-step {
-    position: absolute;
-    inset: 0;
+    grid-area: 1 / 1;
     opacity: 0;
     transition: opacity 400ms var(--ease-out);
   }
