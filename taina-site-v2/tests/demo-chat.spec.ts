@@ -22,7 +22,7 @@ test.describe('Демо: интерактивный чат в mock-режиме'
 
     const refusal = page.locator('#demo-chat-answer .a--refusal');
     await expect(refusal).toBeVisible({ timeout: 15_000 });
-    await expect(refusal).toContainText('такой информации нет');
+    await expect(refusal).toContainText('не выдумает');
   });
 
   test('весь сценарий проходится с клавиатуры: фокус, Enter, ответ', async ({ page }) => {
