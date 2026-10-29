@@ -289,17 +289,21 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
     camera.updateMatrixWorld();
 
     const dScale = Math.max(0.001, logo_s) * dScale0 * (1 + pz * 0.55);
-    logo.scale.setScalar(dScale);
+    // Логотип при прокрутке не летит в камеру, как летел ромб (надпись
+    // вблизи превращалась в огромные буквы): чуть растёт и гаснет, а к
+    // камере приближается только свет.
+    const logoScale = Math.max(0.001, logo_s) * dScale0 * (1 + pz * 0.15);
+    logo.scale.setScalar(logoScale);
     const bx = lerp(D0.x, 0, pm);
     const by = lerp(D0.y, 0.05, pm) + Math.sin(tNow * 0.6) * 0.05 * (1 - pz);
     const bz = lerp(D0.z, 3.4, sstep(0.55, 0.96, ps));
-    logo.position.set(bx, by, bz);
+    logo.position.set(bx, by, D0.z);
     // Логотип плоский и всегда смотрит в камеру (как кот и свечение):
     // надпись должна читаться, а не поворачиваться боком.
     logo.quaternion.copy(camera.quaternion);
-    logoMaterial.uniforms.uI.value = keyI * (1 - pf);
+    logoMaterial.uniforms.uI.value = keyI * (1 - sstep(0.3, 0.7, ps));
     // Источник света — ромб на логотипе, он выше центра картинки.
-    const gemY = by + LOGO_GEM_Y * dScale;
+    const gemY = by + LOGO_GEM_Y * logoScale;
 
     U.uTime.value = tNow;
     U.uKeyPos.value.set(bx, gemY, bz - 0.4);

@@ -31,7 +31,12 @@ const navLinks = [
   const hero = document.getElementById('hero');
   if (header && hero && 'IntersectionObserver' in window) {
     new IntersectionObserver(
-      ([entry]) => header.classList.toggle('header--over-hero', entry.isIntersecting),
+      ([entry]) => {
+        header.classList.toggle('header--over-hero', entry.isIntersecting);
+        // Ниже хиро страница на бумаге — шапка тоже (tokens.css). Класс
+        // только добавляется скриптом: без JS шапка остаётся тёмной.
+        header.classList.toggle('header--paper', !entry.isIntersecting);
+      },
       { threshold: 0 },
     ).observe(hero);
   }

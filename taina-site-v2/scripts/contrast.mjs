@@ -13,7 +13,7 @@ const tokensCss = readFileSync(tokensPath, 'utf8');
 
 /** @type {Map<string, string>} */
 const colors = new Map();
-for (const match of tokensCss.matchAll(/--(color-[a-z-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)) {
+for (const match of tokensCss.matchAll(/--((?:color|paper)-[a-z-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)) {
   colors.set(match[1], match[2]);
 }
 
@@ -36,6 +36,14 @@ const textPairs = [
   { name: 'sand текст на surface', fg: 'color-sand', bg: 'color-surface' },
   { name: 'gold текст на surface', fg: 'color-gold', bg: 'color-surface' },
   { name: 'bg текст на золотой кнопке', fg: 'color-bg', bg: 'color-gold' },
+  // Старая бумага — всё ниже первого экрана (.paper в tokens.css).
+  { name: 'бумага: ivory текст на bg', fg: 'paper-ivory', bg: 'paper-bg' },
+  { name: 'бумага: sand текст на bg', fg: 'paper-sand', bg: 'paper-bg' },
+  { name: 'бумага: gold текст/акцент на bg', fg: 'paper-gold', bg: 'paper-bg' },
+  { name: 'бумага: ivory текст на surface', fg: 'paper-ivory', bg: 'paper-surface' },
+  { name: 'бумага: sand текст на surface', fg: 'paper-sand', bg: 'paper-surface' },
+  { name: 'бумага: gold текст на surface', fg: 'paper-gold', bg: 'paper-surface' },
+  { name: 'бумага: bg текст на золотой кнопке', fg: 'paper-bg', bg: 'paper-gold' },
 ];
 
 const MIN_CONTRAST = 4.5;

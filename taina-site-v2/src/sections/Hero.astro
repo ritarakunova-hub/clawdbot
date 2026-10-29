@@ -94,6 +94,24 @@ import { hero } from '@/content/copy';
     overflow: hidden;
   }
 
+  /* «Проявка»: в конце прокрутки хиро тёмная комната плавно светлеет до
+     старой бумаги, с которой начинается остальная страница (.paper). */
+  .hero::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 50vh;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      color-mix(in srgb, var(--paper-bg) 35%, transparent) 50%,
+      var(--paper-bg) 100%
+    );
+  }
+
   .veil {
     position: absolute;
     inset: 0;
@@ -314,6 +332,10 @@ import { hero } from '@/content/copy';
     .hero {
       height: 100vh;
       height: 100svh;
+    }
+    /* Хиро без прокрутки-сцены: переход короткий, ниже текста. */
+    .hero::after {
+      height: 6vh;
     }
     .eyebrow,
     .lead,

@@ -5,7 +5,7 @@ import PrivacyPolicyDoc from './PrivacyPolicyDoc.astro';
 import OfertaDoc from './OfertaDoc.astro';
 ---
 
-<footer class="footer">
+<footer class="footer paper">
   <div class="mark">Taina Studio<span class="dot">.</span></div>
   <p class="tagline">AI и автоматизация для сильного бизнеса.</p>
   <p class="contacts">
@@ -80,7 +80,9 @@ import OfertaDoc from './OfertaDoc.astro';
   .footer {
     /* html/body/main прозрачные — подвал не 3D-сцена, перекрывает
        холст сам (см. комментарий в Section.astro). */
-    background: var(--color-bg);
+    /* Только цвет, не shorthand: фактуру бумаги даёт класс .paper
+       (tokens.css) на этом же элементе. */
+    background-color: var(--color-bg);
     padding-block: var(--space-7) var(--space-8);
     padding-inline: clamp(20px, 4vw, 56px);
     display: flex;

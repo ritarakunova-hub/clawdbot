@@ -230,7 +230,7 @@ import { territories } from '@/content/copy';
 <style>
   .territories-scene {
     /* Без своей 3D-сцены — перекрываем общий холст сами (см. base.css). */
-    background: var(--color-bg);
+    background: var(--section-bg, var(--color-bg));
     /* Было 300vh — короче, как хиро и «Проект». */
     height: 200vh;
     position: relative;
@@ -409,7 +409,9 @@ import { territories } from '@/content/copy';
     width: 78%;
     height: 60%;
     position: relative;
-    background: color-mix(in srgb, var(--color-bg) 60%, black);
+    /* --film-bg задаёт бумага (tokens.css): тёмная плёнка на светлом фоне
+       ложилась серым пятном поверх текста. */
+    background: var(--film-bg, color-mix(in srgb, var(--color-bg) 60%, black));
     border-radius: var(--radius-xs);
     overflow: hidden;
     animation: territory-orbit 18s var(--ease-in-out) infinite;
@@ -452,11 +454,14 @@ import { territories } from '@/content/copy';
     opacity: 0.8;
   }
 
+  /* Неактивный кадр уходит в фон страницы (на бумаге — светлеет, на
+     тёмном — темнеет), а не в чёрный: на бумаге чёрная вуаль давала
+     грязно-серое пятно. */
   .dim {
     position: absolute;
     inset: 0;
-    background: #000;
-    opacity: 0.55;
+    background: var(--color-bg);
+    opacity: 0.6;
     transition: opacity 260ms var(--ease-out);
     pointer-events: none;
   }

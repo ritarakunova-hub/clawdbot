@@ -133,7 +133,7 @@ import { project } from '@/content/copy';
     display: flex;
     align-items: center;
     /* Больше не 3D-сцена на общем холсте — свой непрозрачный фон. */
-    background: var(--color-bg);
+    background: var(--section-bg, var(--color-bg));
   }
 
   /* :global — этот класс передан в Container через class="reveal-grid",

@@ -11,6 +11,20 @@
   --color-ruby: #e22c34;
   --color-crimson: #8f1d24;
 
+  /* Старая бумага — всё ниже первого экрана (решение владелицы, октябрь
+     2026): тёмная комната хиро при прокрутке «проявляется» в архив.
+     Внутри .paper эти значения подставляются в те же --color-*, поэтому
+     компонентам ничего менять не нужно. Контраст пар проверяет
+     scripts/contrast.mjs. */
+  --paper-bg: #efe6d3;
+  --paper-surface: #e7dcc5;
+  --paper-line: #cbbc9c;
+  --paper-gold: #7e5c12; /* золото темнее — на светлом фоне читается */
+  --paper-ivory: #2a211b; /* основной текст — цвет чернил */
+  --paper-sand: #5b4e40; /* второй текст */
+  --paper-ruby: #a8262e;
+  --paper-crimson: #8f1d24;
+
   /* Шрифты. "Fallback" — метрически подогнанные резервные начертания
      от fontaine (astro.config.mjs), чтобы при догрузке настоящего
      шрифта не было сдвига текста (CLS). */
@@ -64,3 +78,30 @@
   --duration-scene: 1.2s;
   --duration-sweep: 2.3s;
 }
+
+/* Бумажная палитра для всего ниже хиро (обёртка .paper в pages/index.astro,
+   подвал) и для шапки, когда хиро ушёл из вида (.header--paper). */
+.paper,
+.header--paper {
+  color-scheme: light;
+  --color-bg: var(--paper-bg);
+  --color-surface: var(--paper-surface);
+  --color-line: var(--paper-line);
+  --color-gold: var(--paper-gold);
+  --color-ivory: var(--paper-ivory);
+  --color-sand: var(--paper-sand);
+  --color-ruby: var(--paper-ruby);
+  --color-crimson: var(--paper-crimson);
+  color: var(--color-ivory);
+}
+
+.paper {
+  /* Секции внутри бумаги прозрачные: фон и фактура — у обёртки, она же
+     перекрывает общий 3D-холст (см. base.css, Section.astro). */
+  --section-bg: transparent;
+  --film-bg: color-mix(in srgb, var(--paper-line) 60%, var(--paper-bg));
+  background-color: var(--paper-bg);
+  /* Едва заметное зерно старой бумаги — шум SVG, плитка без швов. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .36 0 0 0 0 .27 0 0 0 0 .15 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+

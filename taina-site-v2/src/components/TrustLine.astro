@@ -19,7 +19,7 @@ import { trustLine } from '@/content/copy';
 <style>
   .trust {
     /* Не 3D-сцена — перекрывает общий холст своим фоном, как Section.astro. */
-    background: var(--color-bg);
+    background: var(--section-bg, var(--color-bg));
     padding-block: var(--space-6);
     border-top: 1px solid var(--color-line);
   }

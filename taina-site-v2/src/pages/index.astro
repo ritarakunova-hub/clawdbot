@@ -16,12 +16,15 @@ import TrustLine from '@/components/TrustLine.astro';
   description="AI-ассистенты и автоматизация процессов по документам вашей компании. Если ответа нет, ассистент так и скажет."
 >
   <Hero />
-  <TrustLine />
-  <Problem />
-  <About />
-  <Demo />
-  <Project />
-  <Packages />
-  <Territories />
-  <Contact />
+  {/* Всё ниже первого экрана — на старой бумаге (tokens.css, .paper). */}
+  <div class="paper">
+    <TrustLine />
+    <Problem />
+    <About />
+    <Demo />
+    <Project />
+    <Packages />
+    <Territories />
+    <Contact />
+  </div>
 </Layout>
