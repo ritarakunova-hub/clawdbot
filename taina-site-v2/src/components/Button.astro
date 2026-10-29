@@ -20,13 +20,17 @@ const { href, variant = 'solid', size = 'md', class: className, id } = Astro.pro
     align-items: center;
     justify-content: center;
     min-height: 52px;
-    padding: 0 var(--space-6);
-    border-radius: var(--radius-pill);
+    padding: var(--space-2) var(--space-6);
+    border-radius: var(--radius-sm);
     font-family: var(--font-sans);
     font-weight: 600;
     font-size: var(--text-base);
     border: 1px solid transparent;
-    white-space: nowrap;
+    /* Длинный текст кнопки на узком экране переносится на вторую строку,
+       а не вылезает за край. */
+    line-height: 1.25;
+    text-align: center;
+    text-wrap: balance;
     transition:
       background var(--duration-response) var(--ease-out),
       color var(--duration-response) var(--ease-out),

@@ -68,7 +68,7 @@ a {
   padding: var(--space-2) var(--space-4);
   background: var(--color-gold);
   color: var(--color-bg);
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-sm);
   font-family: var(--font-sans);
   font-weight: 600;
   transition: top var(--duration-response) var(--ease-out);
@@ -81,7 +81,7 @@ a {
 :focus-visible {
   outline: 2px solid var(--color-ivory);
   outline-offset: 4px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 /* Появление контента при скролле (lib/motion.ts). Класс .js-motion
@@ -89,30 +89,39 @@ a {
    этого класса нет, и [data-reveal] ничем не отличается от обычных
    элементов, то есть виден сразу. Только opacity/transform — по правилам
    системы движения (CLAUDE.md). */
-/* :where() вокруг [data-reveal] убирает его вклад в специфичность (иначе
-   .is-in ниже — (0,3,0) — перебивал бы .hover-lift:hover — (0,2,0) — и
-   transform:none держал бы карточку прижатой даже при наведении).
-   .is-in при этом остаётся (0,2,0) — как раз наравне с .hover-lift:hover,
-   и по порядку в файле выигрывает у базового состояния (0,1,0), но
-   уступает :hover, объявленному ниже. */
+/* Сдвиг — отдельным свойством translate, а не transform: так появление
+   складывается с собственным transform элемента (наклон листов doc-stack,
+   подъём .hover-lift, наклон карточек пакетов) и не стирает его.
+   Задержка (--reveal-delay, стаггер) — только у этих двух переходов,
+   на отклик при наведении она не влияет. */
 .js-motion :where([data-reveal]) {
   opacity: 0;
-  transform: translateY(16px);
+  translate: 0 16px;
   transition:
-    opacity var(--duration-scene) var(--ease-out),
-    transform var(--duration-scene) var(--ease-out);
-  transition-delay: var(--reveal-delay, 0ms);
+    opacity var(--duration-reveal) var(--ease-out) var(--reveal-delay, 0ms),
+    translate var(--duration-reveal) var(--ease-out) var(--reveal-delay, 0ms);
 }
 
 .js-motion :where([data-reveal]).is-in {
   opacity: 1;
-  transform: none;
+  translate: none;
 }
 
 /* Лёгкий отклик на курсор для карточек — единая утилита вместо
    повторения в каждой секции. */
 .hover-lift {
   transition:
+    transform var(--duration-response) var(--ease-out),
+    border-color var(--duration-response) var(--ease-out);
+}
+
+/* Карточка, которая и появляется при скролле, и приподнимается при
+   наведении: нужны оба набора переходов, иначе .hover-lift стирает
+   переходы появления и карточка возникает рывком. */
+.js-motion .hover-lift:where([data-reveal]) {
+  transition:
+    opacity var(--duration-reveal) var(--ease-out) var(--reveal-delay, 0ms),
+    translate var(--duration-reveal) var(--ease-out) var(--reveal-delay, 0ms),
     transform var(--duration-response) var(--ease-out),
     border-color var(--duration-response) var(--ease-out);
 }

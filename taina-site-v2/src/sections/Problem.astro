@@ -1,7 +1,8 @@
 ---
 import Section from '@/components/Section.astro';
 import Container from '@/components/Container.astro';
-import { problem, reviewApproved } from '@/content/copy';
+import Button from '@/components/Button.astro';
+import { mainCta, problem, reviewApproved } from '@/content/copy';
 ---
 
 <Section id="problem" label={problem.problem.eyebrow}>
@@ -9,10 +10,7 @@ import { problem, reviewApproved } from '@/content/copy';
     <p class="eyebrow" data-reveal>{problem.problem.eyebrow}</p>
     <h2 data-reveal>{problem.problem.title}</h2>
 
-    <div class="text" data-reveal>
-      {problem.paragraphs.map((paragraph) => <p class="measure">{paragraph}</p>)}
-      <p class="lede measure">{problem.problem.lede}</p>
-    </div>
+    <p class="text measure" data-reveal>{problem.problem.lede}</p>
 
     <div class="before-after" data-reveal>
       <div class="cell">
@@ -73,6 +71,10 @@ import { problem, reviewApproved } from '@/content/copy';
         )
       }
     </div>
+
+    <div class="cta" data-reveal>
+      <Button href="#contact">{mainCta}</Button>
+    </div>
   </Container>
 </Section>
 
@@ -86,17 +88,13 @@ import { problem, reviewApproved } from '@/content/copy';
     font-family: var(--font-sans);
     font-size: var(--text-sm);
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.02em;
     color: var(--color-gold);
     margin-bottom: var(--space-3);
   }
 
   .text {
     margin-top: var(--space-6);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
     font-size: var(--text-lg);
     color: var(--color-sand);
   }
@@ -140,9 +138,8 @@ import { problem, reviewApproved } from '@/content/copy';
 
   .cell .k {
     font-family: var(--font-sans);
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    font-size: var(--text-sm);
+    letter-spacing: 0.02em;
     color: var(--color-sand);
     margin-bottom: var(--space-2);
   }
@@ -180,15 +177,14 @@ import { problem, reviewApproved } from '@/content/copy';
 
   .scenario .k {
     font-family: var(--font-sans);
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    font-size: var(--text-sm);
+    letter-spacing: 0.02em;
     color: var(--color-sand);
     margin-bottom: var(--space-2);
   }
 
   .scenario h3 {
-    font-family: var(--font-serif);
+    font-family: var(--font-sans);
     font-size: var(--text-lg);
     font-weight: 600;
     color: var(--color-gold);
@@ -217,9 +213,8 @@ import { problem, reviewApproved } from '@/content/copy';
 
   .compare th {
     font-family: var(--font-sans);
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    font-size: var(--text-sm);
+    letter-spacing: 0.02em;
     color: var(--color-sand);
     font-weight: 600;
   }
@@ -256,11 +251,14 @@ import { problem, reviewApproved } from '@/content/copy';
   }
 
   .review p {
-    font-family: var(--font-serif);
-    font-style: italic;
+    font-family: var(--font-sans);
     font-size: var(--text-lg);
     color: var(--color-gold);
     max-width: var(--measure);
+  }
+
+  .cta {
+    margin-top: var(--space-7);
   }
 
   .review cite {

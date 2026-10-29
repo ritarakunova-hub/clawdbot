@@ -39,11 +39,16 @@ import { about } from '@/content/copy';
     align-items: flex-start;
   }
 
+  /* На телефоне фото по центру, а текст по левому краю: длинные абзацы,
+     выровненные по центру, читаются тяжело. */
   @media (max-width: 640px) {
     .body {
       flex-direction: column;
       align-items: center;
-      text-align: center;
+    }
+
+    .text {
+      align-self: stretch;
     }
   }
 
@@ -75,6 +80,8 @@ import { about } from '@/content/copy';
   .philosophy {
     font-family: var(--font-serif);
     font-style: italic;
+    font-size: var(--text-xl);
+    line-height: 1.3;
     color: var(--color-ivory);
     border-left: 2px solid var(--color-gold);
     padding-left: var(--space-4);

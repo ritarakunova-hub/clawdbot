@@ -33,7 +33,7 @@ const { people, questions, minutes, rate } = demo.roi.fields;
     <div class="block" data-reveal>
       <h3 class="block-title">Попробуйте сами</h3>
       <p class="lede measure">
-        Работает прямо здесь, на демо-базе TAINA — без сети и без ваших данных. Задайте свой
+        Работает прямо здесь, на демо-базе TAINA, без сети и без ваших данных. Задайте свой
         вопрос или возьмите готовый.
       </p>
 
@@ -382,8 +382,7 @@ const { people, questions, minutes, rate } = demo.roi.fields;
     font-family: var(--font-sans);
     font-size: var(--text-sm);
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.02em;
     color: var(--color-gold);
     margin-bottom: var(--space-3);
   }
@@ -436,7 +435,7 @@ const { people, questions, minutes, rate } = demo.roi.fields;
 
   .step-tag {
     font-family: var(--font-sans);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     letter-spacing: 0.06em;
     color: var(--color-gold);
     padding-top: 3px;
@@ -506,7 +505,7 @@ const { people, questions, minutes, rate } = demo.roi.fields;
     color: var(--color-ivory);
     background: var(--color-surface);
     border: 1px solid var(--color-line);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     transition: border-color var(--duration-response) var(--ease-out);
   }
 
@@ -522,7 +521,7 @@ const { people, questions, minutes, rate } = demo.roi.fields;
     color: var(--color-bg);
     background: var(--color-gold);
     border: none;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     cursor: pointer;
     transition: opacity var(--duration-response) var(--ease-out);
   }
@@ -545,7 +544,7 @@ const { people, questions, minutes, rate } = demo.roi.fields;
     color: var(--color-sand);
     background: transparent;
     border: 1px solid var(--color-line);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     padding: var(--space-2) var(--space-4);
     /* ≥44px — минимальная зона нажатия (CLAUDE.md, Этап 13). */
     min-height: 44px;
@@ -668,7 +667,7 @@ const { people, questions, minutes, rate } = demo.roi.fields;
     padding: var(--space-5);
     background: var(--color-surface);
     border: 1px solid var(--color-line);
-    border-radius: var(--radius-card);
+    border-radius: var(--radius-md);
     min-height: 3.5em;
   }
 
@@ -680,9 +679,8 @@ const { people, questions, minutes, rate } = demo.roi.fields;
 
   .chat-answer .tag {
     font-family: var(--font-sans);
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    font-size: var(--text-sm);
+    letter-spacing: 0.02em;
     color: var(--color-gold);
     margin-bottom: var(--space-2);
     animation: chat-answer-in 300ms var(--ease-out);
@@ -771,9 +769,8 @@ const { people, questions, minutes, rate } = demo.roi.fields;
 
   .roi-out .k {
     font-family: var(--font-sans);
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    font-size: var(--text-sm);
+    letter-spacing: 0.02em;
     color: var(--color-sand);
     margin-bottom: var(--space-2);
   }
@@ -804,7 +801,7 @@ const { people, questions, minutes, rate } = demo.roi.fields;
     color: var(--color-sand);
     background: transparent;
     border: 1px solid var(--color-line);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     cursor: pointer;
     transition:
       color var(--duration-response) var(--ease-out),

@@ -230,8 +230,9 @@ import { territories } from '@/content/copy';
 <style>
   .territories-scene {
     /* Без своей 3D-сцены — перекрываем общий холст сами (см. base.css). */
-    background: var(--color-bg);
-    height: 300vh;
+    background: var(--section-bg, var(--color-bg));
+    /* Было 300vh — короче, как хиро и «Проект». */
+    height: 200vh;
     position: relative;
     border-top: 1px solid var(--color-line);
   }
@@ -271,8 +272,7 @@ import { territories } from '@/content/copy';
     font-family: var(--font-sans);
     font-size: var(--text-sm);
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.02em;
     color: var(--color-gold);
   }
 
@@ -296,7 +296,7 @@ import { territories } from '@/content/copy';
     position: relative;
     flex: 0 0 min(640px, 78vw);
     height: min(64vh, 560px);
-    border-radius: var(--radius-card);
+    border-radius: var(--radius-lg);
     overflow: hidden;
     border: 1px solid var(--color-line);
     background: var(--color-surface);
@@ -409,8 +409,10 @@ import { territories } from '@/content/copy';
     width: 78%;
     height: 60%;
     position: relative;
-    background: color-mix(in srgb, var(--color-bg) 60%, black);
-    border-radius: 4px;
+    /* --film-bg задаёт бумага (tokens.css): тёмная плёнка на светлом фоне
+       ложилась серым пятном поверх текста. */
+    background: var(--film-bg, color-mix(in srgb, var(--color-bg) 60%, black));
+    border-radius: var(--radius-xs);
     overflow: hidden;
     animation: territory-orbit 18s var(--ease-in-out) infinite;
   }
@@ -452,11 +454,14 @@ import { territories } from '@/content/copy';
     opacity: 0.8;
   }
 
+  /* Неактивный кадр уходит в фон страницы (на бумаге — светлеет, на
+     тёмном — темнеет), а не в чёрный: на бумаге чёрная вуаль давала
+     грязно-серое пятно. */
   .dim {
     position: absolute;
     inset: 0;
-    background: #000;
-    opacity: 0.55;
+    background: var(--color-bg);
+    opacity: 0.6;
     transition: opacity 260ms var(--ease-out);
     pointer-events: none;
   }
@@ -522,7 +527,7 @@ import { territories } from '@/content/copy';
     overflow: auto;
     background: var(--color-surface);
     border: 1px solid var(--color-line);
-    border-radius: var(--radius-card);
+    border-radius: var(--radius-lg);
     display: grid;
     grid-template-columns: 1fr 1fr;
   }

@@ -21,35 +21,37 @@ import { faq } from '@/content/faq';
       }
     </div>
 
-    <table class="compare" data-reveal>
-      <thead>
-        <tr>
-          <th><span class="sr-only">Параметр</span></th>
+    <div class="compare-wrap" data-reveal tabindex="0" role="region" aria-label="Сравнение пакетов">
+      <table class="compare">
+        <thead>
+          <tr>
+            <th><span class="sr-only">Параметр</span></th>
+            {
+              comparisonTable.columns.map((column, i) => (
+                <th class:list={{ rec: i === comparisonTable.recommendedIndex }}>
+                  {i === comparisonTable.recommendedIndex && <span class="badge">Рекомендуем</span>}
+                  {column}
+                </th>
+              ))
+            }
+          </tr>
+        </thead>
+        <tbody>
           {
-            comparisonTable.columns.map((column, i) => (
-              <th class:list={{ rec: i === comparisonTable.recommendedIndex }}>
-                {i === comparisonTable.recommendedIndex && <span class="badge">Рекомендуем</span>}
-                {column}
-              </th>
+            comparisonTable.rows.map((row) => (
+              <tr>
+                <td class="row-label">{row.label}</td>
+                {row.values.map((value) => (
+                  <td class:list={{ check: value === true }}>
+                    {value === true ? '✓' : value === false ? '—' : value}
+                  </td>
+                ))}
+              </tr>
             ))
           }
-        </tr>
-      </thead>
-      <tbody>
-        {
-          comparisonTable.rows.map((row) => (
-            <tr>
-              <td class="row-label">{row.label}</td>
-              {row.values.map((value) => (
-                <td class:list={{ check: value === true }}>
-                  {value === true ? '✓' : value === false ? '—' : value}
-                </td>
-              ))}
-            </tr>
-          ))
-        }
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
 
     <ul class="grid" id="packages-grid">
       {
@@ -218,8 +220,7 @@ import { faq } from '@/content/faq';
     font-family: var(--font-sans);
     font-size: var(--text-sm);
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.02em;
     color: var(--color-gold);
     margin-bottom: var(--space-3);
   }
@@ -246,9 +247,8 @@ import { faq } from '@/content/faq';
 
   .segment .k {
     font-family: var(--font-sans);
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    font-size: var(--text-sm);
+    letter-spacing: 0.02em;
     color: var(--color-sand);
     margin-bottom: var(--space-2);
   }
@@ -257,8 +257,15 @@ import { faq } from '@/content/faq';
     color: var(--color-ivory);
   }
 
-  .compare {
+  /* На узком телефоне четыре колонки не помещаются даже с меньшими
+     отступами: таблица прокручивается внутри себя, а страница не уезжает
+     вбок. */
+  .compare-wrap {
     margin-top: var(--space-7);
+    overflow-x: auto;
+  }
+
+  .compare {
     width: 100%;
     border-collapse: collapse;
     border: 1px solid var(--color-line);
@@ -278,13 +285,20 @@ import { faq } from '@/content/faq';
     text-align: left;
   }
 
+  @media (max-width: 480px) {
+    .compare th,
+    .compare td {
+      padding: var(--space-3) var(--space-2);
+    }
+  }
+
   .compare th:last-child,
   .compare td:last-child {
     border-right: none;
   }
 
   .compare th {
-    font-family: var(--font-serif);
+    font-family: var(--font-sans);
     font-size: var(--text-base);
     font-weight: 600;
     padding-top: var(--space-4);
@@ -297,7 +311,7 @@ import { faq } from '@/content/faq';
   .compare .badge {
     display: block;
     font-family: var(--font-sans);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     letter-spacing: 0.06em;
     /* Не ruby: 4.38:1 на чёрном, ниже AA для текста; золото — 9.41:1,
        и так уже отмечен «рекомендуем» у карточек ниже. */
@@ -309,7 +323,7 @@ import { faq } from '@/content/faq';
   .compare .row-label {
     color: var(--color-sand);
     font-family: var(--font-sans);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
   }
 
   .compare .check {
@@ -324,7 +338,7 @@ import { faq } from '@/content/faq';
 
   @media (max-width: 640px) {
     .compare {
-      font-size: var(--text-xs);
+      font-size: var(--text-sm);
     }
     .compare th,
     .compare td {
@@ -351,7 +365,7 @@ import { faq } from '@/content/faq';
     position: relative;
     background: var(--color-surface);
     border: 1px solid var(--color-line);
-    border-radius: var(--radius-card);
+    border-radius: var(--radius-md);
     padding: var(--space-6);
     display: flex;
     flex-direction: column;
@@ -363,7 +377,9 @@ import { faq } from '@/content/faq';
        transition-duration на 90мс). */
     transition:
       transform var(--duration-response) var(--ease-out),
-      border-color var(--duration-response) var(--ease-out);
+      border-color var(--duration-response) var(--ease-out),
+      opacity var(--duration-reveal) var(--ease-out) var(--reveal-delay, 0ms),
+      translate var(--duration-reveal) var(--ease-out) var(--reveal-delay, 0ms);
   }
 
   .card:hover {
@@ -396,9 +412,8 @@ import { faq } from '@/content/faq';
   }
 
   .badge {
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    font-size: var(--text-sm);
+    letter-spacing: 0.02em;
     color: var(--color-gold);
     font-weight: 600;
   }

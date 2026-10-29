@@ -11,6 +11,20 @@
   --color-ruby: #e22c34;
   --color-crimson: #8f1d24;
 
+  /* Старая бумага — всё ниже первого экрана (решение владелицы, октябрь
+     2026): тёмная комната хиро при прокрутке «проявляется» в архив.
+     Внутри .paper эти значения подставляются в те же --color-*, поэтому
+     компонентам ничего менять не нужно. Контраст пар проверяет
+     scripts/contrast.mjs. */
+  --paper-bg: #efe6d3;
+  --paper-surface: #e7dcc5;
+  --paper-line: #cbbc9c;
+  --paper-gold: #7e5c12; /* золото темнее — на светлом фоне читается */
+  --paper-ivory: #2a211b; /* основной текст — цвет чернил */
+  --paper-sand: #5b4e40; /* второй текст */
+  --paper-ruby: #a8262e;
+  --paper-crimson: #8f1d24;
+
   /* Шрифты. "Fallback" — метрически подогнанные резервные начертания
      от fontaine (astro.config.mjs), чтобы при догрузке настоящего
      шрифта не было сдвига текста (CLS). */
@@ -18,14 +32,15 @@
   --font-sans:
     'Inter', 'Inter Fallback', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
-  /* Типографика: clamp(min, предпочтительно, max) */
-  --text-xs: clamp(0.78rem, 0.74rem + 0.2vw, 0.86rem);
-  --text-sm: clamp(0.88rem, 0.84rem + 0.2vw, 0.95rem);
-  --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.1rem);
-  --text-lg: clamp(1.1rem, 1.02rem + 0.4vw, 1.3rem);
-  --text-xl: clamp(1.4rem, 1.2rem + 1vw, 2rem);
-  --text-2xl: clamp(2rem, 1.6rem + 2vw, 3.2rem);
-  --text-3xl: clamp(2.7rem, 1.9rem + 4vw, 6.4rem);
+  /* Типографика — единая шкала 64/40/28/20/16/14 px (значения на десктопе).
+     Крупные ступени на телефоне плавно уменьшаются (clamp), мелкие
+     фиксированы. Других размеров шрифта на сайте нет — только эти шесть. */
+  --text-sm: 0.875rem; /* 14 — подписи, метки, мелкий текст */
+  --text-base: 1rem; /* 16 — основной текст, кнопки */
+  --text-lg: clamp(1.125rem, 1.05rem + 0.3vw, 1.25rem); /* 18→20 — лиды, подзаголовки */
+  --text-xl: clamp(1.375rem, 1.2rem + 0.8vw, 1.75rem); /* 22→28 — H3 */
+  --text-2xl: clamp(1.875rem, 1.5rem + 1.6vw, 2.5rem); /* 30→40 — H2, крупные цифры */
+  --text-3xl: clamp(2.5rem, 1.6rem + 3.6vw, 4rem); /* 40→64 — H1 */
 
   /* Отступы (шкала 4–64) */
   --space-1: 4px;
@@ -37,9 +52,14 @@
   --space-7: 48px;
   --space-8: 64px;
 
-  /* Радиусы */
-  --radius-pill: 999px;
-  --radius-card: 16px;
+  /* Радиусы — единая шкала 4/8/12/20 px. Круги (аватар, круглая кнопка
+     закрытия) остаются кругами через 50%, это форма, а не скругление.
+     xs — мелкие детали и листы doc-stack, sm — кнопки и поля ввода,
+     md — карточки, lg — крупные панели и рамки. */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
 
   /* Максимальная длина строки для читаемого текста (65–75 знаков) */
   --measure: 68ch;
@@ -54,6 +74,34 @@
 
   /* Тайминги */
   --duration-response: 200ms;
+  --duration-reveal: 450ms; /* появление блоков при скролле */
   --duration-scene: 1.2s;
   --duration-sweep: 2.3s;
 }
+
+/* Бумажная палитра для всего ниже хиро (обёртка .paper в pages/index.astro,
+   подвал) и для шапки, когда хиро ушёл из вида (.header--paper). */
+.paper,
+.header--paper {
+  color-scheme: light;
+  --color-bg: var(--paper-bg);
+  --color-surface: var(--paper-surface);
+  --color-line: var(--paper-line);
+  --color-gold: var(--paper-gold);
+  --color-ivory: var(--paper-ivory);
+  --color-sand: var(--paper-sand);
+  --color-ruby: var(--paper-ruby);
+  --color-crimson: var(--paper-crimson);
+  color: var(--color-ivory);
+}
+
+.paper {
+  /* Секции внутри бумаги прозрачные: фон и фактура — у обёртки, она же
+     перекрывает общий 3D-холст (см. base.css, Section.astro). */
+  --section-bg: transparent;
+  --film-bg: color-mix(in srgb, var(--paper-line) 60%, var(--paper-bg));
+  background-color: var(--paper-bg);
+  /* Едва заметное зерно старой бумаги — шум SVG, плитка без швов. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .36 0 0 0 0 .27 0 0 0 0 .15 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+

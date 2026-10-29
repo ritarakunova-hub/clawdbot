@@ -55,11 +55,12 @@ import { hero } from '@/content/copy';
           h1,
           cueScroll,
           catImageUrl: '/img/cat-eyes.jpg',
+          logoImageUrl: '/img/taina-logo.jpg',
         });
       })
       .catch(() => {
         // Нет WebGL2 или сцена упала при инициализации — статичный
-        // ромб на CSS, заголовок остаётся читаемым (уровни C/D из CLAUDE.md).
+        // логотип на CSS, заголовок остаётся читаемым (уровни C/D из CLAUDE.md).
         hero.classList.add('hero--nogl');
         h1.style.setProperty('--s', '130%');
         stage.classList.add('on');
@@ -76,7 +77,10 @@ import { hero } from '@/content/copy';
 <style>
   .hero {
     position: relative;
-    height: 340vh;
+    /* Было 340vh — прокрутка первого экрана занимала три с лишним экрана.
+       Анимация привязана к доле прокрутки, а не к пикселям: та же, только
+       быстрее (правка владелицы, октябрь 2026). */
+    height: 200vh;
     /* Прозрачный — хиро рисуется в общий холст сайта (#scene-gl,
        Layout.astro), а не в свой canvas. Фон-заглушка на время загрузки
        даёт html (base.css), тон совпадает с clearColor рендерера. */
@@ -88,6 +92,24 @@ import { hero } from '@/content/copy';
     top: 0;
     height: 100svh;
     overflow: hidden;
+  }
+
+  /* «Проявка»: в конце прокрутки хиро тёмная комната плавно светлеет до
+     старой бумаги, с которой начинается остальная страница (.paper). */
+  .hero::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 50vh;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      color-mix(in srgb, var(--paper-bg) 35%, transparent) 50%,
+      var(--paper-bg) 100%
+    );
   }
 
   .veil {
@@ -113,7 +135,7 @@ import { hero } from '@/content/copy';
   }
 
   .eyebrow {
-    font-size: 1rem;
+    font-size: var(--text-base);
     font-weight: 500;
     color: var(--color-sand);
     letter-spacing: 0.01em;
@@ -124,7 +146,7 @@ import { hero } from '@/content/copy';
 
   h1 {
     text-wrap: balance;
-    font-size: clamp(2.7rem, 6.6vw, 6.4rem);
+    font-size: var(--text-3xl);
     line-height: 1;
     letter-spacing: -0.012em;
     max-width: 9.6em;
@@ -145,7 +167,7 @@ import { hero } from '@/content/copy';
   .lead {
     margin-top: 1.7rem;
     max-width: 34rem;
-    font-size: clamp(1rem, 1.25vw, 1.16rem);
+    font-size: var(--text-lg);
     line-height: 1.62;
     color: var(--color-sand);
     opacity: 0;
@@ -169,7 +191,7 @@ import { hero } from '@/content/copy';
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem 0;
-    font-size: 0.86rem;
+    font-size: var(--text-sm);
     color: var(--color-sand);
     opacity: 0;
     transition: opacity 1.4s ease;
@@ -196,7 +218,7 @@ import { hero } from '@/content/copy';
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    font-size: 0.78rem;
+    font-size: var(--text-sm);
     color: var(--color-sand);
     pointer-events: none;
   }
@@ -235,8 +257,8 @@ import { hero } from '@/content/copy';
     transition-delay: 0.55s;
   }
 
-  /* Уровень C/D: WebGL недоступен или сцена упала — статичный красный
-     ромб на CSS вместо canvas, текст остаётся как есть. То же самое —
+  /* Уровень C/D: WebGL недоступен или сцена упала — статичный логотип
+     со светящимся ромбом вместо canvas, текст остаётся как есть. То же самое —
      пока общий WebGL-контекст потерян (.hero--ctxlost, см. canvas.ts):
      нужен свой непрозрачный фон, потому что общий холст сейчас пуст. */
   .hero--nogl .stage,
@@ -256,12 +278,12 @@ import { hero } from '@/content/copy';
     position: absolute;
     left: 74%;
     top: 42%;
-    width: min(15vmin, 120px);
-    height: min(24vmin, 190px);
+    width: min(44vmin, 420px);
+    aspect-ratio: 840 / 720;
     transform: translate(-50%, -50%);
-    background: linear-gradient(180deg, var(--color-ruby) 0 50%, var(--color-crimson) 50% 100%);
-    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-    filter: drop-shadow(0 0 40px color-mix(in srgb, var(--color-ruby) 80%, transparent));
+    background: url('/img/taina-logo.jpg') center / contain no-repeat;
+    /* Чёрный фон картинки растворяется в тёмной сцене. */
+    mix-blend-mode: screen;
   }
 
   @media (max-width: 860px) {
@@ -277,12 +299,11 @@ import { hero } from '@/content/copy';
       bottom: calc(env(safe-area-inset-bottom, 0px) + 74px);
     }
     h1 {
-      font-size: clamp(2.35rem, 11.2vw, 3.6rem);
       max-width: 10em;
     }
     .lead {
       margin-top: 1.1rem;
-      font-size: 0.98rem;
+      font-size: var(--text-base);
       line-height: 1.55;
     }
     .actions {
@@ -290,7 +311,7 @@ import { hero } from '@/content/copy';
     }
     .facts {
       margin-top: 1.5rem;
-      font-size: 0.8rem;
+      font-size: var(--text-sm);
     }
     .foot .scroll {
       display: none;
@@ -302,7 +323,7 @@ import { hero } from '@/content/copy';
       display: none;
     }
     .lead {
-      font-size: 0.92rem;
+      font-size: var(--text-sm);
       margin-top: 0.9rem;
     }
   }
@@ -311,6 +332,10 @@ import { hero } from '@/content/copy';
     .hero {
       height: 100vh;
       height: 100svh;
+    }
+    /* Хиро без прокрутки-сцены: переход короткий, ниже текста. */
+    .hero::after {
+      height: 6vh;
     }
     .eyebrow,
     .lead,
