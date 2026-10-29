@@ -55,11 +55,12 @@ import { hero } from '@/content/copy';
           h1,
           cueScroll,
           catImageUrl: '/img/cat-eyes.jpg',
+          logoImageUrl: '/img/taina-logo.jpg',
         });
       })
       .catch(() => {
         // Нет WebGL2 или сцена упала при инициализации — статичный
-        // ромб на CSS, заголовок остаётся читаемым (уровни C/D из CLAUDE.md).
+        // логотип на CSS, заголовок остаётся читаемым (уровни C/D из CLAUDE.md).
         hero.classList.add('hero--nogl');
         h1.style.setProperty('--s', '130%');
         stage.classList.add('on');
@@ -238,8 +239,8 @@ import { hero } from '@/content/copy';
     transition-delay: 0.55s;
   }
 
-  /* Уровень C/D: WebGL недоступен или сцена упала — статичный красный
-     ромб на CSS вместо canvas, текст остаётся как есть. То же самое —
+  /* Уровень C/D: WebGL недоступен или сцена упала — статичный логотип
+     со светящимся ромбом вместо canvas, текст остаётся как есть. То же самое —
      пока общий WebGL-контекст потерян (.hero--ctxlost, см. canvas.ts):
      нужен свой непрозрачный фон, потому что общий холст сейчас пуст. */
   .hero--nogl .stage,
@@ -259,12 +260,12 @@ import { hero } from '@/content/copy';
     position: absolute;
     left: 74%;
     top: 42%;
-    width: min(15vmin, 120px);
-    height: min(24vmin, 190px);
+    width: min(44vmin, 420px);
+    aspect-ratio: 840 / 720;
     transform: translate(-50%, -50%);
-    background: linear-gradient(180deg, var(--color-ruby) 0 50%, var(--color-crimson) 50% 100%);
-    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-    filter: drop-shadow(0 0 40px color-mix(in srgb, var(--color-ruby) 80%, transparent));
+    background: url('/img/taina-logo.jpg') center / contain no-repeat;
+    /* Чёрный фон картинки растворяется в тёмной сцене. */
+    mix-blend-mode: screen;
   }
 
   @media (max-width: 860px) {

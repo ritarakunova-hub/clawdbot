@@ -85,14 +85,17 @@ export interface Sheets {
 /**
  * "Архив" плавающих листов-документов. Позиции — процедурные, с тем же
  * PRNG (LCG), что и в прототипе, чтобы раскладка листов совпадала кадр
- * в кадр с эталоном. diamondRest — снимок позиции покоя ромба на момент
- * постройки (в прототипе тоже разовый снимок D0, не живая ссылка).
+ * в кадр с эталоном. diamondRest — снимок позиции покоя логотипа (раньше
+ * ромба) на момент постройки (в прототипе тоже разовый снимок D0, не живая
+ * ссылка). keepClear — прямоугольник логотипа на экране: листы, которые
+ * легли бы на него, не ставятся, чтобы не перечёркивать надпись.
  */
 export function buildSheets(
   renderer: THREE.WebGLRenderer,
   uniforms: SharedUniforms,
   diamondRest: THREE.Vector3,
   lowPower: boolean,
+  keepClear?: { camZ: number; halfW: number; halfH: number },
 ): Sheets {
   const atlas = buildAtlas(renderer);
   const N = lowPower ? 96 : 180;
@@ -124,6 +127,21 @@ export function buildSheets(
     const dy = y - diamondRest.y;
     const dz = z - diamondRest.z;
     if (dx * dx + dy * dy * 0.6 + dz * dz < 3.2) continue;
+    if (keepClear && z > diamondRest.z - 4) {
+      // Простая перспектива камеры, смотрящей вдоль −z: лист рядом с
+      // логотипом по глубине (перед ним или чуть позади — логотип светится
+      // сложением и не закрывает то, что за ним) попадает на него на
+      // экране — пропускаем. Дальние листы тонут в тумане и не мешают.
+      const k = keepClear.camZ - diamondRest.z;
+      const px = (x * k) / (keepClear.camZ - z);
+      const py = (y * k) / (keepClear.camZ - z);
+      if (
+        Math.abs(px - diamondRest.x) < keepClear.halfW + 0.6 &&
+        Math.abs(py - diamondRest.y) < keepClear.halfH + 0.6
+      ) {
+        continue;
+      }
+    }
     aPos[n * 3] = x;
     aPos[n * 3 + 1] = y;
     aPos[n * 3 + 2] = z;

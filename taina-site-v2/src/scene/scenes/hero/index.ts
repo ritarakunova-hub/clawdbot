@@ -1,10 +1,17 @@
 import * as THREE from 'three';
-import { clamp, smoothstep as sstep, lerp, easeOut as eOut, easeInOut as eInOut, easeBack as eBack } from '@/lib/easing';
+import {
+  clamp,
+  smoothstep as sstep,
+  lerp,
+  easeOut as eOut,
+  easeInOut as eInOut,
+  easeBack as eBack,
+} from '@/lib/easing';
 import { isReducedMotion } from '@/lib/a11y';
 import { getSharedRenderer, Unsupported, onContextLost, onContextRestored } from '../../canvas';
 import { createSharedUniforms } from '../../uniforms';
 import { buildSheets } from '../../objects/sheets';
-import { buildDiamond } from '../../objects/diamond';
+import { buildLogo, LOGO_GEM_Y, LOGO_W, LOGO_H } from '../../objects/logo';
 import { buildFloor } from '../../objects/floor';
 import { buildDust } from '../../objects/dust';
 import { buildCat } from '../../objects/cat';
@@ -23,6 +30,8 @@ export interface HeroSceneElements {
   cueScroll: HTMLElement;
   /** Куда падает изображение кота (public/img/cat-eyes.jpg). */
   catImageUrl: string;
+  /** Логотип со светящимся ромбом (public/img/taina-logo.jpg). */
+  logoImageUrl: string;
 }
 
 export interface HeroSceneHandle {
@@ -38,13 +47,14 @@ export interface HeroSceneHandle {
  * соседняя (наготове) или далеко (можно освободить GPU-ресурсы).
  *
  * Бросает Unsupported, если WebGL2 недоступен или инициализация упала —
- * вызывающий код (Hero.astro) ловит это и включает CSS-заглушку ромба.
+ * вызывающий код (Hero.astro) ловит это и включает статичный логотип.
  */
 export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
   const { hero, stage, copy, h1, cueScroll } = el;
 
   const coarse = matchMedia('(pointer: coarse)').matches;
-  const lowPower = (navigator.hardwareConcurrency || 8) <= 4 || Math.min(innerWidth, innerHeight) < 640;
+  const lowPower =
+    (navigator.hardwareConcurrency || 8) <= 4 || Math.min(innerWidth, innerHeight) < 640;
 
   function setSweep(v: number) {
     h1.style.setProperty('--s', v + '%');
@@ -58,23 +68,19 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
   const three = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 90);
   const base = { camZ: 10, portrait: false };
-  const D0 = new THREE.Vector3(1.9, 0.1, 0); // позиция покоя ромба
+  const D0 = new THREE.Vector3(1.9, 0.1, 0); // позиция покоя логотипа
   let dScale0 = 1;
-  // Ромб меньше прежнего (правка владелицы, октябрь 2026): символ, а не
-  // главный объект экрана.
-  const DIA_SIZE = 0.7;
-  // Свечение за ромбом слабее: тёмный камень с золотым контуром читается
-  // на тёмном фоне, а не в красном зареве.
-  const HALO_I = 0.45;
+  // Свечение слабее, чем было у 3D-ромба: свет даёт сам ромб на логотипе,
+  // зарево вокруг — только поддержка.
+  const HALO_I = 0.6;
   const catBase = { x: 0.4, y: 2.55 };
 
   const U = createSharedUniforms();
 
   // --- объекты сцены (строятся в build(), вызывается из prepare()) ---
   let sheets: THREE.Mesh;
-  let dia: THREE.Group;
-  let diaMaterial: THREE.ShaderMaterial;
-  let diaEdges: THREE.LineSegments;
+  let logo: THREE.Group;
+  let logoMaterial: THREE.ShaderMaterial;
   let halo: THREE.Group;
   let haloA: THREE.Mesh;
   let haloB: THREE.Mesh;
@@ -106,13 +112,15 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
       const hh = tan * base.camZ;
       const hwp = hh * a;
       D0.set(-hwp * 0.26, hh * 0.58, 0);
-      dScale0 = 0.5 * DIA_SIZE;
+      dScale0 = 0.5;
     } else {
       base.camZ = 10;
       const hh2 = tan * base.camZ;
       const hw = hh2 * a;
       D0.set(clamp(hw * 0.44, 1.2, 3.4), 0.12, 0);
-      dScale0 = clamp(a / 1.6, 0.8, 1.15) * DIA_SIZE;
+      // 0.85 — логотип с надписью шире прежнего ромба, без этого он спорит
+      // с заголовком слева.
+      dScale0 = clamp(a / 1.6, 0.8, 1.15) * 0.85;
     }
     camera.updateProjectionMatrix();
     if (catMesh) {
@@ -166,18 +174,21 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
   /** Строит все Three.js-объекты сцены — вызывается один раз на «сборку». */
   function build() {
     layout();
-    const builtSheets = buildSheets(renderer, U, D0, lowPower);
+    const builtSheets = buildSheets(renderer, U, D0, lowPower, {
+      camZ: base.camZ,
+      halfW: (LOGO_W * dScale0) / 2,
+      halfH: (LOGO_H * dScale0) / 2,
+    });
     sheets = builtSheets.mesh;
     three.add(sheets);
 
-    const diamond = buildDiamond(U.uTime);
-    dia = diamond.group;
-    diaMaterial = diamond.material;
-    diaEdges = diamond.edges;
-    halo = diamond.halo;
-    haloA = diamond.haloA;
-    haloB = diamond.haloB;
-    three.add(dia, halo);
+    const logoRig = buildLogo(el.logoImageUrl);
+    logo = logoRig.group;
+    logoMaterial = logoRig.material;
+    halo = logoRig.halo;
+    haloA = logoRig.haloA;
+    haloB = logoRig.haloB;
+    three.add(logo, halo);
 
     floor = buildFloor(U.uKeyPos);
     three.add(floor);
@@ -193,7 +204,7 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
     postFx = buildPostFx(renderer, three, camera, lowPower);
     layout();
 
-    dia.scale.setScalar(0.001);
+    logo.scale.setScalar(0.001);
   }
 
   /** prepare() — идемпотентно строит сцену; вызывается циклом (loop.ts),
@@ -232,7 +243,7 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
 
     const fade = sstep(0, 1.1, it);
     const spark = sstep(0.2, 0.9, it) * (1 - sstep(0.9, 1.5, it) * 0.55);
-    const dia_s = eBack((it - 0.85) / 1.25);
+    const logo_s = eBack((it - 0.85) / 1.25);
     const keyI = eOut((it - 1.0) / 1.6);
     const reveal = lerp(0, 34, eOut((it - 1.1) / 3.4));
     if (!copyShown && it > 1.7) {
@@ -277,24 +288,21 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
     camera.lookAt(0, 0, -2.5);
     camera.updateMatrixWorld();
 
-    const dScale = Math.max(0.001, dia_s) * dScale0 * (1 + pz * 0.55);
-    dia.scale.setScalar(dScale);
+    const dScale = Math.max(0.001, logo_s) * dScale0 * (1 + pz * 0.55);
+    logo.scale.setScalar(dScale);
     const bx = lerp(D0.x, 0, pm);
     const by = lerp(D0.y, 0.05, pm) + Math.sin(tNow * 0.6) * 0.05 * (1 - pz);
     const bz = lerp(D0.z, 3.4, sstep(0.55, 0.96, ps));
-    dia.position.set(bx, by, bz);
-    // Меньше амплитуда, чем в исходном прототипе: ромб — плоский символ
-    // (как масть «бубны» в картах), а не вращающийся 3D-камень — если
-    // крутить его сильно, видно грань сзади/спереди, и силуэт перестаёт
-    // читаться как ромб (см. правку по бренд-буку).
-    dia.rotation.y = Math.sin(tNow * 0.31) * 0.16 + ptr.sx * 0.18;
-    dia.rotation.x = -ptr.sy * 0.08 + Math.sin(tNow * 0.23) * 0.02;
-    dia.rotation.z = 0;
-    diaMaterial.uniforms.uI.value = (0.5 + 0.5 * keyI) * 0.84 * (1 + pz * 0.3);
-    (diaEdges.material as THREE.LineBasicMaterial).opacity = keyI;
+    logo.position.set(bx, by, bz);
+    // Логотип плоский и всегда смотрит в камеру (как кот и свечение):
+    // надпись должна читаться, а не поворачиваться боком.
+    logo.quaternion.copy(camera.quaternion);
+    logoMaterial.uniforms.uI.value = keyI * (1 - pf);
+    // Источник света — ромб на логотипе, он выше центра картинки.
+    const gemY = by + LOGO_GEM_Y * dScale;
 
     U.uTime.value = tNow;
-    U.uKeyPos.value.set(bx, by, bz - 0.4);
+    U.uKeyPos.value.set(bx, gemY, bz - 0.4);
     U.uKeyI.value = keyI * (0.5 + pz * 0.45);
     U.uKeyR.value = 5.4 + pz * 4;
     U.uReveal.value = reveal + ps * 30;
@@ -306,17 +314,20 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
     U.uCurPos.value.copy(camera.position).addScaledVector(tmp, tt);
     U.uCurI.value = sstep(3.2, 4.6, it) * 1.2 * (1 - pf);
 
-    halo.position.set(bx, by, bz - 1.0 * dScale - 0.15);
+    halo.position.set(bx, gemY, bz - 1.0 * dScale - 0.15);
     halo.quaternion.copy(camera.quaternion);
     const hs = Math.max(0.001, dScale);
-    (haloA.material as THREE.ShaderMaterial).uniforms.uI.value = (spark * 0.5 + keyI * 0.12) * (1 + pz * 1.4) * HALO_I;
-    (haloB.material as THREE.ShaderMaterial).uniforms.uI.value = (spark * 0.8 + keyI * 0.16) * (1 + pz * 1.0) * HALO_I;
+    (haloA.material as THREE.ShaderMaterial).uniforms.uI.value =
+      (spark * 0.5 + keyI * 0.12) * (1 + pz * 1.4) * HALO_I;
+    (haloB.material as THREE.ShaderMaterial).uniforms.uI.value =
+      (spark * 0.8 + keyI * 0.16) * (1 + pz * 1.0) * HALO_I;
     halo.scale.setScalar(0.6 + 0.4 * Math.max(hs, spark) * 1);
 
     (floor.material as THREE.ShaderMaterial).uniforms.uI.value = keyI * 0.42 * (1 - pz * 0.7);
 
     const catIn = sstep(3.9, 5.4, it);
-    const near = Math.exp(-(Math.pow(ptr.sx - 0.05, 2) + Math.pow(ptr.sy - 0.5, 2)) * 2.2) * (idle ? 0 : 1);
+    const near =
+      Math.exp(-(Math.pow(ptr.sx - 0.05, 2) + Math.pow(ptr.sy - 0.5, 2)) * 2.2) * (idle ? 0 : 1);
     if (blinkT < 0 && tNow > blinkAt) blinkT = 0;
     let blink = 0;
     if (blinkT >= 0) {
@@ -415,7 +426,11 @@ function disposeSceneContents(scene: THREE.Scene) {
   scene.traverse((obj) => {
     const mesh = obj as Partial<THREE.Mesh & THREE.Points>;
     mesh.geometry?.dispose();
-    const materials = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
+    const materials = Array.isArray(mesh.material)
+      ? mesh.material
+      : mesh.material
+        ? [mesh.material]
+        : [];
     for (const material of materials) {
       if (material instanceof THREE.ShaderMaterial) {
         for (const uniform of Object.values(material.uniforms)) {
