@@ -60,6 +60,12 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
   const base = { camZ: 10, portrait: false };
   const D0 = new THREE.Vector3(1.9, 0.1, 0); // позиция покоя ромба
   let dScale0 = 1;
+  // Ромб меньше прежнего (правка владелицы, октябрь 2026): символ, а не
+  // главный объект экрана.
+  const DIA_SIZE = 0.7;
+  // Свечение за ромбом слабее: тёмный камень с золотым контуром читается
+  // на тёмном фоне, а не в красном зареве.
+  const HALO_I = 0.45;
   const catBase = { x: 0.4, y: 2.55 };
 
   const U = createSharedUniforms();
@@ -72,8 +78,6 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
   let halo: THREE.Group;
   let haloA: THREE.Mesh;
   let haloB: THREE.Mesh;
-  let streakH: THREE.Mesh;
-  let streakV: THREE.Mesh;
   let floor: THREE.Mesh;
   let dust: THREE.Points;
   let catMesh: THREE.Mesh;
@@ -102,13 +106,13 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
       const hh = tan * base.camZ;
       const hwp = hh * a;
       D0.set(-hwp * 0.26, hh * 0.58, 0);
-      dScale0 = 0.5;
+      dScale0 = 0.5 * DIA_SIZE;
     } else {
       base.camZ = 10;
       const hh2 = tan * base.camZ;
       const hw = hh2 * a;
       D0.set(clamp(hw * 0.44, 1.2, 3.4), 0.12, 0);
-      dScale0 = clamp(a / 1.6, 0.8, 1.15);
+      dScale0 = clamp(a / 1.6, 0.8, 1.15) * DIA_SIZE;
     }
     camera.updateProjectionMatrix();
     if (catMesh) {
@@ -173,9 +177,7 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
     halo = diamond.halo;
     haloA = diamond.haloA;
     haloB = diamond.haloB;
-    streakH = diamond.streakH;
-    streakV = diamond.streakV;
-    three.add(dia, halo, streakH, streakV);
+    three.add(dia, halo);
 
     floor = buildFloor(U.uKeyPos);
     three.add(floor);
@@ -232,7 +234,6 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
     const spark = sstep(0.2, 0.9, it) * (1 - sstep(0.9, 1.5, it) * 0.55);
     const dia_s = eBack((it - 0.85) / 1.25);
     const keyI = eOut((it - 1.0) / 1.6);
-    const streak = eOut((it - 1.0) / 1.7);
     const reveal = lerp(0, 34, eOut((it - 1.1) / 3.4));
     if (!copyShown && it > 1.7) {
       copyShown = true;
@@ -290,7 +291,7 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
     dia.rotation.x = -ptr.sy * 0.08 + Math.sin(tNow * 0.23) * 0.02;
     dia.rotation.z = 0;
     diaMaterial.uniforms.uI.value = (0.5 + 0.5 * keyI) * 0.84 * (1 + pz * 0.3);
-    (diaEdges.material as THREE.LineBasicMaterial).opacity = 0.7 * keyI;
+    (diaEdges.material as THREE.LineBasicMaterial).opacity = keyI;
 
     U.uTime.value = tNow;
     U.uKeyPos.value.set(bx, by, bz - 0.4);
@@ -308,19 +309,10 @@ export function mountHeroScene(el: HeroSceneElements): HeroSceneHandle {
     halo.position.set(bx, by, bz - 1.0 * dScale - 0.15);
     halo.quaternion.copy(camera.quaternion);
     const hs = Math.max(0.001, dScale);
-    (haloA.material as THREE.ShaderMaterial).uniforms.uI.value = (spark * 0.5 + keyI * 0.12) * (1 + pz * 1.4);
-    (haloB.material as THREE.ShaderMaterial).uniforms.uI.value = (spark * 0.8 + keyI * 0.16) * (1 + pz * 1.0);
+    (haloA.material as THREE.ShaderMaterial).uniforms.uI.value = (spark * 0.5 + keyI * 0.12) * (1 + pz * 1.4) * HALO_I;
+    (haloB.material as THREE.ShaderMaterial).uniforms.uI.value = (spark * 0.8 + keyI * 0.16) * (1 + pz * 1.0) * HALO_I;
     halo.scale.setScalar(0.6 + 0.4 * Math.max(hs, spark) * 1);
 
-    streakH.position.set(bx, by, bz - 1.0 * dScale - 0.2);
-    streakH.quaternion.copy(camera.quaternion);
-    streakV.position.set(bx, by + 0.05, bz - 1.0 * dScale - 0.2);
-    streakV.quaternion.copy(camera.quaternion);
-    streakV.rotateZ(Math.PI / 2);
-    streakH.scale.set(streak * (1 + pz * 0.6) + 0.001, 1, 1);
-    streakV.scale.set(streak * 0.8 + 0.001, 1, 1);
-    (streakH.material as THREE.ShaderMaterial).uniforms.uI.value = (spark * 0.5 + keyI * 0.2) * (1 - pf * 0.3);
-    (streakV.material as THREE.ShaderMaterial).uniforms.uI.value = spark * 0.4 + keyI * 0.13;
     (floor.material as THREE.ShaderMaterial).uniforms.uI.value = keyI * 0.42 * (1 - pz * 0.7);
 
     const catIn = sstep(3.9, 5.4, it);

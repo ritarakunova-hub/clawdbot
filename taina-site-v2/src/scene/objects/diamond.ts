@@ -1,18 +1,16 @@
 import * as THREE from 'three';
 import { createDiamondMaterial } from '../materials/diamondMaterial';
-import { createGlowMaterial, createStreakMaterial } from '../materials/glow';
+import { createGlowMaterial } from '../materials/glow';
 
 export interface DiamondRig {
   /** Группа с самим ромбом (меш + рёбра) — двигается/масштабируется как одно целое. */
   group: THREE.Group;
   material: THREE.ShaderMaterial;
   edges: THREE.LineSegments;
-  /** halo и полосы — отдельные объекты сцены (билборды к камере), не дети group. */
+  /** halo — отдельный объект сцены (билборд к камере), не ребёнок group. */
   halo: THREE.Group;
   haloA: THREE.Mesh;
   haloB: THREE.Mesh;
-  streakH: THREE.Mesh;
-  streakV: THREE.Mesh;
 }
 
 export function buildDiamond(uTime: { value: number }): DiamondRig {
@@ -44,7 +42,9 @@ export function buildDiamond(uTime: { value: number }): DiamondRig {
   const mesh = new THREE.Mesh(geometry, material);
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(geometry, 1),
-    new THREE.LineBasicMaterial({ color: 0xffc24a, transparent: true, opacity: 0.7 }),
+    // Золотой контур (Antique Gold) — вариант «Линия», выбран владелицей
+    // в октябре 2026 вместо светлого ромба с бликом и лучами.
+    new THREE.LineBasicMaterial({ color: 0xd4af37, transparent: true, opacity: 1 }),
   );
   mesh.add(edges);
 
@@ -59,17 +59,5 @@ export function buildDiamond(uTime: { value: number }): DiamondRig {
   const halo = new THREE.Group();
   halo.add(haloA, haloB);
 
-  const streakH = new THREE.Mesh(
-    new THREE.PlaneGeometry(17, 0.5),
-    createStreakMaterial(0xffb08a, 30, 2.2, 0),
-  );
-  // Вертикальная полоса в прототипе — та же геометрия толщины 0.5,
-  // но развёрнутая (7.5×0.5) и повёрнутая на 90°, а не квадрат 0.5×7.5.
-  const streakV = new THREE.Mesh(
-    new THREE.PlaneGeometry(7.5, 0.5),
-    createStreakMaterial(0xff9a80, 30, 2.6, 0),
-  );
-  streakV.rotation.z = Math.PI / 2;
-
-  return { group, material, edges, halo, haloA, haloB, streakH, streakV };
+  return { group, material, edges, halo, haloA, haloB };
 }
