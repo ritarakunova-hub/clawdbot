@@ -1,0 +1,82 @@
+---
+import Section from '@/components/Section.astro';
+import Container from '@/components/Container.astro';
+import { about } from '@/content/copy';
+---
+
+<Section id="about" label={about.title}>
+  <Container>
+    <div class="about-col">
+      <h2 data-reveal>{about.title}</h2>
+      <div class="body" data-reveal>
+        <img class="avatar" src="/img/author.jpg" alt="Автор TAINA STUDIO" width="160" height="160" loading="lazy" />
+        <div class="text">
+          {about.paragraphs.map((paragraph) => <p class="measure">{paragraph}</p>)}
+          <p class="philosophy measure">«{about.philosophy}»</p>
+        </div>
+      </div>
+    </div>
+  </Container>
+</Section>
+
+<style>
+  /* Фото + текст вместе заметно уже контейнера (1440) — без этого
+     колонка жмётся к левому краю, а справа остаётся пустая половина
+     экрана (та же правка, что и в Contact.astro). */
+  .about-col {
+    max-width: 820px;
+    margin-inline: auto;
+  }
+
+  h2 {
+    font-size: var(--text-2xl);
+  }
+
+  .body {
+    margin-top: var(--space-6);
+    display: flex;
+    gap: var(--space-6);
+    align-items: flex-start;
+  }
+
+  @media (max-width: 640px) {
+    .body {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+  }
+
+  .avatar {
+    flex: none;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+  }
+
+  @media (max-width: 640px) {
+    .avatar {
+      width: 128px;
+      height: 128px;
+    }
+  }
+
+  .text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    font-size: var(--text-lg);
+    color: var(--color-sand);
+  }
+
+  .philosophy {
+    font-family: var(--font-serif);
+    font-style: italic;
+    color: var(--color-ivory);
+    border-left: 2px solid var(--color-gold);
+    padding-left: var(--space-4);
+  }
+</style>

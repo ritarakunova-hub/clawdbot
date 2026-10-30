@@ -1,0 +1,7 @@
+# Сайт ещё черновик — совпадает с <meta name="robots" content="noindex, nofollow">
+# в Layout.astro и X-Robots-Tag в netlify.toml. Все три места хранят
+# одно и то же решение (не индексировать), поэтому меняются вместе.
+# TODO(Этап 14, SEO): открыть краулерам и добавить Sitemap: <домен>/sitemap.xml,
+# когда сайт будет готов к индексации и появится настоящий домен.
+User-agent: *
+Disallow: /
