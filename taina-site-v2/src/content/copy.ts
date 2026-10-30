@@ -155,7 +155,7 @@ export const demo = {
   ],
   // Точная формулировка из CLAUDE.md — расширять её нельзя без подтверждения.
   privacyLine:
-    'В демо-версии ваши данные не нужны: в модель уходят только вопрос и найденные фрагменты документов.',
+    'В рабочем ассистенте в модель уходят только вопрос и найденные фрагменты документов — не вся ваша база.',
 
   // Три готовых сценария, из §13 old-site-content.md
   // (docs/brand/taina-studio-reference.html) — примеры не придуманы заново.
@@ -273,6 +273,8 @@ export const contact = {
   channels: [
     { label: 'Telegram @RitaRakunova', href: 'https://t.me/RitaRakunova' },
     { label: 'ritarakunova@gmail.com', href: 'mailto:ritarakunova@gmail.com' },
+    { label: 'Группа ВКонтакте', href: 'https://vk.ru/tainastudio' },
+    { label: 'Telegram-канал TAINA', href: 'https://t.me/tainastudio' },
   ],
   // Этап 10. Форма — не изобретение заново: те же имя формы и поля, что
   // на taina-site/index.html (форма taina-diagnostic, три поля) — это

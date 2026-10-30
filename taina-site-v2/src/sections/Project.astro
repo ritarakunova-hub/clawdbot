@@ -77,16 +77,6 @@ import { project } from '@/content/copy';
       <h3>{project.case.title}</h3>
       <p class="lede">{project.case.lede}</p>
 
-      <dl class="cells">
-        {
-          project.case.cells.map((cell) => (
-            <div class="cell">
-              <dt>{cell.label}</dt>
-              <dd>{cell.text}</dd>
-            </div>
-          ))
-        }
-      </dl>
 
       <p class="foot">{project.case.foot}</p>
     </article>
@@ -282,27 +272,6 @@ import { project } from '@/content/copy';
     margin-top: var(--space-3);
     color: var(--color-sand);
     max-width: var(--measure);
-  }
-
-  .cells {
-    margin: var(--space-5) 0 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-  }
-
-  .cell dt {
-    font-family: var(--font-sans);
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--color-sand);
-    margin-bottom: var(--space-1);
-  }
-
-  .cell dd {
-    margin: 0;
-    color: var(--color-ivory);
   }
 
   .foot {

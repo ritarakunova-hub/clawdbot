@@ -323,8 +323,11 @@ import { faq } from '@/content/faq';
   }
 
   @media (max-width: 640px) {
+    /* Таблица шире экрана телефона и раздвигала всю страницу вбок.
+       Те же цены и состав есть в карточках пакетов ниже — на телефоне
+       таблицу прячем, страница больше не съезжает. */
     .compare {
-      font-size: var(--text-xs);
+      display: none;
     }
     .compare th,
     .compare td {
