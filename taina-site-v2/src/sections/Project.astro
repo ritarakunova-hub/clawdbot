@@ -79,16 +79,6 @@ import { project } from '@/content/copy';
       <h3>{project.case.title}</h3>
       <p class="lede">{project.case.lede}</p>
 
-      <dl class="cells">
-        {
-          project.case.cells.map((cell) => (
-            <div class="cell">
-              <dt>{cell.label}</dt>
-              <dd>{cell.text}</dd>
-            </div>
-          ))
-        }
-      </dl>
 
       <p class="foot">{project.case.foot}</p>
     </article>
