@@ -62,7 +62,7 @@ const f = contact.form;
           name="contact"
           type="text"
           placeholder={f.contactPlaceholder}
-          autocomplete="email"
+          autocomplete="off"
           required
         />
       </div>
@@ -112,8 +112,17 @@ const f = contact.form;
     // а мини-CRM получает это как обычный текст в уже знакомом поле
     // message — новых полей на её стороне заводить не нужно (см.
     // docs/form-contract.md).
-    const territory = sessionStorage.getItem('taina:territory');
-    const chosenPackage = sessionStorage.getItem('taina:package');
+    // Storage can be unavailable in restricted/private browsing contexts.
+    function readSessionValue(key) {
+      try {
+        return sessionStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    }
+
+    const territory = readSessionValue('taina:territory');
+    const chosenPackage = readSessionValue('taina:package');
     const territoryNames = {
       meanings: 'Смыслы',
       images: 'Образы',
@@ -127,8 +136,10 @@ const f = contact.form;
       if (territory && territoryNames[territory]) bits.push(`Территория «${territoryNames[territory]}».`);
       if (bits.length) messageEl.value = bits.join(' ') + ' ';
     }
-    form.querySelector('input[name="territory"]').value = territory ?? '';
-    form.querySelector('input[name="package"]').value = chosenPackage ?? '';
+    const territoryInput = form.querySelector('input[name="territory"]');
+    const packageInput = form.querySelector('input[name="package"]');
+    if (territoryInput) territoryInput.value = territory ?? '';
+    if (packageInput) packageInput.value = chosenPackage ?? '';
 
     const params = new URLSearchParams(location.search);
     for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']) {
