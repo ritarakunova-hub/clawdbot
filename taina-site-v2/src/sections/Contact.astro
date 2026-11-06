@@ -135,6 +135,7 @@ const f = contact.form;
       if (chosenPackage) bits.push(`Интересует: ${chosenPackage}.`);
       if (territory && territoryNames[territory]) bits.push(`Территория «${territoryNames[territory]}».`);
       if (bits.length) messageEl.value = bits.join(' ') + ' ';
+      else messageEl.value = 'Интересует ранний доступ к TAINA Knowledge Map. ';
     }
     const territoryInput = form.querySelector('input[name="territory"]');
     const packageInput = form.querySelector('input[name="package"]');
