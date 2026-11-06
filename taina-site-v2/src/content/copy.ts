@@ -276,8 +276,7 @@ export const about = {
 
 export const contact = {
   title: 'Ранний доступ к Knowledge Map',
-  // Реальные данные (CLAUDE.md): бесплатная диагностика 15 минут,
-  // два равных канала.
+  // Контактные каналы для вопросов о продукте и дополнительных услугах.
   lead: 'Оставьте контакт, чтобы получить информацию об условиях раннего доступа к TAINA Knowledge Map. Это заявка, а не оплата: онлайн-оплата на сайте пока не подключена.',
   channels: [
     { label: 'Telegram @RitaRakunova', href: 'https://t.me/RitaRakunova' },
