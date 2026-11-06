@@ -1,0 +1,211 @@
+---
+import Section from '@/components/Section.astro';
+import Container from '@/components/Container.astro';
+import Button from '@/components/Button.astro';
+---
+
+<Section id="knowledge-map" label="TAINA Knowledge Map">
+  <Container>
+    <div class="intro" data-reveal>
+      <p class="eyebrow">Первый цифровой продукт TAINA · готовится к запуску</p>
+      <h2>TAINA Knowledge Map</h2>
+      <p class="lede">Веб-инструмент, который помогает руководителю собрать и упорядочить знания компании, проверить их и подготовить к дальнейшей работе с AI.</p>
+      <p class="body">Инструкции лежат в папках, решения — в переписках, а важные детали остаются в памяти сотрудников. Knowledge Map помогает руководителю собрать эти материалы, разложить их по темам и процессам, увидеть пробелы и подготовить основу для дальнейшей работы команды.</p>
+      <div class="price-card">
+        <p class="price-label">Цена раннего доступа</p>
+        <p class="price"><strong>1 490 ₽</strong><span>после запуска — 1 990 ₽</span></p>
+      </div>
+      <h3 class="included-title">Что входит в первую версию</h3>
+      <ul class="included">
+        <li>Веб-пространство проекта: задачи, этапы и прогресс</li>
+        <li>Конструктор процессов, библиотека знаний и панель проверки качества</li>
+        <li>Автосохранение, импорт и экспорт данных</li>
+        <li>Рабочая тетрадь, таблица из 9 листов и структура папок</li>
+        <li>5 шаблонов, 15 AI-промптов и 30 проверочных вопросов</li>
+        <li>Демо-кейс и план внедрения на 7 дней</li>
+      </ul>
+      <p class="scope-note">В первой версии руководитель работает с картой самостоятельно, а затем может передать подготовленные материалы команде. Совместное редактирование в реальном времени и встроенная AI-автоматизация не входят в первую версию.</p>
+      <Button href="#contact">Оставить заявку на ранний доступ</Button>
+      <p class="status">Продукт в разработке. Сейчас формируется первая версия. Кнопка выше отправляет заявку на информацию об условиях раннего доступа — оплату на сайте внести пока нельзя.</p>
+    </div>
+
+    <div class="steps" aria-label="Этапы работы с Knowledge Map">
+      <article data-reveal>
+        <span>01</span>
+        <h3>Collect</h3>
+        <p>Соберите документы, инструкции, ответы и экспертные знания в одном рабочем пространстве.</p>
+      </article>
+      <article data-reveal>
+        <span>02</span>
+        <h3>Structure</h3>
+        <p>Разложите информацию по темам, ролям и процессам — увидьте, что уже есть и чего не хватает.</p>
+      </article>
+      <article data-reveal>
+        <span>03</span>
+        <h3>Verify</h3>
+        <p>Проверьте актуальность, источники и пробелы, прежде чем использовать знания в работе.</p>
+      </article>
+      <article data-reveal>
+        <span>04</span>
+        <h3>Activate</h3>
+        <p>Подготовьте структурированную базу к ежедневной работе команды и подключению AI-инструментов.</p>
+      </article>
+      <article data-reveal>
+        <span>05</span>
+        <h3>Evolve</h3>
+        <p>Обновляйте карту по мере изменений в компании — знания не должны устаревать вместе с документами.</p>
+      </article>
+    </div>
+
+    <p class="foot" data-reveal>Сначала руководитель собирает и проверяет знания. Затем готовую структуру можно передать команде и использовать как основу для дальнейших процессов и AI-инструментов.</p>
+  </Container>
+</Section>
+
+<style>
+  .intro {
+    max-width: 780px;
+    margin-inline: auto;
+  }
+
+  .eyebrow {
+    color: var(--color-gold);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    margin-bottom: var(--space-3);
+  }
+
+  h2 {
+    font-size: var(--text-2xl);
+    max-width: 16ch;
+  }
+
+  .lede {
+    margin-top: var(--space-4);
+    font-size: var(--text-xl);
+    line-height: 1.35;
+    max-width: 38ch;
+  }
+
+  .body {
+    margin-top: var(--space-4);
+    color: var(--color-sand);
+    max-width: var(--measure);
+  }
+
+  .intro :global(a) {
+    margin-top: var(--space-5);
+  }
+
+  .price-card {
+    margin-top: var(--space-5);
+    padding: var(--space-4);
+    border: 1px solid var(--color-gold);
+    border-radius: var(--radius-md);
+    max-width: 420px;
+  }
+
+  .price-label,
+  .included-title {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-gold);
+  }
+
+  .price {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+  }
+
+  .price strong {
+    font-size: var(--text-2xl);
+    color: var(--color-ivory);
+  }
+
+  .price span {
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+  }
+
+  .included-title {
+    margin-top: var(--space-6);
+    font-size: var(--text-lg);
+  }
+
+  .included {
+    margin-top: var(--space-3);
+    padding-left: 1.2rem;
+    max-width: var(--measure);
+  }
+
+  .included li {
+    margin-top: var(--space-2);
+    color: var(--color-ivory);
+  }
+
+  .scope-note {
+    margin-top: var(--space-4);
+    color: var(--color-sand);
+    font-size: var(--text-sm);
+    max-width: var(--measure);
+  }
+
+  .status {
+    margin-top: var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--color-sand);
+  }
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--space-3);
+    margin-top: var(--space-8);
+  }
+
+  .steps article {
+    min-width: 0;
+    padding: var(--space-4);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-surface) 62%, transparent);
+  }
+
+  .steps span {
+    color: var(--color-gold);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .steps h3 {
+    margin-top: var(--space-3);
+    font-size: var(--text-xl);
+  }
+
+  .steps p {
+    margin-top: var(--space-2);
+    color: var(--color-sand);
+    font-size: var(--text-sm);
+  }
+
+  .foot {
+    margin-top: var(--space-5);
+    color: var(--color-sand);
+    font-size: var(--text-sm);
+    max-width: var(--measure);
+  }
+
+  @media (max-width: 900px) {
+    .steps {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 520px) {
+    .steps {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -41,11 +41,12 @@ hero и формы), отправка формы не выдаёт JS-ошибо
 
 Форма уже готова технически (`data-netlify="true"` в HTML) — но чтобы
 заявки реально попадали в вашу таблицу и Telegram, нужно один раз
-включить Outgoing Webhook — это описано в
-`../mini-crm/README.md`, раздел «Шаг 4. Подключить Netlify»:
+включить Outgoing Webhook. Мини-CRM теперь на n8n — инструкция в репозитории
+`clawdbot1`, файл `automation/README.md`, раздел «д) Netlify — подключение webhook»
+(прежний вариант на Node.js из папки `mini-crm/` убран, октябрь 2026):
 
-1. Netlify → ваш сайт → **Site settings → Forms → Form notifications → Add notification → Outgoing webhook**
-2. URL: `https://ВАШ-АДРЕС-НА-AMVERA/webhook/netlify-lead?token=ВАШ_WEBHOOK_SECRET`
+1. Netlify → ваш сайт → **Site configuration → Forms → Form notifications → Add notification → Outgoing webhook**
+2. URL: Production URL ноды Webhook из workflow-1 в n8n
 3. Form: `taina-diagnostic` (имя формы уже прописано в HTML)
 
 Без этого шага заявки будут просто накапливаться в разделе **Forms**

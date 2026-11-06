@@ -1,25 +1,24 @@
 ---
 import Layout from '@/layouts/Layout.astro';
 import Hero from '@/sections/Hero.astro';
-import Problem from '@/sections/Problem.astro';
-import Territories from '@/sections/Territories.astro';
-import Demo from '@/sections/Demo.astro';
 import Project from '@/sections/Project.astro';
 import Packages from '@/sections/Packages.astro';
 import About from '@/sections/About.astro';
 import Contact from '@/sections/Contact.astro';
+import KnowledgeMap from '@/sections/KnowledgeMap.astro';
 ---
 
 <Layout
-  title="TAINA STUDIO — AI и автоматизация для сильного бизнеса"
-  description="AI-ассистенты и автоматизация процессов по документам вашей компании. Если ответа нет, ассистент так и скажет."
+  title="TAINA Knowledge Map — система знаний для бизнеса | TAINA Studio"
+  description="Соберите знания компании в единую систему: структурируйте документы, проверьте актуальность и подготовьте базу к работе с AI. TAINA Knowledge Map."
 >
   <Hero />
-  <Problem />
-  <Territories />
-  <About />
-  <Demo />
-  <Project />
-  <Packages />
-  <Contact />
+  {/* Всё ниже первого экрана — на старой бумаге (tokens.css, .paper). */}
+  <div class="paper">
+    <KnowledgeMap />
+    <About />
+    <Project />
+    <Packages />
+    <Contact />
+  </div>
 </Layout>

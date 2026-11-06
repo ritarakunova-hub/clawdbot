@@ -43,8 +43,8 @@ export default defineConfig({
     // astro preview в этом окружении сам уходит в фон (демонизируется) и
     // печатает статус — команда должна остаться на переднем плане, иначе
     // Playwright считает процесс упавшим. `sleep infinity` держит обёртку
-    // живой, пока превью-сервер работает как отдельный демон.
-    command: `npm run build && npm run preview -- --port ${PORT} && sleep infinity`,
+    // живой; Node.js таймер заменяет Unix-команду sleep.
+    command: `npm run build && npm run preview -- --port ${PORT} && node -e "setInterval(() => {}, 2147483647)"`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

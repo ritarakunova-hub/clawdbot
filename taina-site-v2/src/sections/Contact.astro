@@ -62,7 +62,7 @@ const f = contact.form;
           name="contact"
           type="text"
           placeholder={f.contactPlaceholder}
-          autocomplete="email"
+          autocomplete="off"
           required
         />
       </div>
@@ -112,8 +112,17 @@ const f = contact.form;
     // а мини-CRM получает это как обычный текст в уже знакомом поле
     // message — новых полей на её стороне заводить не нужно (см.
     // docs/form-contract.md).
-    const territory = sessionStorage.getItem('taina:territory');
-    const chosenPackage = sessionStorage.getItem('taina:package');
+    // Storage can be unavailable in restricted/private browsing contexts.
+    function readSessionValue(key) {
+      try {
+        return sessionStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    }
+
+    const territory = readSessionValue('taina:territory');
+    const chosenPackage = readSessionValue('taina:package');
     const territoryNames = {
       meanings: 'Смыслы',
       images: 'Образы',
@@ -126,9 +135,12 @@ const f = contact.form;
       if (chosenPackage) bits.push(`Интересует: ${chosenPackage}.`);
       if (territory && territoryNames[territory]) bits.push(`Территория «${territoryNames[territory]}».`);
       if (bits.length) messageEl.value = bits.join(' ') + ' ';
+      else messageEl.value = 'Интересует ранний доступ к TAINA Knowledge Map. ';
     }
-    form.querySelector('input[name="territory"]').value = territory ?? '';
-    form.querySelector('input[name="package"]').value = chosenPackage ?? '';
+    const territoryInput = form.querySelector('input[name="territory"]');
+    const packageInput = form.querySelector('input[name="package"]');
+    if (territoryInput) territoryInput.value = territory ?? '';
+    if (packageInput) packageInput.value = chosenPackage ?? '';
 
     const params = new URLSearchParams(location.search);
     for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']) {
@@ -250,7 +262,7 @@ const f = contact.form;
     color: var(--color-ivory);
     background: var(--color-surface);
     border: 1px solid var(--color-line);
-    border-radius: var(--radius-card);
+    border-radius: var(--radius-sm);
     padding: var(--space-3) var(--space-4);
     transition: border-color 260ms var(--ease-out);
   }
@@ -300,7 +312,7 @@ const f = contact.form;
     color: var(--color-bg);
     background: var(--color-gold);
     border: none;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     cursor: pointer;
     transition: opacity var(--duration-response) var(--ease-out);
   }
@@ -355,7 +367,7 @@ const f = contact.form;
   }
 
   .fallback {
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     color: var(--color-sand);
   }
 </style>

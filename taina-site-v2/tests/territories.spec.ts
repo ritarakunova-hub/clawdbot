@@ -28,10 +28,17 @@ test.describe('Сцена «Три территории»', () => {
 
     expect(startTransform).not.toBe(endTransform);
 
-    // Фон секции непрозрачный — не пропускает холст 3D-сцен позади.
-    const bg = await page.evaluate(
-      () => getComputedStyle(document.getElementById('territories')!).backgroundColor,
-    );
+    // Холст 3D-сцен позади не просвечивает: непрозрачный фон есть у самой
+    // секции или у обёртки до <main> (на бумаге фон даёт .paper).
+    const bg = await page.evaluate(() => {
+      let el: HTMLElement | null = document.getElementById('territories');
+      while (el && el.tagName !== 'MAIN') {
+        const c = getComputedStyle(el).backgroundColor;
+        if (c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') return c;
+        el = el.parentElement;
+      }
+      return 'rgba(0, 0, 0, 0)';
+    });
     expect(bg).not.toBe('rgba(0, 0, 0, 0)');
   });
 
