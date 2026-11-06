@@ -10,8 +10,22 @@ import Button from '@/components/Button.astro';
       <p class="eyebrow">Первый цифровой продукт TAINA · готовится к запуску</p>
       <h2>TAINA Knowledge Map</h2>
       <p class="lede">Веб-инструмент, который помогает собрать знания компании в понятную, проверенную и готовую к работе с AI систему.</p>
-      <p class="body">Инструкции лежат в папках, важные решения — в переписках, а ответы на одни и те же вопросы хранятся в головах сотрудников. Knowledge Map помогает превратить этот разрозненный опыт в карту знаний, с которой можно работать самостоятельно или вместе с командой.</p>
-      <Button href="#contact">Узнать о раннем доступе</Button>
+      <p class="body">Инструкции лежат в папках, важные решения — в переписках, а ответы на одни и те же вопросы хранятся в головах сотрудников. Knowledge Map помогает превратить этот разрозненный опыт в карту знаний, с которой можно работать самостоятельно или передать проект команде.</p>
+      <div class="price-card">
+        <p class="price-label">Цена раннего доступа</p>
+        <p class="price"><strong>1 490 ₽</strong><span>после запуска — 1 990 ₽</span></p>
+      </div>
+      <h3 class="included-title">Что входит в первую версию</h3>
+      <ul class="included">
+        <li>Веб-пространство проекта: задачи, этапы и прогресс</li>
+        <li>Конструктор процессов, библиотека знаний и панель проверки качества</li>
+        <li>Автосохранение, импорт и экспорт данных</li>
+        <li>Рабочая тетрадь, таблица из 9 листов и структура папок</li>
+        <li>5 шаблонов, 15 AI-промптов и 30 проверочных вопросов</li>
+        <li>Демо-кейс и план внедрения на 7 дней</li>
+      </ul>
+      <p class="scope-note">Можно работать самостоятельно и передавать проект команде. Совместное редактирование в реальном времени и встроенная AI-автоматизация — не входят в первую версию.</p>
+      <Button href="#contact">Запросить ранний доступ за 1 490 ₽</Button>
       <p class="status">Продукт в разработке. Сейчас формируется первая версия и проверяется на реальных задачах.</p>
     </div>
 
@@ -80,6 +94,63 @@ import Button from '@/components/Button.astro';
 
   .intro :global(a) {
     margin-top: var(--space-5);
+  }
+
+  .price-card {
+    margin-top: var(--space-5);
+    padding: var(--space-4);
+    border: 1px solid var(--color-gold);
+    border-radius: var(--radius-md);
+    max-width: 420px;
+  }
+
+  .price-label,
+  .included-title {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-gold);
+  }
+
+  .price {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+  }
+
+  .price strong {
+    font-size: var(--text-2xl);
+    color: var(--color-ink);
+  }
+
+  .price span {
+    font-size: var(--text-sm);
+    color: var(--color-muted);
+    text-decoration: line-through;
+  }
+
+  .included-title {
+    margin-top: var(--space-6);
+    font-size: var(--text-lg);
+  }
+
+  .included {
+    margin-top: var(--space-3);
+    padding-left: 1.2rem;
+    max-width: var(--measure);
+  }
+
+  .included li {
+    margin-top: var(--space-2);
+    color: var(--color-text);
+  }
+
+  .scope-note {
+    margin-top: var(--space-4);
+    color: var(--color-sand);
+    font-size: var(--text-sm);
+    max-width: var(--measure);
   }
 
   .status {
