@@ -10,9 +10,10 @@ import { hero } from '@/content/copy';
       <p class="eyebrow">{hero.eyebrow}</p>
       <h1 id="hero-h1">{hero.title}</h1>
       <p class="lead">{hero.lead}</p>
+      <p class="price-line">{hero.priceLine}</p>
       <div class="actions">
-        <Button href="#knowledge-map">{hero.primaryCta}</Button>
-        <Button href="#contact" variant="text">{hero.secondaryCta}</Button>
+        <Button href="#contact">{hero.primaryCta}</Button>
+        <Button href="#knowledge-map" variant="text">{hero.secondaryCta}</Button>
       </div>
       <ul class="facts" aria-label="Коротко">
         {hero.facts.map((fact) => <li>{fact}</li>)}
@@ -174,8 +175,18 @@ import { hero } from '@/content/copy';
     transition: opacity 1.3s ease;
   }
 
+  .price-line {
+    margin-top: 1.2rem;
+    color: var(--color-gold);
+    font-size: var(--text-base);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    opacity: 0;
+    transition: opacity 1.2s ease;
+  }
+
   .actions {
-    margin-top: 2rem;
+    margin-top: 1.4rem;
     display: flex;
     align-items: center;
     gap: 1.6rem;
@@ -239,6 +250,7 @@ import { hero } from '@/content/copy';
 
   .stage.on .eyebrow,
   .stage.on .lead,
+  .stage.on .price-line,
   .stage.on .actions,
   .stage.on .facts {
     opacity: 1;
@@ -250,8 +262,11 @@ import { hero } from '@/content/copy';
   .stage.on .lead {
     transition-delay: 0.15s;
   }
+  .stage.on .price-line {
+    transition-delay: 0.28s;
+  }
   .stage.on .actions {
-    transition-delay: 0.35s;
+    transition-delay: 0.42s;
   }
   .stage.on .facts {
     transition-delay: 0.55s;
@@ -306,8 +321,12 @@ import { hero } from '@/content/copy';
       font-size: var(--text-base);
       line-height: 1.55;
     }
+    .price-line {
+      margin-top: 0.9rem;
+      font-size: var(--text-sm);
+    }
     .actions {
-      margin-top: 1.4rem;
+      margin-top: 1.1rem;
     }
     .facts {
       margin-top: 1.5rem;
@@ -339,6 +358,7 @@ import { hero } from '@/content/copy';
     }
     .eyebrow,
     .lead,
+    .price-line,
     .actions,
     .facts {
       transition: none;
@@ -356,6 +376,7 @@ import { hero } from '@/content/copy';
     }
     .hero .eyebrow,
     .hero .lead,
+    .hero .price-line,
     .hero .actions,
     .hero .facts {
       opacity: 1;
