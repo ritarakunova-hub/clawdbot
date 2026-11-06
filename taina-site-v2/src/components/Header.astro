@@ -2,6 +2,7 @@
 import Button from './Button.astro';
 
 const navLinks = [
+  { href: '#knowledge-map', label: 'Продукт' },
   { href: '#demo', label: 'Демо' },
   { href: '#packages', label: 'Пакеты' },
   // Раньше вела на #territories — там эйебрау назывался «О нас» и
@@ -22,7 +23,7 @@ const navLinks = [
   <nav class="nav" aria-label="Разделы">
     {navLinks.map((link) => <a href={link.href}>{link.label}</a>)}
   </nav>
-  <Button href="#contact" variant="outline" size="sm">Диагностика</Button>
+  <Button href="#contact" variant="outline" size="sm">Ранний доступ</Button>
 </header>
 
 <script>
