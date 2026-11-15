@@ -45,6 +45,7 @@
 
 Ручная проверка календаря (секрет берите только из локального окружения, не вставляйте его в переписку):
 
+    set -a && . ./.env && set +a
     curl -X POST http://localhost:3000/check/now -H "x-taina-admin-secret: $ADMIN_WEBHOOK_SECRET"
 
 ## Хранение состояния и развёртывание
