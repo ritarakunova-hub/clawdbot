@@ -55,7 +55,7 @@ async function runFollowUpCheck() {
 
   for (const lead of pending) {
     const days = daysSince(lead.last_status_update);
-    if (days < FOLLOWUP_DAYS) continue; // ещё рано
+    if (!Number.isFinite(days) || days < 0 || days < FOLLOWUP_DAYS) continue; // дата некорректна или ещё рано
 
     const currentCount = Number(lead.follow_up_count) || 0;
 
