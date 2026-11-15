@@ -100,7 +100,7 @@ async function appendLead(lead) {
   await sheets.spreadsheets.values.append({
     spreadsheetId: getSheetId(),
     range: `${SHEET_NAME}!A:${colLetter(COLUMNS.length - 1)}`,
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: 'RAW',
     insertDataOption: 'INSERT_ROWS',
     requestBody: { values: [row] },
   });
@@ -159,7 +159,7 @@ async function updateFields(id, fields) {
   const sheets = await getSheetsClient();
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: getSheetId(),
-    requestBody: { valueInputOption: 'USER_ENTERED', data },
+    requestBody: { valueInputOption: 'RAW', data },
   });
   return true;
 }
