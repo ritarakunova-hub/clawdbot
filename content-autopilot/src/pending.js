@@ -16,11 +16,19 @@ function writeJsonAtomically(filePath, value) {
 }
 
 function loadPending() {
+  let raw;
   try {
-    return JSON.parse(fs.readFileSync(PENDING_PATH, 'utf-8'));
-  } catch {
-    return null;
+    raw = fs.readFileSync(PENDING_PATH, 'utf-8');
+  } catch (err) {
+    if (err.code === 'ENOENT') return null;
+    throw err;
   }
+
+  const pending = JSON.parse(raw);
+  if (!pending || typeof pending !== 'object' || Array.isArray(pending) || typeof pending.postId !== 'string') {
+    throw new Error('Файл pending.json повреждён или имеет неверный формат; публикация остановлена до проверки');
+  }
+  return pending;
 }
 
 function savePending(pending) {
