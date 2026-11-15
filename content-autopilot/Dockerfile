@@ -8,6 +8,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --chown=node:node index.js ./
 COPY --chown=node:node src ./src
+COPY --chown=node:node scripts ./scripts
 COPY --chown=node:node data/posts.json ./data/posts.json
 
 USER node
