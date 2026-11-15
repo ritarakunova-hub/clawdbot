@@ -98,8 +98,9 @@ function runPreflight(env = process.env, dataDir) {
 
   let calendarCount = 0;
   try {
-    const calendarErrors = validateCalendar(loadPosts());
-    calendarCount = loadPosts().length;
+    const posts = loadPosts();
+    const calendarErrors = validateCalendar(posts);
+    calendarCount = posts.length;
     errors.push(...calendarErrors);
   } catch {
     errors.push('Не удалось прочитать data/posts.json');
