@@ -35,3 +35,38 @@ jobs:
         run: npm ci
       - name: Run tests
         run: npm test
+
+  docker-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate Compose configuration
+        working-directory: content-autopilot
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+      - name: Build runtime image
+        run: docker build --tag taina-content-autopilot:ci ./content-autopilot
+      - name: Start container and test health/auth
+        run: |
+          docker run --detach --name taina-autopilot-ci \
+            --publish 127.0.0.1:3000:3000 \
+            --env PORT=3000 \
+            --env CONTENT_AUTOPILOT_DATA_DIR=/app/data \
+            --env ADMIN_WEBHOOK_SECRET=ci-test-secret \
+            --env TELEGRAM_WEBHOOK_SECRET=ci-telegram-secret \
+            taina-content-autopilot:ci
+          cleanup() { docker logs taina-autopilot-ci || true; docker rm --force taina-autopilot-ci || true; }
+          trap cleanup EXIT
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:3000/health; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:3000/health
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --request POST http://127.0.0.1:3000/check/now \
+            --header 'x-taina-admin-secret: wrong-secret')
+          test "$status" = "401"
