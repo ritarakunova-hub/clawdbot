@@ -20,7 +20,7 @@ const {
 const { buildWallPostParams } = require('../src/vk');
 const { formatPublishSummary, publish } = require('../src/publisher');
 const { loadPending, savePending, clearPending } = require('../src/pending');
-const { safeSecretEquals } = require('../src/security');
+const { safeSecretEquals, isAuthorizedCallback } = require('../src/security');
 const { postToWall } = require('../src/vk');
 
 {
@@ -106,6 +106,7 @@ const { postToWall } = require('../src/vk');
 {
   const value = { postId: '2026-09-17', status: 'awaiting_approval' };
   savePending(value);
+  assert.strictEqual(fs.statSync(testDataDir).mode & 0o777, 0o700);
   assert.deepStrictEqual(loadPending(), value);
   clearPending();
   assert.strictEqual(loadPending(), null);
@@ -121,6 +122,8 @@ const { postToWall } = require('../src/vk');
   assert.ok(!/APPROVAL_WINDOW_MINUTES|auto:\s*true/.test(source));
   assert.ok(source.includes('if (!TELEGRAM_WEBHOOK_SECRET)'));
   assert.ok(source.includes('TELEGRAM_APPROVER_ID'));
+  assert.ok(source.includes('isAuthorizedCallback'));
+  assert.ok(source.includes("limit: '64kb'"));
   assert.ok(source.includes('ADMIN_WEBHOOK_SECRET'));
   assert.ok(source.includes('x-taina-admin-secret'));
   console.log('OK: no auto-publish path and protected manual trigger');
@@ -137,6 +140,18 @@ const { postToWall } = require('../src/vk');
   assert.strictEqual(safeSecretEquals('wrong-secret', 'same-secret'), false);
   assert.strictEqual(safeSecretEquals('x', 'same-secret'), false);
   assert.strictEqual(safeSecretEquals('', ''), false);
+
+  const pendingIdentity = { telegramChatId: '123456', telegramMessageId: 42 };
+  const approvalCallback = {
+    from: { id: 987654 },
+    message: { message_id: 42, chat: { id: 123456 } }
+  };
+  assert.strictEqual(isAuthorizedCallback(approvalCallback, pendingIdentity, '987654'), true);
+  assert.strictEqual(isAuthorizedCallback({ ...approvalCallback, from: { id: 111111 } }, pendingIdentity, '987654'), false);
+  assert.strictEqual(isAuthorizedCallback({ ...approvalCallback, message: { ...approvalCallback.message, message_id: 41 } }, pendingIdentity, '987654'), false);
+  assert.strictEqual(isAuthorizedCallback({ ...approvalCallback, message: { ...approvalCallback.message, chat: { id: 999999 } } }, pendingIdentity, '987654'), false);
+  assert.strictEqual(isAuthorizedCallback(approvalCallback, pendingIdentity, ''), false);
+  assert.strictEqual(isAuthorizedCallback(approvalCallback, { ...pendingIdentity, telegramMessageId: null }, '987654'), false);
   console.log('OK: constant-time secret comparison');
 }
 
@@ -300,6 +315,7 @@ async function testPreflight() {
     TELEGRAM_BOT_TOKEN: '123456:TEST_BOT_TOKEN',
     TELEGRAM_CHAT_ID: '123456',
     TELEGRAM_CHANNEL_ID: '-100123456',
+    TELEGRAM_APPROVER_ID: '987654',
     TELEGRAM_WEBHOOK_SECRET: webhookSecret,
     TELEGRAM_WEBHOOK_URL: 'https://automation.example.com/telegram/webhook',
     ADMIN_WEBHOOK_SECRET: adminSecret,
@@ -318,12 +334,14 @@ async function testPreflight() {
     TELEGRAM_WEBHOOK_URL: 'http://automation.example.com/telegram/webhook',
     ADMIN_WEBHOOK_SECRET: webhookSecret,
     VK_GROUP_ID: 'not-a-number',
+    TELEGRAM_APPROVER_ID: 'not-numeric',
     TIMEZONE: 'Not/A_Timezone'
   }, path.join(testDataDir, 'invalid-preflight-data'));
   assert.strictEqual(invalid.ok, false);
   assert.ok(invalid.errors.some((error) => /HTTPS/.test(error)));
   assert.ok(invalid.errors.some((error) => /должны различаться/.test(error)));
   assert.ok(invalid.errors.some((error) => /VK_GROUP_ID/.test(error)));
+  assert.ok(invalid.errors.some((error) => /TELEGRAM_APPROVER_ID/.test(error)));
   assert.ok(invalid.errors.some((error) => /часовой пояс/.test(error)));
 
   const posts = loadPosts();
