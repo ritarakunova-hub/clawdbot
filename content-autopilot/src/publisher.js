@@ -5,6 +5,13 @@
 const telegram = require('./telegram');
 const vk = require('./vk');
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 async function publish(text) {
   const results = { telegram: null, vk: null };
 
@@ -29,8 +36,8 @@ function formatPublishSummary(results) {
   const complete = results.telegram === 'ok' && results.vk === 'ok';
   const lines = [
     complete ? '✅ Публикация подтверждена и завершена на обеих площадках' : '⚠️ Публикация завершилась не полностью',
-    'Telegram-канал: ' + (results.telegram === 'ok' ? '✅' : '⚠️ ' + results.telegram),
-    'VK: ' + (results.vk === 'ok' ? '✅' : '⚠️ ' + results.vk)
+    'Telegram-канал: ' + (results.telegram === 'ok' ? '✅' : '⚠️ ' + escapeHtml(results.telegram)),
+    'VK: ' + (results.vk === 'ok' ? '✅' : '⚠️ ' + escapeHtml(results.vk))
   ];
 
   if (!complete) {
