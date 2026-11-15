@@ -88,10 +88,7 @@ The Telegram webhook URL must be:
 Set `TELEGRAM_WEBHOOK_URL=https://YOUR-SUBDOMAIN/telegram/webhook` in `.env`. Then load the environment and run the included setup script. It sends the bot token only inside the API request URL and the webhook secret in the POST body; neither secret is written to shell arguments or script output:
 
 ```bash
-set -a
-. ./.env
-set +a
-node scripts/set-telegram-webhook.js
+docker compose exec app node scripts/set-telegram-webhook.js
 ```
 
 The script rejects non-HTTPS webhook URLs, validates the secret format, checks Telegram's API response, and prints only the public webhook URL. Never paste credentials into chat, Git, screenshots, or shell commands.
