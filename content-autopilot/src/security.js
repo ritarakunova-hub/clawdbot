@@ -11,4 +11,26 @@ function safeSecretEquals(candidate, expected) {
   return crypto.timingSafeEqual(candidateBytes, expectedBytes);
 }
 
-module.exports = { safeSecretEquals };
+function sameId(left, right) {
+  return left !== undefined && right !== undefined && String(left) === String(right);
+}
+
+/**
+ * Only the configured approver may act on the exact Telegram message
+ * created for the current pending draft. A copied/old callback is rejected.
+ */
+function isAuthorizedCallback(callback, pending, approverId) {
+  if (!callback || !pending || !approverId ||
+      !pending.telegramChatId || !pending.telegramMessageId) {
+    return false;
+  }
+
+  const message = callback.message;
+  if (!message || !message.chat) return false;
+
+  return sameId(callback.from && callback.from.id, approverId) &&
+    sameId(message.chat.id, pending.telegramChatId) &&
+    sameId(message.message_id, pending.telegramMessageId);
+}
+
+module.exports = { safeSecretEquals, isAuthorizedCallback };
