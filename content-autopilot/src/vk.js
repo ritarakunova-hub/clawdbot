@@ -1,19 +1,13 @@
 /**
  * Публикация на стену сообщества VK через VK API (wall.post).
- * Используется токен сообщества (Management → Работа с API → Создать
- * ключ доступа) — не личный OAuth-токен: для паблика это безопасный
- * и рекомендованный VK способ автоматизации, без риска для аккаунта.
+ * Токен передаётся в POST body, а не в URL query string.
  */
-
 const API_VERSION = process.env.VK_API_VERSION || '5.199';
+const REQUEST_TIMEOUT_MS = 15000;
 
-/**
- * Собирает параметры запроса к wall.post — вынесено в чистую функцию,
- * чтобы протестировать без реального обращения к VK.
- */
 function buildWallPostParams({ groupId, message, accessToken }) {
   return {
-    owner_id: String(-Math.abs(Number(groupId))), // паблики — всегда отрицательный owner_id
+    owner_id: String(-Math.abs(Number(groupId))),
     message,
     from_group: '1',
     access_token: accessToken,
@@ -29,16 +23,33 @@ async function postToWall(message) {
   }
 
   const params = buildWallPostParams({ groupId, message, accessToken });
-  const url = `https://api.vk.com/method/wall.post?${new URLSearchParams(params)}`;
+  const res = await fetch('https://api.vk.com/method/wall.post', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams(params),
+    signal: AbortSignal.timeout(15000)
+  });
 
-  const res = await fetch(url, { method: 'POST' });
-  const body = await res.json();
-
-  if (body.error) {
-    throw new Error(`VK API вернул ошибку ${body.error.error_code}: ${body.error.error_msg}`);
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    throw new Error('VK API вернул невалидный JSON, HTTP ' + res.status);
   }
 
-  return body.response; // { post_id: ... }
+  if (!res.ok) {
+    throw new Error('VK API вернул HTTP ' + res.status);
+  }
+  if (body && body.error) {
+    throw new Error('VK API вернул ошибку ' + body.error.error_code + ': ' + body.error.error_msg);
+  }
+
+  const postId = body && body.response && body.response.post_id;
+  if (!Number.isSafeInteger(Number(postId)) || Number(postId) <= 0) {
+    throw new Error('VK API не вернул подтверждение созданной записи');
+  }
+
+  return body.response;
 }
 
 module.exports = { postToWall, buildWallPostParams };
