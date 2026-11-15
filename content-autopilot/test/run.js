@@ -14,7 +14,8 @@ const {
   buildCallbackData,
   parseCallbackData,
   draftKeyboard,
-  reviewKeyboard
+  reviewKeyboard,
+  apiCall
 } = require('../src/telegram');
 const { buildWallPostParams } = require('../src/vk');
 const { formatPublishSummary } = require('../src/publisher');
@@ -114,5 +115,43 @@ const { loadPending, savePending, clearPending } = require('../src/pending');
   console.log('OK: timezone date');
 }
 
-fs.rmSync(testDataDir, { recursive: true, force: true });
-console.log('\nAll checks passed.');
+// 12. Telegram API body-level errors must not be mistaken for success.
+async function testTelegramApiBodyErrors() {
+  const originalFetch = global.fetch;
+  const originalToken = process.env.TELEGRAM_BOT_TOKEN;
+  process.env.TELEGRAM_BOT_TOKEN = 'test-token';
+
+  try {
+    global.fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: false, description: 'Forbidden & invalid <chat>' })
+    });
+    await assert.rejects(
+      () => apiCall('sendMessage', { chat_id: '1', text: 'test' }),
+      /Forbidden & invalid <chat>/
+    );
+
+    global.fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true, result: { message_id: 42 } })
+    });
+    const success = await apiCall('sendMessage', { chat_id: '1', text: 'test' });
+    assert.strictEqual(success.result.message_id, 42);
+    console.log('OK: Telegram API body-level errors');
+  } finally {
+    global.fetch = originalFetch;
+    if (originalToken === undefined) delete process.env.TELEGRAM_BOT_TOKEN;
+    else process.env.TELEGRAM_BOT_TOKEN = originalToken;
+  }
+}
+
+testTelegramApiBodyErrors().then(() => {
+  fs.rmSync(testDataDir, { recursive: true, force: true });
+  console.log('\\nAll checks passed.');
+}).catch((err) => {
+  console.error(err);
+  fs.rmSync(testDataDir, { recursive: true, force: true });
+  process.exitCode = 1;
+});
