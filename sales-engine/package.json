@@ -14,5 +14,8 @@
     "googleapis": "^140.0.1",
     "node-cron": "^4.6.0",
     "zod": "^3.24.1"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }
