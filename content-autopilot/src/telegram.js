@@ -19,14 +19,22 @@ function parseCallbackData(data) {
 }
 
 function formatDraftPreview(post) {
-  return [
+  const vkText = post.text || '';
+  const telegramText = post.telegramText || vkText;
+  const lines = [
     '📝 <b>Черновик на согласование (' + escapeHtml(post.rubric) + ')</b>',
     '<b>' + escapeHtml(post.title) + '</b>',
     '',
-    escapeHtml(post.text),
-    '',
-    'Публикация произойдёт только после нажатия кнопки. Если ничего не делать — пост останется черновиком.'
-  ].join('\n');
+    '<b>VK — основная версия</b>',
+    escapeHtml(vkText)
+  ];
+
+  if (telegramText !== vkText) {
+    lines.push('', '<b>Telegram — короткая версия</b>', escapeHtml(telegramText));
+  }
+
+  lines.push('', 'Публикация произойдёт только после нажатия кнопки. Если ничего не делать — пост останется черновиком.');
+  return lines.join('\n');
 }
 
 function formatTopicReminder(post) {
