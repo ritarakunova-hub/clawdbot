@@ -30,7 +30,7 @@ async function resolvePublish(pending) {
   const publishing = { ...current, status: 'publishing', approvedAt: new Date().toISOString() };
   savePending(publishing);
 
-  const results = await publish(current.text);
+  const results = await publish({ text: current.text, telegramText: current.telegramText || current.text });
   const complete = results.telegram === 'ok' && results.vk === 'ok';
 
   if (complete) {
@@ -115,6 +115,7 @@ async function checkAndSchedule() {
     const pending = {
       postId: post.date,
       text: post.text,
+      telegramText: post.telegramText || post.text,
       telegramChatId: process.env.TELEGRAM_CHAT_ID,
       status: 'creating_draft',
       createdAt: new Date().toISOString()
