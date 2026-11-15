@@ -4,6 +4,7 @@ const { getPostForDate, todayInTimezone } = require('./src/posts');
 const telegram = require('./src/telegram');
 const { publish, formatPublishSummary } = require('./src/publisher');
 const { loadPending, savePending, clearPending } = require('./src/pending');
+const { safeSecretEquals } = require('./src/security');
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
@@ -12,6 +13,7 @@ const PORT = process.env.PORT || 3000;
 const TIMEZONE = process.env.TIMEZONE || 'Europe/Moscow';
 const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '0 9 * * *';
 const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || '';
+const ADMIN_WEBHOOK_SECRET = process.env.ADMIN_WEBHOOK_SECRET || '';
 const TELEGRAM_APPROVER_ID = process.env.TELEGRAM_APPROVER_ID || process.env.TELEGRAM_CHAT_ID || '';
 
 app.get('/health', (req, res) => res.status(200).json({ ok: true }));
@@ -143,6 +145,13 @@ async function checkAndSchedule() {
 }
 
 app.post('/check/now', async (req, res) => {
+  if (!ADMIN_WEBHOOK_SECRET) {
+    return res.status(503).json({ ok: false, error: 'ADMIN_WEBHOOK_SECRET не настроен' });
+  }
+  if (!safeSecretEquals(req.get('x-taina-admin-secret') || '', ADMIN_WEBHOOK_SECRET)) {
+    return res.status(401).json({ ok: false });
+  }
+
   try {
     await checkAndSchedule();
     res.status(200).json({
@@ -161,7 +170,7 @@ app.post('/telegram/webhook', async (req, res) => {
     return res.status(503).json({ ok: false, error: 'TELEGRAM_WEBHOOK_SECRET не настроен' });
   }
   const header = req.headers['x-telegram-bot-api-secret-token'];
-  if (header !== TELEGRAM_WEBHOOK_SECRET) {
+  if (!safeSecretEquals(header || '', TELEGRAM_WEBHOOK_SECRET)) {
     return res.status(401).json({ ok: false });
   }
 
