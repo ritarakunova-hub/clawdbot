@@ -18,14 +18,21 @@ const {
   apiCall
 } = require('../src/telegram');
 const { buildWallPostParams } = require('../src/vk');
-const { formatPublishSummary } = require('../src/publisher');
+const { formatPublishSummary, publish } = require('../src/publisher');
 const { loadPending, savePending, clearPending } = require('../src/pending');
 
 {
   const posts = loadPosts();
-  assert.strictEqual(posts.length, 46);
-  assert.strictEqual(posts.filter((post) => post.type === 'full').length, 12);
-  assert.strictEqual(posts.filter((post) => post.type === 'topic').length, 34);
+  assert.strictEqual(posts.length, 32);
+  assert.strictEqual(posts.filter((post) => post.type === 'full').length, 18);
+  assert.strictEqual(posts.filter((post) => post.type === 'topic').length, 14);
+  const upcoming = posts.filter((post) => post.date >= '2026-11-15');
+  assert.deepStrictEqual(upcoming.map((post) => post.date), [
+    '2026-11-17', '2026-11-19', '2026-11-22',
+    '2026-11-24', '2026-11-26', '2026-11-29'
+  ]);
+  assert.ok(upcoming.every((post) => post.type === 'full' && post.telegramText));
+  assert.ok(!upcoming.some((post) => /RAG|архетип|ассистент/i.test(post.title)));
   console.log('OK: calendar data');
 }
 
@@ -37,10 +44,13 @@ const { loadPending, savePending, clearPending } = require('../src/pending');
 }
 
 {
-  const message = formatDraftPreview({ rubric: 'Путь', title: 'Test <b>', text: 'A & B' });
+  const message = formatDraftPreview({ rubric: 'Путь', title: 'Test <b>', text: 'A & B', telegramText: 'C & D' });
   assert.ok(message.includes('&lt;b&gt;'));
   assert.ok(!message.includes('Test <b>'));
   assert.ok(message.includes('A &amp; B'));
+  assert.ok(message.includes('VK — основная версия'));
+  assert.ok(message.includes('Telegram — короткая версия'));
+  assert.ok(message.includes('C &amp; D'));
   assert.ok(message.includes('только после нажатия кнопки'));
   assert.ok(!/через \d+ минут|если ничего не делать.{0,40}опубликую/i.test(message));
   console.log('OK: explicit approval preview');
@@ -147,7 +157,29 @@ async function testTelegramApiBodyErrors() {
   }
 }
 
-testTelegramApiBodyErrors().then(() => {
+async function testPlatformSpecificContent() {
+  const telegram = require('../src/telegram');
+  const vk = require('../src/vk');
+  const originalTelegram = telegram.sendChannelPost;
+  const originalVk = vk.postToWall;
+  let sentToTelegram = '';
+  let sentToVk = '';
+
+  telegram.sendChannelPost = async (text) => { sentToTelegram = text; };
+  vk.postToWall = async (text) => { sentToVk = text; };
+  try {
+    const result = await publish({ text: 'Long VK version', telegramText: 'Short Telegram version' });
+    assert.deepStrictEqual(result, { telegram: 'ok', vk: 'ok' });
+    assert.strictEqual(sentToTelegram, 'Short Telegram version');
+    assert.strictEqual(sentToVk, 'Long VK version');
+    console.log('OK: platform-specific post text');
+  } finally {
+    telegram.sendChannelPost = originalTelegram;
+    vk.postToWall = originalVk;
+  }
+}
+
+testTelegramApiBodyErrors().then(testPlatformSpecificContent).then(() => {
   fs.rmSync(testDataDir, { recursive: true, force: true });
   console.log('\\nAll checks passed.');
 }).catch((err) => {
