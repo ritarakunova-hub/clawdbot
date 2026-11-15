@@ -16,12 +16,14 @@ async function callTelegram(method, payload) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(10000),
   });
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Telegram API (${method}) вернул ${res.status}: ${body}`);
+    throw new Error('telegram_api_http_error');
   }
-  return res.json();
+  const result = await res.json().catch(() => null);
+  if (!result || result.ok !== true) throw new Error('telegram_api_rejected_request');
+  return result;
 }
 
 function getChatId() {
@@ -86,8 +88,7 @@ async function sendLeadCard(lead) {
 async function sendPlainMessage(text) {
   await callTelegram('sendMessage', {
     chat_id: getChatId(),
-    text,
-    parse_mode: 'HTML',
+    text: String(text || ''),
   });
 }
 
