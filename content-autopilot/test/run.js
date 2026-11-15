@@ -20,6 +20,8 @@ const {
 const { buildWallPostParams } = require('../src/vk');
 const { formatPublishSummary, publish } = require('../src/publisher');
 const { loadPending, savePending, clearPending } = require('../src/pending');
+const { safeSecretEquals } = require('../src/security');
+const { postToWall } = require('../src/vk');
 
 {
   const posts = loadPosts();
@@ -107,7 +109,10 @@ const { loadPending, savePending, clearPending } = require('../src/pending');
   assert.deepStrictEqual(loadPending(), value);
   clearPending();
   assert.strictEqual(loadPending(), null);
-  console.log('OK: pending storage');
+  fs.writeFileSync(path.join(testDataDir, 'pending.json'), '{broken-json');
+  assert.throws(() => loadPending(), SyntaxError);
+  fs.unlinkSync(path.join(testDataDir, 'pending.json'));
+  console.log('OK: pending storage fails closed on corrupt JSON');
 }
 
 {
@@ -116,13 +121,64 @@ const { loadPending, savePending, clearPending } = require('../src/pending');
   assert.ok(!/APPROVAL_WINDOW_MINUTES|auto:\s*true/.test(source));
   assert.ok(source.includes('if (!TELEGRAM_WEBHOOK_SECRET)'));
   assert.ok(source.includes('TELEGRAM_APPROVER_ID'));
-  console.log('OK: no auto-publish path');
+  assert.ok(source.includes('ADMIN_WEBHOOK_SECRET'));
+  assert.ok(source.includes('x-taina-admin-secret'));
+  console.log('OK: no auto-publish path and protected manual trigger');
 }
 
 {
   const today = todayInTimezone('Europe/Moscow');
   assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(today));
   console.log('OK: timezone date');
+}
+
+{
+  assert.strictEqual(safeSecretEquals('same-secret', 'same-secret'), true);
+  assert.strictEqual(safeSecretEquals('wrong-secret', 'same-secret'), false);
+  assert.strictEqual(safeSecretEquals('x', 'same-secret'), false);
+  assert.strictEqual(safeSecretEquals('', ''), false);
+  console.log('OK: constant-time secret comparison');
+}
+
+// 13. VK must not treat HTTP errors or malformed success payloads as a published post.
+async function testVkApiResponses() {
+  const telegramModule = require('../src/telegram');
+  const originalFetch = global.fetch;
+  const originalGroup = process.env.VK_GROUP_ID;
+  const originalToken = process.env.VK_COMMUNITY_TOKEN;
+  process.env.VK_GROUP_ID = '12345';
+  process.env.VK_COMMUNITY_TOKEN = 'secret-test-token';
+
+  try {
+    let capturedUrl = '';
+    let capturedBody = '';
+    global.fetch = async (url, options) => {
+      capturedUrl = String(url);
+      capturedBody = String(options.body);
+      return { ok: true, status: 200, json: async () => ({ response: { post_id: 77 } }) };
+    };
+    const success = await postToWall('Hello');
+    assert.strictEqual(success.post_id, 77);
+    assert.strictEqual(capturedUrl, 'https://api.vk.com/method/wall.post');
+    assert.ok(capturedBody.includes('access_token=secret-test-token'));
+
+    global.fetch = async () => ({
+      ok: true, status: 200, json: async () => ({ response: {} })
+    });
+    await assert.rejects(() => postToWall('Hello'), /не вернул подтверждение/);
+
+    global.fetch = async () => ({
+      ok: false, status: 502, json: async () => ({})
+    });
+    await assert.rejects(() => postToWall('Hello'), /HTTP 502/);
+    console.log('OK: VK API errors and response validation');
+  } finally {
+    global.fetch = originalFetch;
+    if (originalGroup === undefined) delete process.env.VK_GROUP_ID;
+    else process.env.VK_GROUP_ID = originalGroup;
+    if (originalToken === undefined) delete process.env.VK_COMMUNITY_TOKEN;
+    else process.env.VK_COMMUNITY_TOKEN = originalToken;
+  }
 }
 
 // 12. Telegram API body-level errors must not be mistaken for success.
@@ -179,7 +235,7 @@ async function testPlatformSpecificContent() {
   }
 }
 
-testTelegramApiBodyErrors().then(testPlatformSpecificContent).then(() => {
+testTelegramApiBodyErrors().then(testPlatformSpecificContent).then(testVkApiResponses).then(() => {
   fs.rmSync(testDataDir, { recursive: true, force: true });
   console.log('\\nAll checks passed.');
 }).catch((err) => {
