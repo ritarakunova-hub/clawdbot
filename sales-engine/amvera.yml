@@ -2,12 +2,8 @@ meta:
   environment: node
   toolchain:
     name: npm
-    version: 18
-
-build:
-  install: npm install
+    version: 24
 
 run:
   scriptName: index.js
   containerPort: 3000
-  persistent: false
