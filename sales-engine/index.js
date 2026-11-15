@@ -78,13 +78,9 @@ function runExclusive(name, task) {
 }
 
 function makeCsrfCookie(token) {
-  const secure = process.env.NODE_ENV === 'production';
-  const cookieName = secure ? '__Host-taina-csrf' : 'taina-csrf';
   return {
-    name: cookieName,
-    value: secure
-      ? token + '; Path=/; Max-Age=3600; Secure; HttpOnly; SameSite=Strict'
-      : token + '; Path=/; Max-Age=3600; HttpOnly; SameSite=Strict'
+    name: '__Host-taina-csrf',
+    value: token + '; Path=/; Max-Age=3600; Secure; HttpOnly; SameSite=Strict'
   };
 }
 
