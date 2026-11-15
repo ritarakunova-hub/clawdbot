@@ -235,7 +235,63 @@ async function testPlatformSpecificContent() {
   }
 }
 
-testTelegramApiBodyErrors().then(testPlatformSpecificContent).then(testVkApiResponses).then(() => {
+
+async function testWebhookSetup() {
+  const { setTelegramWebhook } = require('../src/webhook-setup');
+  const botToken = '123456:TEST_BOT_TOKEN';
+  const secretToken = 'webhook-secret-for-tests-0123456789';
+  const webhookUrl = 'https://automation.example.com/telegram/webhook';
+  let capturedUrl = '';
+  let capturedOptions;
+
+  const result = await setTelegramWebhook({
+    botToken,
+    secretToken,
+    webhookUrl,
+    fetchImpl: async (url, options) => {
+      capturedUrl = String(url);
+      capturedOptions = options;
+      return { ok: true, status: 200, json: async () => ({ ok: true, result: true }) };
+    }
+  });
+
+  assert.strictEqual(capturedUrl, 'https://api.telegram.org/bot' + botToken + '/setWebhook');
+  assert.strictEqual(capturedOptions.method, 'POST');
+  assert.strictEqual(capturedOptions.headers['Content-Type'], 'application/x-www-form-urlencoded');
+  const payload = new URLSearchParams(capturedOptions.body);
+  assert.strictEqual(payload.get('url'), webhookUrl);
+  assert.strictEqual(payload.get('secret_token'), secretToken);
+  assert.ok(!capturedUrl.includes(secretToken));
+  assert.deepStrictEqual(result, { ok: true, webhookUrl });
+
+  await assert.rejects(() => setTelegramWebhook({
+    botToken, secretToken, webhookUrl: 'http://automation.example.com/telegram/webhook',
+    fetchImpl: async () => { throw new Error('fetch should not run'); }
+  }), /HTTPS/);
+
+  await assert.rejects(() => setTelegramWebhook({
+    botToken, secretToken: 'short', webhookUrl,
+    fetchImpl: async () => { throw new Error('fetch should not run'); }
+  }), /32–256/);
+
+  await assert.rejects(() => setTelegramWebhook({
+    botToken, secretToken, webhookUrl,
+    fetchImpl: async () => ({
+      ok: true, status: 200, json: async () => ({ ok: false, description: 'Unauthorized' })
+    })
+  }), /Unauthorized/);
+
+  await assert.rejects(() => setTelegramWebhook({
+    botToken, secretToken, webhookUrl,
+    fetchImpl: async () => ({
+      ok: false, status: 502, json: async () => ({ ok: true })
+    })
+  }), /HTTP 502/);
+
+  console.log('OK: secure Telegram webhook setup and API failures');
+}
+
+testTelegramApiBodyErrors().then(testPlatformSpecificContent).then(testVkApiResponses).then(testWebhookSetup).then(() => {
   fs.rmSync(testDataDir, { recursive: true, force: true });
   console.log('\\nAll checks passed.');
 }).catch((err) => {
