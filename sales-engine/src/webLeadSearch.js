@@ -38,6 +38,7 @@ const SEARCH_SYSTEM = `Ты помогаешь найти реальные су�
 [{"name": "...", "site": "...", "phone": "..."}]`;
 
 function extractJsonArray(text) {
+  if (typeof text !== 'string' || text.length > 100000) return [];
   const fenced = text.match(/```json\s*([\s\S]*?)```/);
   const raw = fenced ? fenced[1] : (text.match(/(\[[\s\S]*\])/) || [])[1];
   if (!raw) return [];
@@ -76,11 +77,15 @@ async function searchCompanies(niche, city, limit) {
 
   const places = extractJsonArray(text);
 
-  return places.slice(0, limit).map((place) => ({
-    name: (place && place.name) || '',
-    site: (place && place.site) || '',
-    phone: (place && place.phone) || '',
-  }));
+  return places
+    .filter(place => place && typeof place === 'object' && !Array.isArray(place))
+    .slice(0, Math.min(30, Math.max(1, Number(limit) || 1)))
+    .map(place => ({
+      name: typeof place.name === 'string' ? place.name.trim().slice(0, 160) : '',
+      site: typeof place.site === 'string' ? place.site.trim().slice(0, 2048) : '',
+      phone: typeof place.phone === 'string' ? place.phone.trim().slice(0, 48) : '',
+    }))
+    .filter(place => place.name.length > 0);
 }
 
 /**
