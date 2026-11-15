@@ -16,8 +16,49 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  sync-lockfile:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/feat/content-autopilot-safe-approval' && github.actor == 'ritarakunova-hub' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: content-autopilot
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ github.ref }}
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: content-autopilot/package-lock.json
+      - name: Resolve and audit committed dependencies
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          npm audit fix --package-lock-only --ignore-scripts
+          npm audit --omit=dev --audit-level=high
+      - name: Commit lockfile changes when required
+        working-directory: .
+        run: |
+          if git diff --quiet -- content-autopilot/package-lock.json; then
+            echo "Lockfile already matches package.json and passes audit."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add content-autopilot/package-lock.json
+            git commit -m "chore(content-autopilot): sync audited dependency lockfile"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+  test:
+    needs: sync-lockfile
+    if: ${{ always() && (needs.sync-lockfile.result == 'success' || needs.sync-lockfile.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -26,15 +67,17 @@ jobs:
       run:
         working-directory: content-autopilot
     steps:
-      - name: Checkout
+      - name: Checkout tested ref
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ github.ref }}
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
           cache-dependency-path: content-autopilot/package-lock.json
-      - name: Install dependencies
+      - name: Install exact committed dependencies
         run: npm ci
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
@@ -43,6 +86,7 @@ jobs:
 
   docker-smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
