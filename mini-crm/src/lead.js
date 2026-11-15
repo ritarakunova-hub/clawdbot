@@ -11,8 +11,15 @@ const MAX = {
 function pick(data, names) {
   for (const name of names) {
     const value = data[name];
-    if (value !== undefined && value !== null && value !== '') {
-      if (Array.isArray(value)) return value.map(String).join(', ').trim();
+    if (value === undefined || value === null || value === '') continue;
+    if (Array.isArray(value)) {
+      return value
+        .filter((item) => ['string', 'number', 'boolean'].includes(typeof item))
+        .map((item) => String(item).trim())
+        .filter(Boolean)
+        .join(', ');
+    }
+    if (['string', 'number', 'boolean'].includes(typeof value)) {
       return String(value).trim();
     }
   }
@@ -66,13 +73,19 @@ function parseNetlifyLead(body) {
     throw validationError('consent_required', 'Нет подтверждённого согласия на обработку данных');
   }
 
+  const formName = String(payload.form_name || root.form_name || '').trim();
+  if (formName !== 'taina-diagnostic') {
+    throw validationError('unexpected_form', 'Webhook разрешён только для формы taina-diagnostic');
+  }
+
   const lead = {
     submission_id: submissionId,
     name: pick(data, ['name', 'Name', 'имя', 'Имя']),
     email: pick(data, ['email', 'Email', 'почта', 'Почта']),
     phone: pick(data, ['phone', 'Phone', 'телефон', 'Телефон']),
-    message: pick(data, ['message', 'Message', 'сообщение', 'Сообщение', 'комментарий']),
-    form_name: String(payload.form_name || root.form_name || '').trim(),
+    // Free-form text is intentionally not stored: it can contain sensitive or confidential data.
+    message: '',
+    form_name: formName,
     consent_status: 'yes',
     received_at: payload.created_at || root.created_at || new Date().toISOString(),
     status: 'Новая',
