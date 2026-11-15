@@ -105,7 +105,8 @@ async function sendTopicReminder(post) {
 async function sendChannelPost(text) {
   const channelId = process.env.TELEGRAM_CHANNEL_ID;
   if (!channelId) throw new Error('Не задана переменная окружения TELEGRAM_CHANNEL_ID');
-  return apiCall('sendMessage', { chat_id: channelId, text: text, parse_mode: 'HTML' });
+  // Posts are plain text from the calendar; do not parse user-authored text as HTML.
+  return apiCall('sendMessage', { chat_id: channelId, text: text });
 }
 
 async function markDraftDecided(chatId, messageId, statusLine) {
