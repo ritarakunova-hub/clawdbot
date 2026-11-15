@@ -12,25 +12,21 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;');
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-async function publish(text) {
+async function publish(content) {
+  const post = typeof content === 'string' ? { text: content } : (content || {});
+  const vkText = post.text || post.vkText || '';
+  const telegramText = post.telegramText || vkText;
   const results = { telegram: null, vk: null };
 
   try {
-    await telegram.sendChannelPost(text);
+    await telegram.sendChannelPost(telegramText);
     results.telegram = 'ok';
   } catch (err) {
     results.telegram = 'ошибка: ' + err.message;
   }
 
   try {
-    await vk.postToWall(text);
+    await vk.postToWall(vkText);
     results.vk = 'ok';
   } catch (err) {
     results.vk = 'ошибка: ' + err.message;
