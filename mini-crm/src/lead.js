@@ -45,15 +45,16 @@ function hasConsent(data) {
 }
 
 function parseNetlifyLead(body) {
-  const payload = body && body.payload && typeof body.payload === 'object'
-    ? body.payload
-    : (body || {});
+  const root = body && typeof body === 'object' && !Array.isArray(body) ? body : {};
+  const payload = root.payload && typeof root.payload === 'object' && !Array.isArray(root.payload)
+    ? root.payload
+    : root;
   const data = payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
     ? payload.data
     : {};
 
   const submissionId = String(
-    payload.id || payload.submission_id || body.id || ''
+    payload.id || payload.submission_id || root.id || ''
   ).trim();
 
   if (!submissionId) {
@@ -71,9 +72,9 @@ function parseNetlifyLead(body) {
     email: pick(data, ['email', 'Email', 'почта', 'Почта']),
     phone: pick(data, ['phone', 'Phone', 'телефон', 'Телефон']),
     message: pick(data, ['message', 'Message', 'сообщение', 'Сообщение', 'комментарий']),
-    form_name: String(payload.form_name || body.form_name || '').trim(),
+    form_name: String(payload.form_name || root.form_name || '').trim(),
     consent_status: 'yes',
-    received_at: payload.created_at || body.created_at || new Date().toISOString(),
+    received_at: payload.created_at || root.created_at || new Date().toISOString(),
     status: 'Новая',
     last_status_update: new Date().toISOString(),
     notes: ''
