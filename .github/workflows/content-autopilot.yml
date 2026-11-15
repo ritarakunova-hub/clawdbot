@@ -48,6 +48,8 @@ jobs:
           docker compose config --quiet
       - name: Build runtime image
         run: docker build --tag taina-content-autopilot:ci ./content-autopilot
+      - name: Verify webhook setup utility is packaged
+        run: docker run --rm --entrypoint node taina-content-autopilot:ci -e "require('/app/scripts/set-telegram-webhook.js')"
       - name: Start container and test health/auth
         run: |
           docker run --detach --name taina-autopilot-ci \
