@@ -225,6 +225,18 @@ async function resumePendingOnStartup() {
     savePending(pending);
   }
 
+  // If the process stopped while sending a preview, no publication could
+  // have happened. Notify the owner, discard the orphan marker, and let the
+  // next scheduled/manual check recreate a draft safely.
+  if (pending.status === 'creating_draft' || (pending.status === 'needs_review' && !pending.telegramMessageId)) {
+    await telegram.sendPlainMessage(
+      '⚠️ Сервис прервался во время отправки черновика ' + pending.postId +
+      '. Проверьте личный чат: сообщение могло прийти без сохранённой кнопки. Ничего не опубликовано автоматически.'
+    ).catch((err) => console.error('[content-autopilot] Не удалось отправить уведомление о черновике:', err.message));
+    clearPending();
+    return;
+  }
+
   // A crash during a network request has an ambiguous outcome.
   // Never retry automatically because one platform may already have received the post.
   if (pending.status === 'publishing') {
