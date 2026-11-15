@@ -69,6 +69,7 @@ docker compose up -d --build
 docker compose ps
 docker compose logs --tail 50 app
 curl http://127.0.0.1:3000/health
+docker compose exec app node scripts/preflight.js
 ```
 
 The app port is bound to loopback only. It is not exposed directly to the public internet. If port 3000 is already used on the VPS, change both the host side of the `ports` mapping and the reverse proxy target consistently.
