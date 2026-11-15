@@ -82,37 +82,63 @@ async function resolveReviewed(pending) {
   );
 }
 
+let checkInProgress = false;
+
 async function checkAndSchedule() {
-  const existing = loadPending();
-  if (existing) {
-    console.log('[content-autopilot] Есть необработанный черновик (' +
-      existing.postId + ', ' + (existing.status || 'awaiting_approval') + '). Новый не создаю.');
+  if (checkInProgress) {
+    console.log('[content-autopilot] Проверка уже выполняется — повторный запуск пропускаю');
     return;
   }
 
-  const today = todayInTimezone(TIMEZONE);
-  const post = getPostForDate(today);
-  if (!post) {
-    console.log('[content-autopilot] На ' + today + ' публикация не запланирована — пропуск');
-    return;
-  }
+  checkInProgress = true;
+  try {
+    const existing = loadPending();
+    if (existing) {
+      console.log('[content-autopilot] Есть необработанный черновик (' +
+        existing.postId + ', ' + (existing.status || 'awaiting_approval') + '). Новый не создаю.');
+      return;
+    }
 
-  if (post.type === 'topic') {
-    console.log('[content-autopilot] На ' + today + ' только тема, без текста — шлю напоминание');
-    await telegram.sendTopicReminder(post);
-    return;
-  }
+    const today = todayInTimezone(TIMEZONE);
+    const post = getPostForDate(today);
+    if (!post) {
+      console.log('[content-autopilot] На ' + today + ' публикация не запланирована — пропуск');
+      return;
+    }
 
-  console.log('[content-autopilot] На ' + today + ' готов текст: "' + post.title + '" — шлю черновик на согласование');
-  const messageId = await telegram.sendDraftPreview(post);
-  savePending({
-    postId: post.date,
-    text: post.text,
-    telegramMessageId: messageId,
-    telegramChatId: process.env.TELEGRAM_CHAT_ID,
-    status: 'awaiting_approval',
-    createdAt: new Date().toISOString()
-  });
+    if (post.type === 'topic') {
+      console.log('[content-autopilot] На ' + today + ' только тема, без текста — шлю напоминание');
+      await telegram.sendTopicReminder(post);
+      return;
+    }
+
+    const pending = {
+      postId: post.date,
+      text: post.text,
+      telegramChatId: process.env.TELEGRAM_CHAT_ID,
+      status: 'creating_draft',
+      createdAt: new Date().toISOString()
+    };
+    savePending(pending);
+
+    try {
+      const messageId = await telegram.sendDraftPreview(post);
+      savePending({
+        ...pending,
+        telegramMessageId: messageId,
+        status: 'awaiting_approval'
+      });
+    } catch (err) {
+      savePending({
+        ...pending,
+        status: 'needs_review',
+        lastError: 'Не удалось однозначно подтвердить отправку черновика: ' + err.message
+      });
+      throw err;
+    }
+  } finally {
+    checkInProgress = false;
+  }
 }
 
 app.post('/check/now', async (req, res) => {
