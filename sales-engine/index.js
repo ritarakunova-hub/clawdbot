@@ -233,7 +233,7 @@ app.post('/telegram/webhook', async (req, res) => {
       const approvedLead = await sheets.getLeadById(id);
       if (approvedLead && approvedLead.message) {
         await telegram.sendPlainMessage('Текст для отправки (' +
-          escapeHtml(approvedLead.company) + '):\n\n' + escapeHtml(approvedLead.message));
+          approvedLead.company + '):\n\n' + approvedLead.message);
       }
     }
   } catch {
