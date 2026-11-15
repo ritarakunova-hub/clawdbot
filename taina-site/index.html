@@ -4,45 +4,385 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#171314">
-  <meta name="description" content="TAINA Knowledge Map — приложение, которое помогает руководителю увидеть, где живут знания компании, как они связаны с процессами и что нужно привести в порядок.">
+  <meta name="description" content="TAINA Process Diagnostic — диагностика одного повторяемого бизнес-процесса. Карта этапов, источников и ответственности, подтверждённые пробелы и до трёх приоритетных действий.">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="TAINA Knowledge Map — увидьте устройство знаний вашей компании">
-  <meta property="og:description" content="Соберите карту источников, процессов, ответственных и пробелов. Начните с одного важного процесса.">
-  <title>TAINA Knowledge Map — карта знаний компании</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;1,500;1,600&display=swap" rel="stylesheet">
+  <meta property="og:title" content="TAINA Process Diagnostic — сначала ясность, потом автоматизация">
+  <meta property="og:description" content="Разберите один важный процесс за ограниченный пилот. Без обещаний автоматизировать всё и без выдуманных цифр эффективности.">
+  <title>TAINA Process Diagnostic — диагностика бизнес-процесса</title>
   <style>
-    :root{--bg:#171314;--panel:#211b1d;--panel2:#2a2225;--line:#49383d;--text:#f5eee9;--muted:#b9a9a8;--gold:#d2b878;--wine:#7a3b49;--rose:#c99b9e;--green:#9db6a5;--max:1160px}
-    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:Manrope,Arial,sans-serif;line-height:1.6}a{color:inherit;text-decoration:none}button,input,textarea,select{font:inherit}.wrap{width:min(var(--max),calc(100% - 40px));margin:auto}.mono,.eyebrow,.tag,.nav-label{font-family:"DM Mono",monospace;letter-spacing:.08em;text-transform:uppercase}.eyebrow{font-size:11px;color:var(--gold)}.muted{color:var(--muted)}.serif{font-family:"Playfair Display",Georgia,serif;font-weight:500}.top{position:sticky;top:0;z-index:20;background:rgba(23,19,20,.88);backdrop-filter:blur(16px);border-bottom:1px solid rgba(210,184,120,.14)}.nav{height:76px;display:flex;align-items:center;justify-content:space-between;gap:24px}.brand{font-size:21px;font-weight:800;letter-spacing:.2em}.brand i{color:var(--gold);font-style:normal}.navlinks{display:flex;align-items:center;gap:28px;color:var(--muted);font-size:13px}.navlinks a:hover{color:var(--gold)}.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 20px;border:1px solid var(--gold);background:var(--gold);color:#211a16;border-radius:4px;font-size:13px;font-weight:800;transition:.2s}.btn:hover{transform:translateY(-2px);filter:brightness(1.07)}.btn.secondary{background:transparent;color:var(--text);border-color:var(--line)}.btn.small{padding:10px 14px;font-size:12px}.hero{padding:90px 0 84px;display:grid;grid-template-columns:1.03fr .97fr;align-items:center;gap:60px;min-height:650px}.hero h1{font-size:clamp(42px,6vw,76px);line-height:1.04;letter-spacing:-.045em;margin:20px 0 24px;max-width:720px}.hero h1 em{color:var(--gold);font-style:italic}.hero-copy{font-size:17px;line-height:1.75;color:#cbbfbb;max-width:580px}.actions{display:flex;gap:12px;flex-wrap:wrap;margin:32px 0 18px}.fine{font-size:11px;color:#8f8080;max-width:520px}.visual{position:relative;padding:18px;border:1px solid #55434a;border-radius:14px;background:linear-gradient(145deg,#2b2225,#191516);box-shadow:0 28px 80px rgba(0,0,0,.35)}.visual:before{content:"";position:absolute;inset:-18px 18px 18px -18px;border:1px solid rgba(210,184,120,.22);border-radius:14px;z-index:-1}.windowbar{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 16px;border-bottom:1px solid var(--line);font:10px "DM Mono";color:#9f8e8c}.dots{display:flex;gap:5px}.dots span{width:6px;height:6px;border-radius:50%;background:#795d62}.dash{padding:20px 4px 4px}.dash-title{font-size:16px;font-weight:700}.dash-sub{font-size:10px;color:#a99796;margin-top:3px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:18px 0}.stat{padding:12px;background:#211a1c;border:1px solid #45363b;border-radius:7px}.stat b{display:block;font:20px "DM Mono";color:var(--gold)}.stat small{font-size:9px;color:#a99796}.map{display:grid;grid-template-columns:1fr 1fr;gap:10px}.node{padding:12px;background:#211a1c;border:1px solid #5b424a;border-radius:7px;min-height:78px}.node strong{font-size:11px;display:block;margin-bottom:6px}.node span{font-size:9px;color:#b8a7a5}.node.accent{border-color:#a68d58;background:#2c251b}.connector{display:flex;align-items:center;justify-content:center;color:var(--gold);font:10px "DM Mono";padding:1px}.visual-note{margin-top:14px;font-size:9px;color:#8f8080}.section{padding:88px 0;border-top:1px solid rgba(210,184,120,.13)}.section-head{max-width:720px;margin-bottom:40px}.section h2{font-size:clamp(31px,4vw,49px);line-height:1.12;letter-spacing:-.035em;margin:12px 0 16px}.section-lead{font-size:16px;color:var(--muted);max-width:690px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card{padding:24px;border:1px solid var(--line);background:linear-gradient(145deg,#241d1f,#1c1719);border-radius:8px}.card .num{font:12px "DM Mono";color:var(--gold)}.card h3{font-size:17px;margin:14px 0 8px}.card p{font-size:13px;color:var(--muted);margin:0}.split{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center}.list{display:grid;gap:16px}.list-item{display:grid;grid-template-columns:28px 1fr;gap:12px}.check{color:var(--gold);font:18px "DM Mono"}.list-item b{display:block;font-size:14px}.list-item span{font-size:12px;color:var(--muted)}.process{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;counter-reset:step}.process div{padding:17px 14px;border-top:1px solid var(--gold);background:#201a1c}.process b{display:block;font:12px "DM Mono";color:var(--gold);margin-bottom:12px}.process span{font-size:12px;color:#d2c5c1}.callout{padding:28px;border:1px solid #76565e;background:linear-gradient(135deg,#302126,#211a1c);border-radius:8px}.callout strong{color:var(--gold)}.limitations{display:grid;grid-template-columns:1fr 1fr;gap:16px}.limit{padding:22px;border:1px solid var(--line);border-radius:8px}.limit h3{font-size:15px;margin:0 0 8px}.limit p{font-size:12px;color:var(--muted);margin:0}.price{font:36px "DM Mono";color:var(--gold);margin:12px 0}.formbox{display:grid;grid-template-columns:.85fr 1.15fr;gap:44px;padding:34px;border:1px solid #806c4b;background:linear-gradient(135deg,#282124,#1d181a);border-radius:10px}.formbox h2{font-size:38px;line-height:1.1;margin:12px 0}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}.field label{font-size:11px;color:#c7b8b3}.field input,.field select,.field textarea{width:100%;padding:12px;border:1px solid #57464b;border-radius:4px;background:#171314;color:var(--text);font-size:13px}.field textarea{min-height:90px;resize:vertical}.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--gold);outline-offset:1px}.consent{display:flex;gap:9px;align-items:flex-start;font-size:10px;color:var(--muted);grid-column:1/-1}.consent input{margin-top:3px}.formstatus{font-size:12px;color:var(--green);margin-top:10px}.faq{display:grid;grid-template-columns:1fr 1fr;gap:12px}.faq details{padding:18px;border:1px solid var(--line);border-radius:6px;background:#1d181a}.faq summary{cursor:pointer;font-size:13px;font-weight:700}.faq p{font-size:12px;color:var(--muted);margin-bottom:0}.footer{padding:35px 0 50px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:20px;color:#928282;font-size:11px}.footer .brand{color:var(--text)}.mobile-cta{display:none}
-    @media(max-width:850px){.hero{grid-template-columns:1fr;gap:40px;padding:65px 0}.visual{max-width:620px}.split,.formbox{grid-template-columns:1fr}.grid{grid-template-columns:1fr 1fr}.process{grid-template-columns:1fr 1fr}.navlinks{display:none}.mobile-cta{display:inline-flex}}
-    @media(max-width:560px){.wrap{width:min(100% - 28px,var(--max))}.nav{height:64px}.nav .btn{display:none}.hero{padding:52px 0 60px;min-height:auto}.hero h1{font-size:43px}.hero-copy{font-size:15px}.actions{flex-direction:column}.actions .btn{width:100%}.grid,.limitations,.faq,.formgrid{grid-template-columns:1fr}.field.full,.consent{grid-column:auto}.section{padding:65px 0}.section h2{font-size:34px}.formbox{padding:22px}.formbox h2{font-size:32px}.process{grid-template-columns:1fr 1fr}.footer{flex-direction:column}.mobile-cta{position:fixed;display:flex;bottom:12px;left:12px;right:12px;z-index:30;box-shadow:0 8px 28px #0008}.visual{padding:12px}.stat b{font-size:16px}}
-    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important}}
+    :root {
+      color-scheme: dark;
+      --bg: #171314;
+      --panel: #211b1d;
+      --panel-2: #2a2225;
+      --line: #49383d;
+      --text: #f5eee9;
+      --muted: #b9a9a8;
+      --gold: #d2b878;
+      --wine: #7a3b49;
+      --rose: #c99b9e;
+      --green: #9db6a5;
+      --max: 1160px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.65;
+    }
+    a { color: inherit; text-decoration: none; }
+    a:focus-visible, summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+    .wrap { width: min(var(--max), calc(100% - 40px)); margin: 0 auto; }
+    .eyebrow, .mono, .step-no {
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+    .eyebrow { color: var(--gold); font-size: 11px; }
+    .muted { color: var(--muted); }
+    .serif { font-family: Georgia, "Times New Roman", serif; font-weight: 400; }
+    .serif em { color: var(--gold); font-style: italic; }
+    .top {
+      position: sticky; top: 0; z-index: 20;
+      background: rgba(23, 19, 20, .92);
+      border-bottom: 1px solid rgba(210, 184, 120, .16);
+      backdrop-filter: blur(14px);
+    }
+    .nav { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { font-size: 21px; font-weight: 800; letter-spacing: .2em; white-space: nowrap; }
+    .brand-mark { color: var(--gold); }
+    .navlinks { display: flex; gap: 26px; color: var(--muted); font-size: 13px; }
+    .navlinks a:hover { color: var(--gold); }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      min-height: 48px; padding: 13px 20px;
+      border: 1px solid var(--gold); border-radius: 4px;
+      background: var(--gold); color: #211a16;
+      font-size: 13px; font-weight: 800; text-align: center;
+      transition: transform .2s ease, filter .2s ease;
+    }
+    .btn:hover { transform: translateY(-2px); filter: brightness(1.07); }
+    .btn.secondary { background: transparent; border-color: var(--line); color: var(--text); }
+    .btn.small { min-height: 40px; padding: 9px 14px; font-size: 12px; }
+    .hero {
+      display: grid; grid-template-columns: 1.05fr .95fr; align-items: center; gap: 58px;
+      min-height: 650px; padding-top: 86px; padding-bottom: 86px;
+    }
+    h1 { max-width: 720px; margin: 18px 0 22px; font-size: clamp(43px, 6vw, 76px); line-height: 1.04; letter-spacing: -.045em; }
+    .hero-copy { max-width: 610px; color: #cbbfbb; font-size: 17px; line-height: 1.8; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 30px 0 16px; }
+    .fine { max-width: 560px; color: #958786; font-size: 11px; }
+    .visual {
+      position: relative; padding: 20px;
+      border: 1px solid #55434a; border-radius: 14px;
+      background: linear-gradient(145deg, #2b2225, #191516);
+      box-shadow: 0 28px 80px rgba(0,0,0,.32);
+    }
+    .visual::before {
+      content: ""; position: absolute; inset: -16px 16px 16px -16px; z-index: -1;
+      border: 1px solid rgba(210,184,120,.22); border-radius: 14px;
+    }
+    .windowbar { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--line); color: #9f8e8c; font: 10px ui-monospace, monospace; }
+    .dots { display: flex; gap: 5px; }
+    .dots span { width: 6px; height: 6px; border-radius: 50%; background: #795d62; }
+    .dash { padding-top: 20px; }
+    .dash-title { font-size: 16px; font-weight: 750; }
+    .dash-sub { margin-top: 3px; color: #a99796; font: 10px ui-monospace, monospace; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin: 18px 0; }
+    .stat { padding: 12px; border: 1px solid #45363b; border-radius: 7px; background: #211a1c; }
+    .stat b { display: block; color: var(--gold); font: 20px ui-monospace, monospace; }
+    .stat small { color: #a99796; font-size: 9px; }
+    .map { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .node { min-height: 76px; padding: 12px; border: 1px solid #5b424a; border-radius: 7px; background: #211a1c; }
+    .node strong { display: block; margin-bottom: 5px; font-size: 10px; letter-spacing: .06em; }
+    .node span { color: #b8a7a5; font-size: 11px; }
+    .node.accent { border-color: #a68d58; background: #2c251b; }
+    .connector { display: flex; align-items: center; justify-content: center; color: var(--gold); font: 10px ui-monospace, monospace; }
+    .visual-note { margin: 14px 0 0; color: #8f8080; font-size: 9px; }
+    .section { padding: 84px 0; border-top: 1px solid rgba(210,184,120,.13); }
+    .section-head { max-width: 760px; margin-bottom: 38px; }
+    h2 { margin: 12px 0 16px; font-size: clamp(32px, 4vw, 50px); line-height: 1.12; letter-spacing: -.035em; }
+    .section-lead { max-width: 720px; color: var(--muted); font-size: 16px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .card { padding: 24px; border: 1px solid var(--line); border-radius: 8px; background: linear-gradient(145deg, #241d1f, #1c1719); }
+    .card .num { color: var(--gold); font: 11px ui-monospace, monospace; letter-spacing: .08em; }
+    .card h3 { margin: 14px 0 8px; font-size: 17px; }
+    .card p { margin: 0; color: var(--muted); font-size: 13px; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 50px; }
+    .list { display: grid; gap: 16px; }
+    .list-item { display: grid; grid-template-columns: 28px 1fr; gap: 12px; }
+    .list-mark { color: var(--gold); font: 17px ui-monospace, monospace; }
+    .list-item b { display: block; font-size: 14px; }
+    .list-item span { color: var(--muted); font-size: 12px; }
+    .process { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .process article { padding: 17px 14px; border-top: 1px solid var(--gold); background: #201a1c; }
+    .process b { display: block; margin-bottom: 12px; color: var(--gold); font: 11px ui-monospace, monospace; }
+    .process span { color: #d2c5c1; font-size: 12px; }
+    .callout { padding: 28px; border: 1px solid #76565e; border-radius: 8px; background: linear-gradient(135deg,#302126,#211a1c); }
+    .callout h3 { margin: 8px 0 14px; font-size: 30px; line-height: 1.2; }
+    .callout p { color: var(--muted); font-size: 13px; }
+    .deliverables { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; }
+    .deliverable { padding: 20px; border: 1px solid var(--line); border-radius: 7px; }
+    .deliverable b { display: block; margin-bottom: 6px; color: var(--gold); font-size: 14px; }
+    .deliverable p { margin: 0; color: var(--muted); font-size: 12px; }
+    .offer {
+      display: grid; grid-template-columns: .9fr 1.1fr; gap: 38px;
+      padding: 34px; border: 1px solid #806c4b; border-radius: 10px;
+      background: linear-gradient(135deg,#282124,#1d181a);
+    }
+    .price { margin: 12px 0 4px; color: var(--gold); font: 42px ui-monospace, monospace; }
+    .offer-meta { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin: 20px 0; }
+    .meta-item { padding: 14px; border: 1px solid var(--line); background: rgba(0,0,0,.12); }
+    .meta-item b { display: block; color: var(--gold); font: 11px ui-monospace, monospace; }
+    .meta-item span { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; }
+    .note { padding: 16px 18px; border-left: 2px solid var(--rose); background: rgba(122,59,73,.12); color: #d8c9c6; font-size: 12px; }
+    .limits { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .limit { padding: 20px; border: 1px solid var(--line); border-radius: 8px; }
+    .limit h3 { margin: 0 0 8px; font-size: 15px; }
+    .limit p { margin: 0; color: var(--muted); font-size: 12px; }
+    .faq { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .faq details { padding: 18px; border: 1px solid var(--line); border-radius: 6px; background: #1d181a; }
+    .faq summary { cursor: pointer; font-size: 13px; font-weight: 750; }
+    .faq p { margin-bottom: 0; color: var(--muted); font-size: 12px; }
+    .footer { display: flex; justify-content: space-between; gap: 24px; padding: 32px 0 50px; border-top: 1px solid var(--line); color: #928282; font-size: 11px; }
+    .footer .brand { color: var(--text); }
+    .mobile-cta { display: none; }
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; gap: 42px; min-height: 0; padding-top: 64px; padding-bottom: 68px; }
+      .visual { max-width: 680px; }
+      .split, .offer { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr 1fr; }
+      .process { grid-template-columns: repeat(2,1fr); }
+      .navlinks { display: none; }
+    }
+    @media (max-width: 600px) {
+      .wrap { width: min(100% - 28px, var(--max)); }
+      .nav { min-height: 64px; }
+      .nav > .btn { display: none; }
+      h1 { font-size: 43px; }
+      .hero-copy { font-size: 15px; }
+      .actions { flex-direction: column; }
+      .actions .btn { width: 100%; }
+      .section { padding: 64px 0; }
+      h2 { font-size: 34px; }
+      .grid, .deliverables, .limits, .faq, .offer-meta { grid-template-columns: 1fr; }
+      .offer { padding: 22px; }
+      .footer { flex-direction: column; }
+      .mobile-cta {
+        position: fixed; display: flex; left: 12px; right: 12px; bottom: 12px; z-index: 30;
+        box-shadow: 0 8px 28px rgba(0,0,0,.5);
+      }
+      .visual { padding: 12px; }
+      .stat b { font-size: 17px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition: none !important; }
+    }
   </style>
 </head>
 <body>
-<header class="top"><div class="wrap nav"><a class="brand" href="#" aria-label="TAINA">TAINA<i>◆</i></a><nav class="navlinks" aria-label="Основная навигация"><a href="#problem">Проблема</a><a href="#product">Приложение</a><a href="#how">Как работает</a><a href="#faq">Вопросы</a></nav><a class="btn small" href="#access">Получить ранний доступ</a></div></header>
-<main>
-<section class="wrap hero">
- <div><p class="eyebrow">TAINA / KNOWLEDGE MAP / V1</p><h1 class="serif">Управлять компанией проще, когда <em>видно, как она устроена.</em></h1><p class="hero-copy">TAINA Knowledge Map помогает руководителю собрать карту знаний компании: источники, процессы, документы, ответственных и пробелы — чтобы перестать держать устройство бизнеса только в голове.</p><div class="actions"><a class="btn" href="#access">Запросить ранний доступ <span aria-hidden="true">↗</span></a><a class="btn secondary" href="#product">Посмотреть, что внутри</a></div><p class="fine">Начните с одного важного процесса. Не нужно описывать всю компанию за один вечер.</p></div>
- <div class="visual" aria-label="Иллюстрация интерфейса карты знаний"><div class="windowbar"><span>TAINA KNOWLEDGE MAP / WORKSPACE</span><span class="dots"><span></span><span></span><span></span></span></div><div class="dash"><div class="dash-title">Карта знаний компании</div><div class="dash-sub">УЧЕБНЫЙ ПРИМЕР · СТРУКТУРА ПРОЦЕССА</div><div class="stats"><div class="stat"><b>05</b><small>этапов проверки</small></div><div class="stat"><b>12</b><small>связей в примере</small></div><div class="stat"><b>03</b><small>точки внимания</small></div></div><div class="map"><div class="node accent"><strong>ПРОЦЕСС</strong><span>Обработка заявки</span></div><div class="node"><strong>ОТВЕТСТВЕННЫЙ</strong><span>Руководитель направления</span></div><div class="connector">↘ ИСТОЧНИКИ ↙</div><div class="connector">↙ ДОКУМЕНТЫ ↘</div><div class="node"><strong>ИСТОЧНИК</strong><span>Регламент · CRM · инструкция</span></div><div class="node"><strong>ПРОБЕЛ</strong><span>Не назначен владелец обновления</span></div></div><p class="visual-note">Схематичная иллюстрация структуры, не скриншот приложения. Данные вымышлены.</p></div>
-</section>
-<section class="section" id="problem"><div class="wrap"><div class="section-head"><p class="eyebrow">Проблема, которую не видно в отчётах</p><h2 class="serif">Знания есть. <em>Системы знаний — часто нет.</em></h2><p class="section-lead">Пока компания небольшая, многое держится на памяти собственника и нескольких ключевых сотрудников. С ростом это превращается в зависимость, задержки и бесконечные уточнения.</p></div><div class="grid"><article class="card"><span class="num">01 / ЗАВИСИМОСТЬ</span><h3>«Спроси у Ирины, она знает»</h3><p>Критичные инструкции и исключения живут в головах конкретных людей. Отпуск или увольнение превращаются в операционный риск.</p></article><article class="card"><span class="num">02 / РАЗРОЗНЕННОСТЬ</span><h3>«Где последняя версия?»</h3><p>Документы, таблицы, переписки и рабочие системы не складываются в общую картину.</p></article><article class="card"><span class="num">03 / НЕЯСНОСТЬ</span><h3>«Кто отвечает за это?»</h3><p>Не всегда понятно, кто владелец процесса, кто обновляет источник и что делать, если сведения противоречат друг другу.</p></article></div></div></section>
-<section class="section" id="product"><div class="wrap split"><div><p class="eyebrow">Не очередная папка с файлами</p><h2 class="serif">Превратите разрозненные сведения в <em>карту управления знаниями.</em></h2><p class="section-lead">Приложение помогает не просто перечислить документы, а связать источники с процессами, ответственными, проблемами и следующими действиями.</p><div class="list" style="margin-top:28px"><div class="list-item"><span class="check">◆</span><div><b>Соберите источники</b><span>Документы, инструкции, таблицы, системы и знания сотрудников.</span></div></div><div class="list-item"><span class="check">◆</span><div><b>Свяжите с процессами и владельцами</b><span>Поймите, где используется информация и кто за неё отвечает.</span></div></div><div class="list-item"><span class="check">◆</span><div><b>Зафиксируйте пробелы и противоречия</b><span>Отметьте устаревшие сведения, отсутствующие инструкции и зависимости.</span></div></div><div class="list-item"><span class="check">◆</span><div><b>Сформируйте план улучшений</b><span>Назначьте действия, ответственных и сроки; экспортируйте реестры и сводку.</span></div></div></div></div><div class="callout"><p class="eyebrow">Главный принцип</p><h3 class="serif" style="font-size:30px;line-height:1.2;margin:8px 0 14px">Не пытайтесь оцифровать всё сразу.</h3><p class="muted" style="font-size:13px">Выберите один процесс, который важен для бизнеса. Соберите его источники и связи. Увидьте, чего не хватает, и решите, что исправлять первым.</p><p style="font-size:12px;margin:18px 0 0"><strong>Результат:</strong> структурированная карта выбранного участка работы и список конкретных следующих действий.</p></div></div></section>
-<section class="section" id="how"><div class="wrap"><div class="section-head"><p class="eyebrow">Первый рабочий цикл</p><h2 class="serif">От хаоса к понятной картине — <em>по шагам.</em></h2><p class="section-lead">Для небольшого пилота заложите 5–7 часов активной работы. Можно проходить маршрут постепенно, подключая владельцев процессов по мере необходимости.</p></div><div class="process"><div><b>01 / COLLECT</b><span>Собрать источники знаний и места хранения.</span></div><div><b>02 / STRUCTURE</b><span>Описать процесс, шаги и ответственных.</span></div><div><b>03 / VERIFY</b><span>Проверить связи, найти пробелы и противоречия.</span></div><div><b>04 / ACTIVATE</b><span>Подготовить и вручную проверить AI-сценарий.</span></div><div><b>05 / EVOLVE</b><span>Составить план улучшений и сохранить карту.</span></div></div><div class="grid" style="margin-top:16px"><article class="card"><span class="num">НА ВЫХОДЕ</span><h3>Карта и реестры</h3><p>Структура процессов, источников, документов, владельцев и проблем.</p></article><article class="card"><span class="num">НА ВЫХОДЕ</span><h3>Управленческая сводка</h3><p>Формальные сигналы из заполненной карты и до трёх приоритетных действий.</p></article><article class="card"><span class="num">НА ВЫХОДЕ</span><h3>Экспорт и резервная копия</h3><p>Выгрузка XLSX/CSV и JSON-копия проекта для хранения отдельно от браузера.</p></article></div></div></section>
-<section class="section"><div class="wrap split"><div><p class="eyebrow">Кому подойдёт</p><h2 class="serif">Когда бизнес уже вырос из управления «на словах».</h2><p class="section-lead">Для собственников и руководителей небольших и растущих компаний, которым важно понять, как устроен конкретный процесс и где хранятся знания о нём.</p></div><div class="list"><div class="list-item"><span class="check">01</span><div><b>Сервисные компании</b><span>Много повторяющихся операций и клиентских сценариев.</span></div></div><div class="list-item"><span class="check">02</span><div><b>Медицинские и диагностические организации</b><span>Много ролей, инструкций, оборудования и регламентов.</span></div></div><div class="list-item"><span class="check">03</span><div><b>Сети и франшизы</b><span>Нужно удерживать единые стандарты в нескольких точках.</span></div></div><div class="list-item"><span class="check">04</span><div><b>Растущие команды</b><span>Новые сотрудники, новые процессы и растущая нагрузка на руководителя.</span></div></div></div></div></section>
-<section class="section"><div class="wrap"><div class="section-head"><p class="eyebrow">Прозрачность V1</p><h2 class="serif">Что важно знать <em>до начала работы.</em></h2><p class="section-lead">Мы не обещаем функции, которых пока нет. Первая версия — инструмент структурированной диагностики одного процесса, а не готовая корпоративная IT-платформа.</p></div><div class="limitations"><div class="limit"><h3>Как хранятся данные</h3><p>Данные V1 хранятся локально в браузере на конкретном устройстве. Нет аккаунтов, облачной синхронизации, серверного хранения и совместного редактирования.</p></div><div class="limit"><h3>Что с конфиденциальностью</h3><p>Не вносите персональные, медицинские, клиентские, финансовые и другие чувствительные сведения. Для пилота используйте синтетические или обезличенные данные.</p></div><div class="limit"><h3>Есть ли встроенный AI</h3><p>Нет. Приложение помогает подготовить структуру и вопросы для проверки AI-сценариев. AI-модель внутри V1 не подключена.</p></div><div class="limit"><h3>Что означает оценка качества</h3><p>Проверки показывают полноту структуры и связи. Они не подтверждают истинность документов и не сертифицируют готовность компании к AI.</p></div></div></div></section>
-<section class="section" id="access"><div class="wrap"><div class="formbox"><div><p class="eyebrow">Ранний доступ / первая волна</p><h2 class="serif">Проверьте, что скрыто внутри процессов вашей компании.</h2><p class="muted" style="font-size:13px">Оставьте заявку на ранний доступ к TAINA Knowledge Map. Мы уточним ваш сценарий, сообщим условия тестирования и поможем понять, подходит ли вам текущая версия.</p><div class="price">1 490 ₽</div><p class="fine">Планируемая стартовая цена раннего доступа за V1. Не является оплатой или подтверждением заказа. Финальные условия будут сообщены до покупки.</p></div>
-<div class="formbox" role="status" aria-live="polite">
-<div>
-<p class="eyebrow">Ранний доступ / первая волна</p>
-<h2 class="serif">Приём заявок скоро откроется.</h2>
-<p class="muted" style="font-size:13px">Мы готовим корректный и безопасный способ обработки заявок. Пока форма не принимает и не сохраняет персональные данные. Если вы хотите протестировать TAINA Knowledge Map, следите за обновлениями TAINA.</p>
-<p class="fine">Планируемая цена раннего доступа — 1 490 ₽. Это гипотеза, не оферта и не действующий заказ.</p>
-</div>
-</div></div></div></section>
-<section class="section" id="faq"><div class="wrap"><div class="section-head"><p class="eyebrow">Вопросы перед стартом</p><h2 class="serif">Коротко и по делу.</h2></div><div class="faq"><details><summary>Нужно ли описывать всю компанию?</summary><p>Нет. Начните с одного важного процесса и ограниченного набора источников. Так проще получить полезный результат и не утонуть в инвентаризации.</p></details><details><summary>Это корпоративная база знаний?</summary><p>Нет. V1 — инструмент для построения карты и диагностики структуры знаний. Это не облачная Wiki и не общее хранилище документов.</p></details><details><summary>Можно ли работать командой?</summary><p>В V1 нет аккаунтов, ролей и совместного редактирования. Карту готовит один пользователь, при необходимости собирая сведения у коллег отдельно.</p></details><details><summary>Приложение само анализирует документы?</summary><p>Нет. В текущей версии источники и сведения вносятся в структурированные реестры. Файлы автоматически не читаются, AI-поиск не подключён.</p></details><details><summary>Что происходит с моими данными?</summary><p>Они остаются в локальном хранилище браузера на вашем устройстве. Регулярно скачивайте JSON-резервную копию. Очистка данных сайта может удалить проект.</p></details><details><summary>Что будет после заявки?</summary><p>Мы уточним ваш сценарий, проверим соответствие текущим возможностям V1 и сообщим условия раннего доступа. Заявка не означает автоматическую покупку.</p></details></div></div></section>
+<a class="skip-link" href="#main">Перейти к содержанию</a>
+<header class="top">
+  <div class="wrap nav">
+    <a class="brand" href="#top" aria-label="TAINA Studio">TAINA<span class="brand-mark">◆</span></a>
+    <nav class="navlinks" aria-label="Основная навигация">
+      <a href="#problem">Проблема</a>
+      <a href="#approach">Подход</a>
+      <a href="#result">Результат</a>
+      <a href="#pilot">Пилот</a>
+    </nav>
+    <a class="btn small" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Обсудить пилот ↗</a>
+  </div>
+</header>
+<main id="main">
+  <section class="wrap hero" id="top">
+    <div>
+      <p class="eyebrow">TAINA STUDIO / PROCESS DIAGNOSTIC</p>
+      <h1 class="serif">Сначала увидеть процесс. Потом решать, <em>что автоматизировать.</em></h1>
+      <p class="hero-copy">TAINA Process Diagnostic — структурированная диагностика одного повторяемого бизнес-процесса. Мы связываем этапы работы, источники информации и ответственность, чтобы увидеть, где возникают пробелы, лишние действия и зависимость от отдельных сотрудников.</p>
+      <div class="actions">
+        <a class="btn" href="#pilot">Посмотреть условия пилота <span aria-hidden="true">↘</span></a>
+        <a class="btn secondary" href="#approach">Как устроена диагностика</a>
+      </div>
+      <p class="fine">Не начинаем с обещаний про AI. Сначала проверяем, есть ли в процессе задача, которую действительно стоит автоматизировать.</p>
+    </div>
+    <div class="visual" aria-label="Схематичная карта одного бизнес-процесса">
+      <div class="windowbar"><span>TAINA / PROCESS MAP</span><span class="dots"><span></span><span></span><span></span></span></div>
+      <div class="dash">
+        <div class="dash-title">Процесс: обработка заявки</div>
+        <div class="dash-sub">УЧЕБНЫЙ ПРИМЕР · ВЫМЫШЛЕННЫЕ ДАННЫЕ</div>
+        <div class="stats">
+          <div class="stat"><b>01</b><small>процесс</small></div>
+          <div class="stat"><b>05</b><small>этапов</small></div>
+          <div class="stat"><b>03</b><small>точки внимания</small></div>
+        </div>
+        <div class="map">
+          <div class="node accent"><strong>ЭТАП</strong><span>Получить заявку</span></div>
+          <div class="node"><strong>ОТВЕТСТВЕННЫЙ</strong><span>Менеджер</span></div>
+          <div class="connector">↘ ИСТОЧНИКИ ↙</div>
+          <div class="connector">↙ ПЕРЕДАЧА ↘</div>
+          <div class="node"><strong>ИНФОРМАЦИЯ</strong><span>Форма · CRM · регламент</span></div>
+          <div class="node"><strong>ВОПРОС</strong><span>Кто проверяет полноту данных?</span></div>
+        </div>
+        <p class="visual-note">Это иллюстрация логики диагностики, не скриншот интерфейса и не клиентский кейс.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="problem">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Когда работа держится на памяти</p>
+        <h2 class="serif">Процесс есть. <em>Общей картины часто нет.</em></h2>
+        <p class="section-lead">Пока команда небольшая, многое решается в переписке и устных договорённостях. С ростом компании это превращается в постоянные уточнения, ручные проверки и задержки на стыках между людьми и системами.</p>
+      </div>
+      <div class="grid">
+        <article class="card"><span class="num">01 / ПОИСК</span><h3>«Где последняя версия?»</h3><p>Сотрудники тратят время, чтобы найти актуальную инструкцию, условия или ответ на повторяющийся вопрос.</p></article>
+        <article class="card"><span class="num">02 / ПЕРЕДАЧА</span><h3>«Кто должен продолжить?»</h3><p>Запрос переходит между людьми, но следующий шаг и ответственный не всегда очевидны.</p></article>
+        <article class="card"><span class="num">03 / ЗАВИСИМОСТЬ</span><h3>«Спроси у того, кто знает»</h3><p>Важные исключения и рабочие правила остаются в памяти отдельных сотрудников.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="approach">
+    <div class="wrap split">
+      <div>
+        <p class="eyebrow">Диагностика прежде разработки</p>
+        <h2 class="serif">Не продаём автоматизацию, пока не поняли, <em>что именно мешает.</em></h2>
+        <p class="section-lead">За ограниченный пилот мы разбираем один повторяемый процесс: от входящего события до результата. Отмечаем, какие сведения нужны на каждом шаге, где они находятся, кто ими пользуется и где возникают разрывы.</p>
+        <div class="list" style="margin-top:28px">
+          <div class="list-item"><span class="list-mark">◆</span><div><b>Границы процесса</b><span>Что запускает работу, где она заканчивается и какие этапы входят в разбор.</span></div></div>
+          <div class="list-item"><span class="list-mark">◆</span><div><b>Источники и ответственность</b><span>Какие документы, системы и люди поддерживают каждый этап.</span></div></div>
+          <div class="list-item"><span class="list-mark">◆</span><div><b>Пробелы и вопросы</b><span>Что подтверждено, чего не хватает и что нужно уточнить у владельца процесса.</span></div></div>
+          <div class="list-item"><span class="list-mark">◆</span><div><b>Приоритеты</b><span>Какие действия разумно выполнить сначала и есть ли основание переходить к автоматизации.</span></div></div>
+        </div>
+      </div>
+      <aside class="callout">
+        <p class="eyebrow">Принцип TAINA</p>
+        <h3 class="serif">Иногда лучший результат диагностики — решение пока ничего не автоматизировать.</h3>
+        <p>Если узкое место связано с неясной ответственностью, устаревшими правилами или отсутствующим решением руководителя, новый бот не устранит причину. Мы фиксируем это прямо.</p>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section" id="result">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Что вы получаете</p>
+        <h2 class="serif">Не презентацию про технологии, а <em>рабочую картину процесса.</em></h2>
+        <p class="section-lead">Результат привязан к одному согласованному процессу и к информации, которую можно безопасно использовать в пилоте.</p>
+      </div>
+      <div class="deliverables">
+        <article class="deliverable"><b>Карта процесса</b><p>Этапы, переходы и ключевые точки, в которых работа передаётся между ролями.</p></article>
+        <article class="deliverable"><b>Реестр источников и владельцев</b><p>Где находится нужная информация и кто отвечает за её актуальность.</p></article>
+        <article class="deliverable"><b>Подтверждённые пробелы и вопросы</b><p>Отделяем найденные факты от предположений и пунктов, требующих проверки.</p></article>
+        <article class="deliverable"><b>До трёх приоритетных действий</b><p>Конкретные шаги для улучшения процесса — до решения о разработке.</p></article>
+        <article class="deliverable"><b>Управленческий отчёт</b><p>Итоговая сводка: что увидели, что это означает и что делать дальше.</p></article>
+        <article class="deliverable"><b>Рекомендация по следующему шагу</b><p>Продолжать ручное улучшение, уточнить данные или отдельно оценить автоматизацию.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Как проходит пилот</p>
+        <h2 class="serif">Пять шагов. <em>Один процесс.</em></h2>
+        <p class="section-lead">Обычно пилот занимает до семи календарных дней и требует около 5–7 часов активной работы со стороны исполнителя. Срок зависит от доступности владельца процесса и согласованных материалов.</p>
+      </div>
+      <div class="process">
+        <article><b>01 / DEFINE</b><span>Выбираем один процесс и фиксируем его границы.</span></article>
+        <article><b>02 / COLLECT</b><span>Собираем разрешённые сведения, источники и роли.</span></article>
+        <article><b>03 / MAP</b><span>Связываем этапы, информацию и ответственность.</span></article>
+        <article><b>04 / VERIFY</b><span>Проверяем спорные места и подтверждаем пробелы.</span></article>
+        <article><b>05 / REPORT</b><span>Передаём карту, выводы и до трёх приоритетных действий.</span></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap split">
+      <div>
+        <p class="eyebrow">Для кого</p>
+        <h2 class="serif">Когда повторяющаяся работа уже стала <em>дорогой привычкой.</em></h2>
+        <p class="section-lead">В первую очередь — для небольших и растущих сервисных компаний, где несколько сотрудников участвуют в одном процессе, а информация распределена между документами, таблицами, CRM и перепиской.</p>
+      </div>
+      <div class="list">
+        <div class="list-item"><span class="list-mark">01</span><div><b>Собственник или руководитель</b><span>Хочет понять, почему процесс зависит от отдельных людей или постоянно требует ручного контроля.</span></div></div>
+        <div class="list-item"><span class="list-mark">02</span><div><b>Операционный руководитель</b><span>Видит потери на стыках этапов, передачах и повторных проверках.</span></div></div>
+        <div class="list-item"><span class="list-mark">03</span><div><b>Команда перед автоматизацией</b><span>Хочет проверить реальную задачу и границы решения до бюджета на разработку.</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="pilot">
+    <div class="wrap">
+      <div class="offer">
+        <div>
+          <p class="eyebrow">Первые два платных пилота</p>
+          <h2 class="serif">Начните с одного процесса.</h2>
+          <div class="price">9 900 ₽</div>
+          <p class="muted">Стоимость одного пилота в рамках первой проверки формата TAINA Process Diagnostic.</p>
+          <div class="actions">
+            <a class="btn" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Обсудить пилот в VK ↗</a>
+          </div>
+          <p class="fine">Это цена диагностической услуги для первых двух платных пилотов, а не лицензия на программное обеспечение и не оплата через сайт.</p>
+        </div>
+        <div>
+          <div class="offer-meta">
+            <div class="meta-item"><b>ОБЪЁМ</b><span>Один согласованный повторяемый процесс</span></div>
+            <div class="meta-item"><b>СРОК</b><span>До 7 календарных дней</span></div>
+            <div class="meta-item"><b>РАБОТА</b><span>Около 5–7 часов активной работы исполнителя</span></div>
+            <div class="meta-item"><b>РЕЗУЛЬТАТ</b><span>Карта, реестры, выводы и управленческий отчёт</span></div>
+          </div>
+          <div class="note">Пилот не включает разработку или внедрение бота, AI-ассистента и интеграций. Если по итогам диагностики автоматизация выглядит оправданной, её объём и стоимость обсуждаются отдельно — без обязательства продолжать работу.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="limits">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Границы и безопасность</p>
+        <h2 class="serif">Сразу обозначаем, <em>чего этот пилот не делает.</em></h2>
+      </div>
+      <div class="limits">
+        <article class="limit"><h3>Это не внедрение</h3><p>В пилот не входят разработка, запуск и сопровождение автоматизации. Сначала диагностика, затем отдельное решение о следующих работах.</p></article>
+        <article class="limit"><h3>Это не аудит и не сертификация</h3><p>Мы разбираем согласованный процесс, но не выдаём сертификат AI-готовности и не подтверждаем соответствие компании стандартам.</p></article>
+        <article class="limit"><h3>Это не автоматический AI-анализ</h3><p>TAINA Knowledge Map используется как рабочий инструмент структурирования. В текущей V1 нет подключённой AI-модели и автоматического чтения документов.</p></article>
+        <article class="limit"><h3>Не передавайте чувствительные данные</h3><p>Для пилота подходят синтетические или разрешённые обезличенные сведения. Не используйте персональные, клиентские, медицинские, финансовые и конфиденциальные данные.</p></article>
+        <article class="limit"><h3>Нет облачной командной платформы</h3><p>Рабочая версия Knowledge Map хранит данные локально в браузере одного устройства. Нет аккаунтов, облачной синхронизации и совместного редактирования.</p></article>
+        <article class="limit"><h3>Результат зависит от подтверждения фактов</h3><p>Мы отдельно отмечаем, что известно, что предоставлено участниками, а что пока остаётся вопросом или гипотезой.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="faq">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Вопросы перед стартом</p>
+        <h2 class="serif">Коротко и без обещаний лишнего.</h2>
+      </div>
+      <div class="faq">
+        <details><summary>Вы сразу разработаете AI-бота?</summary><p>Нет. Этот формат — диагностика одного процесса. Мы определяем, где находится проблема и есть ли основания для автоматизации. Разработка, если она понадобится, обсуждается отдельно.</p></details>
+        <details><summary>Я получу доступ к TAINA Knowledge Map?</summary><p>Нет, пилот не является продажей лицензии или SaaS-доступа. Knowledge Map — рабочий инструмент, который используется при подготовке карты и отчёта. У V1 пока нет аккаунтов и облачной синхронизации.</p></details>
+        <details><summary>Какие данные нужны?</summary><p>Описание одного повторяемого процесса, сведения об этапах и ролях, а также безопасные примеры источников. Используйте синтетические или разрешённые обезличенные данные.</p></details>
+        <details><summary>Что, если автоматизация не нужна?</summary><p>Так и скажем. В отчёте будут зафиксированы найденные проблемы и практические действия, даже если правильный следующий шаг — изменить порядок работы, а не писать код.</p></details>
+        <details><summary>Как начинается работа?</summary><p>Напишите в сообщество TAINA Studio во VK. Сначала уточним задачу и проверим, подходит ли процесс под границы пилота. До согласования объёма и условий обязательств по оплате нет.</p></details>
+        <details><summary>Можно ли передать реальные клиентские документы?</summary><p>Не в рамках текущего пилота. Не отправляйте персональные, клиентские, медицинские, финансовые и коммерчески чувствительные сведения. Допустимый набор данных отдельно согласуется до начала работы.</p></details>
+      </div>
+    </div>
+  </section>
 </main>
-<footer class="wrap footer"><div><div class="brand">TAINA<i style="color:var(--gold);font-style:normal">◆</i></div><div>Карта знаний компании. Ясность начинается со структуры.</div></div><div>© TAINA Studio · 2026</div></footer>
-<a class="btn mobile-cta" href="#access">Получить ранний доступ ↗</a>
-</body></html>
+<footer class="wrap footer">
+  <div><div class="brand">TAINA<span class="brand-mark">◆</span></div><div>Диагностика процесса прежде, чем разработка.</div></div>
+  <div>© TAINA Studio · 2026</div>
+</footer>
+<a class="btn mobile-cta" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Обсудить пилот в VK ↗</a>
+</body>
+</html>
