@@ -6,7 +6,8 @@ const { normalizeDomain, extractJsonArray } = require('../src/webLeadSearch');
 const { computeScore, digitalPresenceCriterion } = require('../src/scoring');
 const { formatLeadCard } = require('../src/telegram');
 const { buildLeadKey } = require('../src/pipeline');
-const { fetchSiteText } = require('../src/siteFetch');
+const { fetchSiteText, isPublicIPv4, parsePublicHttpUrl } = require('../src/siteFetch');
+const { safeEqual, verifyBasicAuth, verifyCsrf, verifyTelegramCallback, escapeHtml } = require('../src/security');
 const { parseAnalysis, daysSince } = require('../src/followup');
 
 // 1. normalizeDomain — убирает протокол и www, приводит к нижнему регистру
@@ -16,6 +17,36 @@ const { parseAnalysis, daysSince } = require('../src/followup');
   assert.strictEqual(normalizeDomain(''), '');
   assert.strictEqual(normalizeDomain(null), '');
   console.log('OK: normalizeDomain');
+
+// 1a. Authentication and request authorization fail closed.
+{
+  assert.strictEqual(safeEqual('secret', 'secret'), true);
+  assert.strictEqual(safeEqual('secret', 'wrong'), false);
+  assert.strictEqual(safeEqual('', ''), false);
+  const valid = 'Basic ' + Buffer.from('operator:correct-horse').toString('base64');
+  assert.strictEqual(verifyBasicAuth(valid, 'operator', 'correct-horse'), true);
+  assert.strictEqual(verifyBasicAuth(valid, 'operator', 'wrong'), false);
+  assert.strictEqual(verifyBasicAuth(valid, '', 'correct-horse'), false);
+  assert.strictEqual(verifyBasicAuth('Basic !!!', 'operator', 'correct-horse'), false);
+  assert.strictEqual(verifyTelegramCallback({
+    from: { id: 12345 },
+    message: { message_id: 7, chat: { id: 555 } }
+  }, '12345', '555'), true);
+  assert.strictEqual(verifyTelegramCallback({
+    from: { id: 9 },
+    message: { message_id: 7, chat: { id: 555 } }
+  }, '12345', '555'), false);
+  assert.strictEqual(verifyTelegramCallback(null, '12345', '555'), false);
+  assert.strictEqual(escapeHtml('<x a="b">'), '&lt;x a=&quot;b&quot;&gt;');
+  const csrfReq = {
+    body: { _csrf: 'token-123' },
+    headers: { cookie: '__Host-taina-csrf=token-123', host: 'example.com', origin: 'https://example.com', 'sec-fetch-site': 'same-origin' }
+  };
+  assert.strictEqual(verifyCsrf(csrfReq, 'example.com'), true);
+  assert.strictEqual(verifyCsrf({ ...csrfReq, headers: { ...csrfReq.headers, origin: 'https://evil.example' } }, 'example.com'), false);
+  assert.strictEqual(verifyCsrf({ ...csrfReq, body: { _csrf: 'wrong' } }, 'example.com'), false);
+  console.log('OK: authentication, Telegram authorization and CSRF');
+}
 }
 
 // 2. computeScore — детерминированная формула, а не выдумка LLM
@@ -113,6 +144,7 @@ const { parseAnalysis, daysSince } = require('../src/followup');
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
   assert.ok(Math.abs(daysSince(threeDaysAgo) - 3) < 0.01);
   assert.strictEqual(daysSince(''), Infinity);
+  assert.ok(!Number.isFinite(daysSince('not-a-date')));
   console.log('OK: daysSince');
 }
 
@@ -157,20 +189,45 @@ const { parseAnalysis, daysSince } = require('../src/followup');
 // 10. fetchSiteText — парсинг HTML в текст (сеть подменяем)
 {
   (async () => {
-    const originalFetch = global.fetch;
-    global.fetch = async () => ({
-      ok: true,
-      headers: { get: () => 'text/html; charset=utf-8' },
-      text: async () => '<html><head><style>.a{}</style></head><body><h1>О нас</h1><p>Мы делаем классные вещи &amp; помогаем клиентам.</p><script>evil()</script></body></html>',
+    const text = await fetchSiteText('example.com', {
+      lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+      request: async () => ({
+        body: '<html><head><style>.a{}</style></head><body><h1>О нас</h1><p>Мы делаем классные вещи &amp; помогаем клиентам.</p><script>evil()</script></body></html>'
+      })
     });
-
-    const text = await fetchSiteText('example.com');
     assert.ok(text.includes('О нас'));
     assert.ok(text.includes('Мы делаем классные вещи & помогаем клиентам'));
     assert.ok(!text.includes('evil()'));
     assert.ok(!text.includes('<h1>'));
 
-    global.fetch = originalFetch;
+    assert.strictEqual(parsePublicHttpUrl('http://127.0.0.1'), null);
+    assert.strictEqual(parsePublicHttpUrl('http://169.254.169.254/latest/meta-data'), null);
+    assert.strictEqual(parsePublicHttpUrl('http://localhost'), null);
+    assert.strictEqual(parsePublicHttpUrl('file:///etc/passwd'), null);
+    assert.strictEqual(parsePublicHttpUrl('https://user:pass@example.com'), null);
+    assert.strictEqual(parsePublicHttpUrl('https://example.com:8443'), null);
+    assert.strictEqual(isPublicIPv4('93.184.216.34'), true);
+    assert.strictEqual(isPublicIPv4('10.0.0.1'), false);
+    assert.strictEqual(isPublicIPv4('169.254.169.254'), false);
+
+    let requestCount = 0;
+    const blocked = await fetchSiteText('https://example.com', {
+      lookup: async () => [{ address: '127.0.0.1', family: 4 }],
+      request: async () => { requestCount++; return { body: '' }; }
+    });
+    assert.strictEqual(blocked, null);
+    assert.strictEqual(requestCount, 0);
+
+    let dnsCount = 0;
+    const redirectBlocked = await fetchSiteText('https://example.com', {
+      lookup: async () => {
+        dnsCount++;
+        return [{ address: dnsCount === 1 ? '93.184.216.34' : '10.0.0.2', family: 4 }];
+      },
+      request: async () => ({ redirect: 'http://127.0.0.1/admin' })
+    });
+    assert.strictEqual(redirectBlocked, null);
+    assert.strictEqual(dnsCount, 2);
     console.log('OK: fetchSiteText — очистка HTML');
   })().then(() => {
     console.log('\nВсе проверки пройдены.');
