@@ -12,6 +12,13 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;');
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 async function publish(text) {
   const results = { telegram: null, vk: null };
 
