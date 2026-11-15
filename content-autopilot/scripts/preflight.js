@@ -8,6 +8,7 @@ const REQUIRED_KEYS = [
   'TELEGRAM_BOT_TOKEN',
   'TELEGRAM_CHAT_ID',
   'TELEGRAM_CHANNEL_ID',
+  'TELEGRAM_APPROVER_ID',
   'TELEGRAM_WEBHOOK_SECRET',
   'TELEGRAM_WEBHOOK_URL',
   'ADMIN_WEBHOOK_SECRET',
@@ -84,6 +85,13 @@ function runPreflight(env = process.env, dataDir) {
     } catch (err) {
       errors.push(err.message);
     }
+  }
+
+  if (env.TELEGRAM_APPROVER_ID &&
+      (!/^\d+$/.test(env.TELEGRAM_APPROVER_ID) ||
+       !Number.isSafeInteger(Number(env.TELEGRAM_APPROVER_ID)) ||
+       Number(env.TELEGRAM_APPROVER_ID) <= 0)) {
+    errors.push('TELEGRAM_APPROVER_ID должен быть положительным числовым Telegram user ID');
   }
 
   if (env.VK_GROUP_ID && (!/^\d+$/.test(env.VK_GROUP_ID) || Number(env.VK_GROUP_ID) <= 0)) {
