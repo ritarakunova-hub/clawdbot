@@ -48,7 +48,8 @@ Fill in:
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID` (owner's private chat)
 - `TELEGRAM_CHANNEL_ID` (test channel first)
-- `TELEGRAM_WEBHOOK_SECRET`
+- `TELEGRAM_WEBHOOK_SECRET` (generate with `openssl rand -hex 32`)
+- `TELEGRAM_WEBHOOK_URL` (`https://YOUR-SUBDOMAIN/telegram/webhook`)
 - `ADMIN_WEBHOOK_SECRET`
 - `TELEGRAM_APPROVER_ID` (your Telegram numeric user ID)
 - `VK_GROUP_ID` and `VK_COMMUNITY_TOKEN` (test community first)
@@ -84,7 +85,16 @@ The Telegram webhook URL must be:
 
 `https://YOUR-SUBDOMAIN/telegram/webhook`
 
-Configure it using the Telegram Bot API `setWebhook` method with `secret_token` set to the exact value of `TELEGRAM_WEBHOOK_SECRET`. Do not paste the bot token into a public terminal recording, shared chat, or Git repository.
+Set `TELEGRAM_WEBHOOK_URL=https://YOUR-SUBDOMAIN/telegram/webhook` in `.env`. Then load the environment and run the included setup script. It sends the bot token only inside the API request URL and the webhook secret in the POST body; neither secret is written to shell arguments or script output:
+
+```bash
+set -a
+. ./.env
+set +a
+node scripts/set-telegram-webhook.js
+```
+
+The script rejects non-HTTPS webhook URLs, validates the secret format, checks Telegram's API response, and prints only the public webhook URL. Never paste credentials into chat, Git, screenshots, or shell commands.
 
 ## 6. Smoke tests before production
 
