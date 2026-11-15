@@ -51,7 +51,7 @@ Fill in:
 - `TELEGRAM_WEBHOOK_SECRET` (generate with `openssl rand -hex 32`)
 - `TELEGRAM_WEBHOOK_URL` (`https://YOUR-SUBDOMAIN/telegram/webhook`)
 - `ADMIN_WEBHOOK_SECRET`
-- `TELEGRAM_APPROVER_ID` (your Telegram numeric user ID)
+- `TELEGRAM_APPROVER_ID` (required positive numeric Telegram user ID; do not leave blank)
 - `VK_GROUP_ID` and `VK_COMMUNITY_TOKEN` (test community first)
 - `TIMEZONE=Europe/Moscow`
 - `CRON_SCHEDULE=0 9 * * *`
