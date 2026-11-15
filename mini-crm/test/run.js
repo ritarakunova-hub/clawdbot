@@ -60,6 +60,7 @@ function makeJws(body, secret, overrides = {}) {
   assert.strictEqual(lead.submission_id, 'sub-123');
   assert.strictEqual(lead.name, 'Ольга Смирнова');
   assert.strictEqual(lead.email, 'olga@example.com');
+  assert.strictEqual(lead.message, '');
   assert.strictEqual(lead.form_name, 'taina-diagnostic');
   assert.strictEqual(lead.consent_status, 'yes');
   assert.strictEqual(lead.status, 'Новая');
@@ -70,16 +71,26 @@ function makeJws(body, secret, overrides = {}) {
 // 3. Single contact field may contain either an email or a phone/messenger.
 {
   const email = parseNetlifyLead({
-    payload: { id: 'sub-124', form_name: 'contact', data: { contact: 'person@example.com', consent: 'on' } }
+    payload: { id: 'sub-124', form_name: 'taina-diagnostic', data: { contact: 'person@example.com', consent: 'on' } }
   });
   assert.strictEqual(email.email, 'person@example.com');
   assert.strictEqual(email.phone, '');
 
   const phone = parseNetlifyLead({
-    payload: { id: 'sub-125', form_name: 'contact', data: { Контакт: '+7 999 000-11-22', согласие: 'да' } }
+    payload: { id: 'sub-125', form_name: 'taina-diagnostic', data: { Контакт: '+7 999 000-11-22', согласие: 'да' } }
   });
   assert.strictEqual(phone.phone, '+7 999 000-11-22');
   assert.strictEqual(phone.email, '');
+  assert.strictEqual(phone.message, '');
+
+  assert.throws(() => parseNetlifyLead({
+    payload: { id: 'sub-126', form_name: 'unknown-form', data: { email: 'person@example.com', consent: 'yes' } }
+  }), (err) => err.code === 'unexpected_form');
+  const objectValue = parseNetlifyLead({
+    payload: { id: 'sub-127', form_name: 'taina-diagnostic', data: { email: { address: 'evil@example.com' }, contact: 'valid@example.com', consent: 'yes' } }
+  });
+  assert.strictEqual(objectValue.email, '');
+  assert.strictEqual(objectValue.phone, 'valid@example.com');
   assert.strictEqual(hasConsent({ consent: 'true' }), true);
   assert.strictEqual(hasConsent({ consent: 'no' }), false);
   console.log('OK: contact and consent field handling');
@@ -87,17 +98,17 @@ function makeJws(body, secret, overrides = {}) {
 
 // 4. Invalid submissions are rejected instead of becoming empty CRM rows.
 {
-  assert.throws(() => parseNetlifyLead({ payload: { form_name: 'contact', data: { email: 'a@b.com', consent: 'yes' } } }),
+  assert.throws(() => parseNetlifyLead({ payload: { form_name: 'taina-diagnostic', data: { email: 'a@b.com', consent: 'yes' } } }),
     (err) => err.code === 'missing_submission_id');
-  assert.throws(() => parseNetlifyLead({ payload: { id: 'sub-1', form_name: 'contact', data: { email: 'a@b.com' } } }),
+  assert.throws(() => parseNetlifyLead({ payload: { id: 'sub-1', form_name: 'taina-diagnostic', data: { email: 'a@b.com' } } }),
     (err) => err.code === 'consent_required');
-  assert.throws(() => parseNetlifyLead({ payload: { id: 'sub-2', form_name: 'contact', data: { email: 'not-an-email', consent: 'yes' } } }),
+  assert.throws(() => parseNetlifyLead({ payload: { id: 'sub-2', form_name: 'taina-diagnostic', data: { email: 'not-an-email', consent: 'yes' } } }),
     (err) => err.code === 'invalid_email');
-  assert.throws(() => parseNetlifyLead({ payload: { id: 'sub-3', form_name: 'contact', data: { name: 'No contact', consent: 'yes' } } }),
+  assert.throws(() => parseNetlifyLead({ payload: { id: 'sub-3', form_name: 'taina-diagnostic', data: { name: 'No contact', consent: 'yes' } } }),
     (err) => err.code === 'contact_required');
-  assert.throws(() => parseNetlifyLead({ payload: { id: 'sub-4', form_name: 'contact', created_at: 'not-a-date', data: { email: 'a@b.com', consent: 'yes' } } }),
+  assert.throws(() => parseNetlifyLead({ payload: { id: 'sub-4', form_name: 'taina-diagnostic', created_at: 'not-a-date', data: { email: 'a@b.com', consent: 'yes' } } }),
     (err) => err.code === 'invalid_created_at');
-  assert.throws(() => parseNetlifyLead({ payload: { id: 'sub-5', form_name: 'contact', data: { email: 'a@b.com', message: 'x'.repeat(2001), consent: 'yes' } } }),
+  assert.throws(() => parseNetlifyLead({ payload: { id: 'sub-5', form_name: 'taina-diagnostic', data: { email: 'a@b.com', message: 'x'.repeat(2001), consent: 'yes' } } }),
     (err) => err.code === 'field_too_long');
   assert.throws(() => parseNetlifyLead(null), (err) => err.code === 'missing_submission_id');
   assert.throws(() => parseNetlifyLead([]), (err) => err.code === 'missing_submission_id');
@@ -110,11 +121,14 @@ function makeJws(body, secret, overrides = {}) {
     name: 'Тест <script>',
     email: 'test@example.com',
     message: 'A & B > C',
-    form_name: 'contact',
+    form_name: 'taina-diagnostic',
     submission_id: 'sub-456'
   });
   assert.ok(message.includes('&lt;script&gt;'));
   assert.ok(message.includes('A &amp; B &gt; C'));
+  assert.ok(!message.includes('test@example.com'));
+  assert.ok(!message.includes('Тест'));
+  assert.ok(message.includes('Только в рабочей таблице') || message.includes('рабочей таблице'));
   assert.ok(message.includes('ID заявки'));
   assert.ok(!message.includes('<script>'));
 
@@ -171,6 +185,10 @@ async function run() {
   assert.ok(indexSource.includes("NETLIFY_JWS_SECRET"));
   assert.ok(!indexSource.includes("req.query.token"));
   assert.ok(!indexSource.includes("body =', req.body"));
+  assert.ok(indexSource.includes("limit: '64kb'"));
+  assert.ok(indexSource.includes("inflate: false"));
+  assert.ok(indexSource.includes("notification_outcome_uncertain"));
+  assert.ok(!indexSource.includes("setNotificationStatus(lead.submission_id, 'failed')"));
   console.log('OK: webhook security regression checks');
   console.log('\nAll mini-CRM checks passed.');
 }
