@@ -8,6 +8,9 @@ const { formatLeadCard } = require('../src/telegram');
 const { buildLeadKey } = require('../src/pipeline');
 const { fetchSiteText, isPublicIPv4, parsePublicHttpUrl } = require('../src/siteFetch');
 const { safeEqual, verifyBasicAuth, verifyCsrf, verifyTelegramCallback, escapeHtml } = require('../src/security');
+const { runPreflight } = require('../scripts/preflight');
+const fs = require('node:fs');
+const path = require('node:path');
 const { parseAnalysis, daysSince } = require('../src/followup');
 
 // 1. normalizeDomain — убирает протокол и www, приводит к нижнему регистру
@@ -46,6 +49,28 @@ const { parseAnalysis, daysSince } = require('../src/followup');
   assert.strictEqual(verifyCsrf({ ...csrfReq, headers: { ...csrfReq.headers, origin: 'https://evil.example' } }, 'example.com'), false);
   assert.strictEqual(verifyCsrf({ ...csrfReq, body: { _csrf: 'wrong' } }, 'example.com'), false);
   console.log('OK: authentication, Telegram authorization and CSRF');
+
+  const validEnv = {
+    ANTHROPIC_API_KEY: 'test',
+    GOOGLE_SHEET_ID: 'sheet-id',
+    GOOGLE_SERVICE_ACCOUNT_KEY_BASE64: 'e30=',
+    TELEGRAM_BOT_TOKEN: '123:token',
+    TELEGRAM_CHAT_ID: '12345',
+    TELEGRAM_WEBHOOK_SECRET: 'x'.repeat(40),
+    TELEGRAM_ADMIN_USER_ID: '12345',
+    APP_USERNAME: 'operator',
+    APP_PASSWORD: 'a-very-long-password',
+    PUBLIC_BASE_URL: 'https://sales.example.com/'
+  };
+  assert.deepStrictEqual(runPreflight(validEnv), { ok: true, errors: [] });
+  assert.ok(runPreflight({ ...validEnv, TELEGRAM_ADMIN_USER_ID: '0' }).errors.some(x => x.includes('TELEGRAM_ADMIN_USER_ID')));
+  assert.ok(runPreflight({ ...validEnv, TELEGRAM_WEBHOOK_SECRET: 'short' }).errors.some(x => x.includes('TELEGRAM_WEBHOOK_SECRET')));
+  assert.ok(runPreflight({ ...validEnv, APP_PASSWORD: 'tiny' }).errors.some(x => x.includes('APP_PASSWORD')));
+  assert.ok(runPreflight({ ...validEnv, PUBLIC_BASE_URL: 'http://sales.example.com/' }).errors.some(x => x.includes('PUBLIC_BASE_URL')));
+  const sheetsSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'sheets.js'), 'utf8');
+  assert.ok(sheetsSource.includes("valueInputOption: 'RAW'"));
+  assert.ok(!sheetsSource.includes("valueInputOption: 'USER_ENTERED'"));
+  console.log('OK: deployment preflight and spreadsheet formula-injection regression checks');
 }
 }
 
