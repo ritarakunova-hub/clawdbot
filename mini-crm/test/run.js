@@ -89,8 +89,8 @@ function makeJws(body, secret, overrides = {}) {
   const objectValue = parseNetlifyLead({
     payload: { id: 'sub-127', form_name: 'taina-diagnostic', data: { email: { address: 'evil@example.com' }, contact: 'valid@example.com', consent: 'yes' } }
   });
-  assert.strictEqual(objectValue.email, '');
-  assert.strictEqual(objectValue.phone, 'valid@example.com');
+  assert.strictEqual(objectValue.email, 'valid@example.com');
+  assert.strictEqual(objectValue.phone, '');
   assert.strictEqual(hasConsent({ consent: 'true' }), true);
   assert.strictEqual(hasConsent({ consent: 'no' }), false);
   console.log('OK: contact and consent field handling');
@@ -108,14 +108,14 @@ function makeJws(body, secret, overrides = {}) {
     (err) => err.code === 'contact_required');
   assert.throws(() => parseNetlifyLead({ payload: { id: 'sub-4', form_name: 'taina-diagnostic', created_at: 'not-a-date', data: { email: 'a@b.com', consent: 'yes' } } }),
     (err) => err.code === 'invalid_created_at');
-  assert.throws(() => parseNetlifyLead({ payload: { id: 'sub-5', form_name: 'taina-diagnostic', data: { email: 'a@b.com', message: 'x'.repeat(2001), consent: 'yes' } } }),
-    (err) => err.code === 'field_too_long');
+  const noFreeText = parseNetlifyLead({ payload: { id: 'sub-5', form_name: 'taina-diagnostic', data: { email: 'a@b.com', message: 'private health or financial details', consent: 'yes' } } });
+  assert.strictEqual(noFreeText.message, '');
   assert.throws(() => parseNetlifyLead(null), (err) => err.code === 'missing_submission_id');
   assert.throws(() => parseNetlifyLead([]), (err) => err.code === 'missing_submission_id');
   console.log('OK: invalid submissions rejected');
 }
 
-// 5. Telegram notification safely escapes markup and bounds free-text length.
+// 5. Telegram notification contains no personal contacts or free-text request.
 {
   const message = formatLeadMessage({
     name: 'Тест <script>',
@@ -124,17 +124,17 @@ function makeJws(body, secret, overrides = {}) {
     form_name: 'taina-diagnostic',
     submission_id: 'sub-456'
   });
-  assert.ok(message.includes('&lt;script&gt;'));
-  assert.ok(message.includes('A &amp; B &gt; C'));
+  assert.ok(!message.includes('&lt;script&gt;'));
+  assert.ok(!message.includes('A &amp; B &gt; C'));
   assert.ok(!message.includes('test@example.com'));
   assert.ok(!message.includes('Тест'));
   assert.ok(message.includes('Только в рабочей таблице') || message.includes('рабочей таблице'));
-  assert.ok(message.includes('ID заявки'));
+  assert.ok(message.includes('ID: <code>sub-456</code>'));
   assert.ok(!message.includes('<script>'));
 
-  const longMessage = formatLeadMessage({ message: 'x'.repeat(800) });
-  assert.ok(longMessage.length < 600);
-  assert.ok(!longMessage.includes('undefined'));
+  const minimalMessage = formatLeadMessage({ submission_id: 'sub-456', form_name: 'taina-diagnostic' });
+  assert.ok(minimalMessage.length < 600);
+  assert.ok(!minimalMessage.includes('undefined'));
   console.log('OK: Telegram notification formatting');
 }
 
