@@ -1,0 +1,40 @@
+name: Mini CRM Checks
+
+on:
+  pull_request:
+    paths:
+      - "mini-crm/**"
+      - ".github/workflows/mini-crm.yml"
+  push:
+    branches:
+      - "feat/mini-crm-secure-intake"
+    paths:
+      - "mini-crm/**"
+      - ".github/workflows/mini-crm.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [18, 20]
+    defaults:
+      run:
+        working-directory: mini-crm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: \${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: mini-crm/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm test
