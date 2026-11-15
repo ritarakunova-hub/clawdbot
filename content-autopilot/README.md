@@ -23,7 +23,7 @@
 - TELEGRAM_WEBHOOK_SECRET — обязательный секрет Telegram webhook (32–256 символов из латинских букв, цифр, `_` и `-`).
 - TELEGRAM_WEBHOOK_URL — публичный HTTPS URL обработчика `/telegram/webhook`.
 - ADMIN_WEBHOOK_SECRET — отдельный секрет для ручного запуска POST /check/now; без него endpoint закрыт.
-- TELEGRAM_APPROVER_ID — числовой ID пользователя, которому разрешено подтверждать и отклонять посты.
+- TELEGRAM_APPROVER_ID — обязательный положительный числовой Telegram user ID; fallback на TELEGRAM_CHAT_ID не используется.
 - VK_GROUP_ID и VK_COMMUNITY_TOKEN — ID и токен сообщества VK.
 - TIMEZONE и CRON_SCHEDULE — расписание; по умолчанию Europe/Moscow и 0 9 * * *.
 - CONTENT_AUTOPILOT_DATA_DIR — необязательный путь к постоянному каталогу хранения pending.json.
