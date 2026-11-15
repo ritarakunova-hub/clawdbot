@@ -11,15 +11,15 @@ function shorten(value, maxLength) {
 }
 
 function formatLeadMessage(lead) {
+  // Keep personal contacts and free-text request details out of Telegram.
   const lines = [
     '📩 <b>Новая заявка TAINA</b>',
-    lead.name ? 'Имя: ' + escapeHtml(shorten(lead.name, 120)) : null,
-    lead.phone ? 'Телефон: ' + escapeHtml(shorten(lead.phone, 48)) : null,
-    lead.email ? 'Email: ' + escapeHtml(shorten(lead.email, 254)) : null,
-    lead.message ? 'Запрос: ' + escapeHtml(shorten(lead.message, 500)) : null,
+    lead.submission_id ? 'ID: <code>' + escapeHtml(shorten(lead.submission_id, 128)) + '</code>' : null,
     lead.form_name ? 'Форма: ' + escapeHtml(shorten(lead.form_name, 120)) : null,
-    lead.submission_id ? 'ID заявки: <code>' + escapeHtml(shorten(lead.submission_id, 128)) + '</code>' : null
-  ].filter(Boolean);
+    lead.received_at ? 'Получена: ' + escapeHtml(shorten(lead.received_at, 40)) : null,
+    '',
+    'Контактные данные доступны только в рабочей таблице. Не пересылайте их в чаты.'
+  ].filter((line) => line !== null);
 
   return lines.join('\n');
 }
