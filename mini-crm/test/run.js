@@ -99,6 +99,8 @@ function makeJws(body, secret, overrides = {}) {
     (err) => err.code === 'invalid_created_at');
   assert.throws(() => parseNetlifyLead({ payload: { id: 'sub-5', form_name: 'contact', data: { email: 'a@b.com', message: 'x'.repeat(2001), consent: 'yes' } } }),
     (err) => err.code === 'field_too_long');
+  assert.throws(() => parseNetlifyLead(null), (err) => err.code === 'missing_submission_id');
+  assert.throws(() => parseNetlifyLead([]), (err) => err.code === 'missing_submission_id');
   console.log('OK: invalid submissions rejected');
 }
 
