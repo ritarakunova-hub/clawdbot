@@ -1,0 +1,33 @@
+name: Content Autopilot Checks
+
+on:
+  pull_request:
+    paths:
+      - "content-autopilot/**"
+      - ".github/workflows/content-autopilot.yml"
+  push:
+    branches:
+      - "feat/content-autopilot-safe-approval"
+    paths:
+      - "content-autopilot/**"
+      - ".github/workflows/content-autopilot.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: content-autopilot
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: content-autopilot/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm test
