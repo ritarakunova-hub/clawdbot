@@ -4,23 +4,27 @@ const { getPostForDate, todayInTimezone } = require('./src/posts');
 const telegram = require('./src/telegram');
 const { publish, formatPublishSummary } = require('./src/publisher');
 const { loadPending, savePending, clearPending } = require('./src/pending');
-const { safeSecretEquals } = require('./src/security');
+const { safeSecretEquals, isAuthorizedCallback } = require('./src/security');
 
 const app = express();
-app.use(express.json({ limit: '1mb' }));
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+app.use(express.json({ limit: '64kb' }));
 
 const PORT = process.env.PORT || 3000;
 const TIMEZONE = process.env.TIMEZONE || 'Europe/Moscow';
 const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '0 9 * * *';
 const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || '';
 const ADMIN_WEBHOOK_SECRET = process.env.ADMIN_WEBHOOK_SECRET || '';
-const TELEGRAM_APPROVER_ID = process.env.TELEGRAM_APPROVER_ID || process.env.TELEGRAM_CHAT_ID || '';
+const TELEGRAM_APPROVER_ID = process.env.TELEGRAM_APPROVER_ID || '';
 
 app.get('/health', (req, res) => res.status(200).json({ ok: true }));
-
-function sameId(left, right) {
-  return left !== undefined && right !== undefined && String(left) === String(right);
-}
 
 async function resolvePublish(pending) {
   const current = loadPending();
@@ -188,9 +192,7 @@ app.post('/telegram/webhook', async (req, res) => {
     return;
   }
 
-  const messageChatId = callback.message && callback.message.chat && callback.message.chat.id;
-  const actorId = callback.from && callback.from.id;
-  if (!sameId(messageChatId, pending.telegramChatId) || !sameId(actorId, TELEGRAM_APPROVER_ID)) {
+  if (!isAuthorizedCallback(callback, pending, TELEGRAM_APPROVER_ID)) {
     await telegram.answerCallbackQuery(callback.id, 'Нет разрешения на это действие').catch(() => {});
     return;
   }
