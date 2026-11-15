@@ -2,7 +2,7 @@
   "name": "taina-content-autopilot",
   "version": "1.0.0",
   "private": true,
-  "description": "TAINA Content Autopilot — черновик поста по расписанию в Telegram, окно на правку/отмену, автопубликация в VK и Telegram-канал, если ничего не тронули",
+  "description": "TAINA Content Autopilot — Telegram draft approval required before VK and Telegram publication; silence never publishes",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
