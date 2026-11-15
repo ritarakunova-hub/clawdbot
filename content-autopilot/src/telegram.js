@@ -65,11 +65,17 @@ async function apiCall(method, payload) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error('Telegram API (' + method + ') вернул ' + res.status + ': ' + body);
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    throw new Error('Telegram API (' + method + ') вернул невалидный JSON, HTTP ' + res.status);
   }
-  return res.json();
+  if (!res.ok || body.ok !== true) {
+    const description = body && body.description ? body.description : 'неизвестная ошибка API';
+    throw new Error('Telegram API (' + method + ') вернул ' + res.status + ': ' + description);
+  }
+  return body;
 }
 
 async function sendPlainMessage(text) {
@@ -138,5 +144,6 @@ module.exports = {
   sendChannelPost,
   markDraftDecided,
   markDraftNeedsReview,
-  answerCallbackQuery
+  answerCallbackQuery,
+  apiCall
 };
