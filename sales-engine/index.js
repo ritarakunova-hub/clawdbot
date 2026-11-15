@@ -38,7 +38,7 @@ const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '0 10 * * *';
 let activeOperation = null;
 
 function requireAuth(req, res, next) {
-  if (!APP_USERNAME || !APP_PASSWORD) {
+  if (!APP_USERNAME || APP_PASSWORD.length < 16) {
     return res.status(503).send('Сервис закрыт: авторизация не настроена.');
   }
   if (verifyBasicAuth(req.headers.authorization, APP_USERNAME, APP_PASSWORD)) return next();
@@ -176,8 +176,8 @@ app.post('/followup/run', requireAuth, requireCsrf, (req, res) => {
 });
 
 app.post('/telegram/webhook', async (req, res) => {
-  if (!TELEGRAM_WEBHOOK_SECRET || !TELEGRAM_ADMIN_USER_ID ||
-      !safePositiveInteger(TELEGRAM_ADMIN_USER_ID) || !TELEGRAM_CHAT_ID) {
+  if (!/^[A-Za-z0-9_-]{32,256}$/.test(TELEGRAM_WEBHOOK_SECRET) ||
+      !TELEGRAM_ADMIN_USER_ID || !safePositiveInteger(TELEGRAM_ADMIN_USER_ID) || !TELEGRAM_CHAT_ID) {
     return res.status(503).json({ ok: false, error: 'webhook_not_configured' });
   }
   const suppliedSecret = req.get('x-telegram-bot-api-secret-token') || '';
@@ -257,7 +257,8 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log('[sales-engine] service_started');
-  if (!APP_USERNAME || !APP_PASSWORD || !TELEGRAM_WEBHOOK_SECRET ||
+  if (!APP_USERNAME || APP_PASSWORD.length < 16 ||
+      !/^[A-Za-z0-9_-]{32,256}$/.test(TELEGRAM_WEBHOOK_SECRET) ||
       !safePositiveInteger(TELEGRAM_ADMIN_USER_ID) || !TELEGRAM_CHAT_ID) {
     console.error('[sales-engine] security_configuration_incomplete; privileged routes remain closed');
   }
