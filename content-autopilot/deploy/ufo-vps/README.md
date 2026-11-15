@@ -88,8 +88,11 @@ Configure it using the Telegram Bot API `setWebhook` method with `secret_token` 
 
 ## 6. Smoke tests before production
 
-1. Temporarily set the calendar to a test date or invoke the protected manual check:
+1. Export the local environment file and invoke the protected manual check (this sends a draft only if today's calendar has a ready post):
    ```bash
+   set -a
+   . ./.env
+   set +a
    curl -X POST http://127.0.0.1:3000/check/now \
      -H "x-taina-admin-secret: $ADMIN_WEBHOOK_SECRET"
    ```
