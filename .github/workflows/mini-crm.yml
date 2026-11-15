@@ -16,39 +16,70 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  sync-lockfile:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/feat/mini-crm-secure-intake' && github.actor == 'ritarakunova-hub' }}
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: [18, 20]
+    timeout-minutes: 10
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: mini-crm
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout target branch
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ github.ref }}
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mini-crm/package-lock.json
+      - name: Resolve and audit committed dependencies
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          npm audit fix --package-lock-only --ignore-scripts
+          npm audit --omit=dev --audit-level=high
+      - name: Commit lockfile changes when required
+        working-directory: .
+        run: |
+          if git diff --quiet -- mini-crm/package-lock.json; then
+            echo "Lockfile already matches package.json and passes audit."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add mini-crm/package-lock.json
+            git commit -m "chore(mini-crm): sync audited dependency lockfile"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+  test:
+    needs: sync-lockfile
+    if: ${{ always() && (needs.sync-lockfile.result == 'success' || needs.sync-lockfile.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [24, 26]
+    defaults:
+      run:
+        working-directory: mini-crm
+    steps:
+      - name: Checkout tested ref
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ github.ref }}
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
           cache-dependency-path: mini-crm/package-lock.json
-      - name: Resolve patched lockfile
-        run: |
-          npm install --package-lock-only --ignore-scripts
-          npm audit fix --package-lock-only || true
-      - name: Install dependencies from resolved lockfile
+      - name: Install exact committed dependencies
         run: npm ci
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
       - name: Run tests
         run: npm test
-      - name: Summarize dependency advisories
-        run: |
-          npm audit --json > /tmp/mini-crm-audit.json || true
-          node -e "const report=require('/tmp/mini-crm-audit.json'); for (const [name,item] of Object.entries(report.vulnerabilities||{})) { const via=(item.via||[]).map(v=>typeof v==='string'?v:{title:v.title,url:v.url,range:v.range}); console.log(JSON.stringify({name,severity:item.severity,range:item.range,fixAvailable:item.fixAvailable,via})); }"
-      - name: Upload resolved lockfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: mini-crm-lockfile-node-${{ matrix.node-version }}
-          path: mini-crm/package-lock.json
-          retention-days: 1
