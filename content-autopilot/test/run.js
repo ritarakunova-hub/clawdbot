@@ -291,7 +291,48 @@ async function testWebhookSetup() {
   console.log('OK: secure Telegram webhook setup and API failures');
 }
 
-testTelegramApiBodyErrors().then(testPlatformSpecificContent).then(testVkApiResponses).then(testWebhookSetup).then(() => {
+
+async function testPreflight() {
+  const { runPreflight, validateCalendar } = require('../scripts/preflight');
+  const webhookSecret = 'telegram-webhook-secret-for-tests-012345';
+  const adminSecret = 'different-admin-secret-for-tests-0123456';
+  const env = {
+    TELEGRAM_BOT_TOKEN: '123456:TEST_BOT_TOKEN',
+    TELEGRAM_CHAT_ID: '123456',
+    TELEGRAM_CHANNEL_ID: '-100123456',
+    TELEGRAM_WEBHOOK_SECRET: webhookSecret,
+    TELEGRAM_WEBHOOK_URL: 'https://automation.example.com/telegram/webhook',
+    ADMIN_WEBHOOK_SECRET: adminSecret,
+    VK_GROUP_ID: '654321',
+    VK_COMMUNITY_TOKEN: 'vk-test-token',
+    TIMEZONE: 'Europe/Moscow'
+  };
+  const dataDir = path.join(testDataDir, 'preflight-data');
+  const passed = runPreflight(env, dataDir);
+  assert.strictEqual(passed.ok, true, passed.errors.join('; '));
+  assert.ok(passed.calendarCount > 0);
+  assert.strictEqual(fs.existsSync(dataDir), true);
+
+  const invalid = runPreflight({
+    ...env,
+    TELEGRAM_WEBHOOK_URL: 'http://automation.example.com/telegram/webhook',
+    ADMIN_WEBHOOK_SECRET: webhookSecret,
+    VK_GROUP_ID: 'not-a-number',
+    TIMEZONE: 'Not/A_Timezone'
+  }, path.join(testDataDir, 'invalid-preflight-data'));
+  assert.strictEqual(invalid.ok, false);
+  assert.ok(invalid.errors.some((error) => /HTTPS/.test(error)));
+  assert.ok(invalid.errors.some((error) => /должны различаться/.test(error)));
+  assert.ok(invalid.errors.some((error) => /VK_GROUP_ID/.test(error)));
+  assert.ok(invalid.errors.some((error) => /часовой пояс/.test(error)));
+
+  const posts = loadPosts();
+  const duplicateCalendar = validateCalendar(posts.concat([{ ...posts[0] }]));
+  assert.ok(duplicateCalendar.some((error) => /дата дублируется/.test(error)));
+  console.log('OK: deployment preflight and calendar validation');
+}
+
+testTelegramApiBodyErrors().then(testPlatformSpecificContent).then(testVkApiResponses).then(testWebhookSetup).then(testPreflight).then(() => {
   fs.rmSync(testDataDir, { recursive: true, force: true });
   console.log('\\nAll checks passed.');
 }).catch((err) => {
