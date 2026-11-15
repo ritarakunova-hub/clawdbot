@@ -6,8 +6,17 @@ const { notifyNewLead } = require('./src/telegram');
 const { createSerialQueue } = require('./src/serial-queue');
 
 const app = express();
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
 app.use(express.json({
-  limit: '100kb',
+  limit: '64kb',
+  inflate: false,
   verify: (req, res, buffer) => {
     req.rawBody = Buffer.from(buffer);
   }
@@ -52,7 +61,7 @@ app.post('/webhook/netlify-lead', async (req, res) => {
         };
       }
 
-      if (stored.duplicate && stored.notificationStatus === 'sending') {
+      if (stored.duplicate && ['sending', 'failed'].includes(stored.notificationStatus)) {
         // A prior request may have reached Telegram before the process stopped.
         // Do not blindly send a second notification.
         return {
@@ -66,10 +75,13 @@ app.post('/webhook/netlify-lead', async (req, res) => {
       try {
         await notifyNewLead(lead);
       } catch {
-        await setNotificationStatus(lead.submission_id, 'failed').catch(() => {});
-        const failure = new Error('telegram_notification_failed');
-        failure.code = 'telegram_notification_failed';
-        throw failure;
+        // A timeout/error does not prove Telegram did not deliver the message.
+        // Leave status as "sending"; retries must go to manual review, never resend blindly.
+        console.error('[mini-crm] notification_outcome_uncertain', lead.submission_id);
+        return {
+          status: 202,
+          body: { ok: true, duplicate: false, notification: 'manual_review_required' }
+        };
       }
 
       try {
@@ -102,6 +114,19 @@ app.post('/webhook/netlify-lead', async (req, res) => {
     });
     return res.status(503).json({ ok: false, error: code });
   }
+});
+
+// Do not expose Express stack traces or request payloads on malformed/oversized input.
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  const tooLarge = err && (err.type === 'entity.too.large' || err.status === 413);
+  const unsupportedEncoding = err && (err.status === 415 || err.type === 'encoding.unsupported');
+  const status = tooLarge ? 413 : (unsupportedEncoding ? 415 : 400);
+  return res.status(status).json({
+    ok: false,
+    error: tooLarge ? 'payload_too_large' :
+      (unsupportedEncoding ? 'unsupported_content_encoding' : 'invalid_request')
+  });
 });
 
 app.listen(PORT, () => {
