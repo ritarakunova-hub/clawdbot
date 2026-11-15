@@ -20,7 +20,8 @@
 - TELEGRAM_BOT_TOKEN — токен бота.
 - TELEGRAM_CHAT_ID — личный чат для черновиков и уведомлений.
 - TELEGRAM_CHANNEL_ID — канал для согласованных постов.
-- TELEGRAM_WEBHOOK_SECRET — обязательный секрет Telegram webhook.
+- TELEGRAM_WEBHOOK_SECRET — обязательный секрет Telegram webhook (32–256 символов из латинских букв, цифр, `_` и `-`).
+- TELEGRAM_WEBHOOK_URL — публичный HTTPS URL обработчика `/telegram/webhook`.
 - ADMIN_WEBHOOK_SECRET — отдельный секрет для ручного запуска POST /check/now; без него endpoint закрыт.
 - TELEGRAM_APPROVER_ID — числовой ID пользователя, которому разрешено подтверждать и отклонять посты.
 - VK_GROUP_ID и VK_COMMUNITY_TOKEN — ID и токен сообщества VK.
@@ -31,9 +32,12 @@
 
 ## Telegram webhook
 
-Укажите HTTPS-адрес сервиса и тот же секрет, который задан в TELEGRAM_WEBHOOK_SECRET:
+Укажите публичный HTTPS URL в `TELEGRAM_WEBHOOK_URL` внутри `.env`. Для регистрации используйте встроенный скрипт после загрузки переменных окружения:
 
-    curl "https://api.telegram.org/botВАШ_ТОКЕН/setWebhook?url=https://ВАШ_ДОМЕН/telegram/webhook&secret_token=ВАШ_TELEGRAM_WEBHOOK_SECRET"
+    set -a && . ./.env && set +a
+    node scripts/set-telegram-webhook.js
+
+Скрипт отправляет `setWebhook` через POST, проверяет ответ Telegram и не печатает токен или секрет. Не регистрируйте webhook командой, в которой токен или секрет прописаны непосредственно в URL или аргументах терминала.
 
 ## Локальный запуск
 
