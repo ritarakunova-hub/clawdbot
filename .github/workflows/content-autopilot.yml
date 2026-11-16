@@ -88,6 +88,6 @@ jobs:
           status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             --request POST http://127.0.0.1:3000/telegram/webhook \
             --header 'content-type: application/json' \
-            --header 'x-telegram-bot-api-secret-token: ci-telegram-secret-for-smoke-test-0000000000000000-for-smoke-test-0000000000000000' \
+            --header 'x-telegram-bot-api-secret-token: ci-telegram-secret-for-smoke-test-0000000000000000' \
             --data '{}')
           test "$status" = "200"
