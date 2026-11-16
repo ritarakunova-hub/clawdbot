@@ -91,7 +91,10 @@ const { postToWall } = require('../src/vk');
   assert.strictEqual(positive.owner_id, '-12345');
   assert.strictEqual(negative.owner_id, '-12345');
   assert.strictEqual(positive.from_group, '1');
-  console.log('OK: VK parameters');
+  assert.throws(() => buildWallPostParams({ groupId: '9007199254740992', message: 'hello', accessToken: 'token' }), /безопасным целым числом/);
+  assert.throws(() => buildWallPostParams({ groupId: '12.5', message: 'hello', accessToken: 'token' }), /целым положительным ID/);
+  assert.throws(() => buildWallPostParams({ groupId: '0', message: 'hello', accessToken: 'token' }), /безопасным целым числом/);
+  console.log('OK: VK parameters and safe community ID validation');
 }
 
 {
