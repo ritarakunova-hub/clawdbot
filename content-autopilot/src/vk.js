@@ -7,7 +7,7 @@ const REQUEST_TIMEOUT_MS = 15000;
 
 function buildWallPostParams({ groupId, message, accessToken }) {
   const rawGroupId = String(groupId ?? '').trim();
-  if (!/^-?\\d+$/.test(rawGroupId)) {
+  if (!/^-?\d+$/.test(rawGroupId)) {
     throw new Error('VK_GROUP_ID должен быть целым положительным ID сообщества');
   }
   const absoluteGroupId = BigInt(rawGroupId);
