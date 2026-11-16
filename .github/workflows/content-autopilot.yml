@@ -1,0 +1,93 @@
+name: Content Autopilot Checks
+
+on:
+  pull_request:
+    paths:
+      - "content-autopilot/**"
+      - ".github/workflows/content-autopilot.yml"
+  push:
+    branches:
+      - "feat/content-autopilot-safe-approval"
+    paths:
+      - "content-autopilot/**"
+      - ".github/workflows/content-autopilot.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [24, 26]
+    defaults:
+      run:
+        working-directory: content-autopilot
+    steps:
+      - name: Checkout tested ref
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: content-autopilot/package-lock.json
+      - name: Install exact committed dependencies
+        run: npm ci
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+      - name: Run tests
+        run: npm test
+
+  docker-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Validate Compose configuration
+        working-directory: content-autopilot
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+      - name: Build runtime image
+        run: docker build --tag taina-content-autopilot:ci ./content-autopilot
+      - name: Verify webhook setup utility is packaged
+        run: docker run --rm --entrypoint node taina-content-autopilot:ci -e "require('/app/scripts/set-telegram-webhook.js'); require('/app/scripts/preflight.js')"
+      - name: Start container and test health/auth
+        run: |
+          docker run --detach --name taina-autopilot-ci \
+            --publish 127.0.0.1:3000:3000 \
+            --env PORT=3000 \
+            --env CONTENT_AUTOPILOT_DATA_DIR=/app/data \
+            --env ADMIN_WEBHOOK_SECRET=ci-test-secret \
+            --env TELEGRAM_WEBHOOK_SECRET=ci-telegram-secret-for-smoke-test-0000000000000000 \
+            taina-content-autopilot:ci
+          cleanup() { docker logs taina-autopilot-ci || true; docker rm --force taina-autopilot-ci || true; }
+          trap cleanup EXIT
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:3000/health; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:3000/health
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --request POST http://127.0.0.1:3000/check/now \
+            --header 'x-taina-admin-secret: wrong-secret')
+          test "$status" = "401"
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --request POST http://127.0.0.1:3000/telegram/webhook \
+            --header 'content-type: application/json' \
+            --header 'x-telegram-bot-api-secret-token: wrong-secret' \
+            --data '{}')
+          test "$status" = "401"
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --request POST http://127.0.0.1:3000/telegram/webhook \
+            --header 'content-type: application/json' \
+            --header 'x-telegram-bot-api-secret-token: ci-telegram-secret-for-smoke-test-0000000000000000' \
+            --data '{}')
+          test "$status" = "200"

@@ -4,158 +4,215 @@ const { getPostForDate, todayInTimezone } = require('./src/posts');
 const telegram = require('./src/telegram');
 const { publish, formatPublishSummary } = require('./src/publisher');
 const { loadPending, savePending, clearPending } = require('./src/pending');
+const { safeSecretEquals, isAuthorizedCallback } = require('./src/security');
 
 const app = express();
-app.use(express.json());
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+app.use(express.json({ limit: '64kb' }));
 
 const PORT = process.env.PORT || 3000;
 const TIMEZONE = process.env.TIMEZONE || 'Europe/Moscow';
-// По умолчанию — каждый день в 9:00 по МСК; cron сам проверяет, есть ли
-// на сегодня пост, дни без публикации просто пропускаются.
 const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '0 9 * * *';
-const APPROVAL_WINDOW_MINUTES = Number(process.env.APPROVAL_WINDOW_MINUTES || 30);
 const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || '';
-
-// postId -> таймер setTimeout, живёт только в памяти процесса.
-// Если сервис перезапустится в середине окна — таймер теряется, но
-// pending.json остаётся, и при старте мы либо публикуем сразу (если
-// время уже прошло), либо ставим новый таймер на остаток времени.
-const timers = new Map();
+const ADMIN_WEBHOOK_SECRET = process.env.ADMIN_WEBHOOK_SECRET || '';
+const TELEGRAM_APPROVER_ID = process.env.TELEGRAM_APPROVER_ID || '';
 
 app.get('/health', (req, res) => res.status(200).json({ ok: true }));
 
-/**
- * Публикует черновик (вручную или по таймеру), убирает кнопки с
- * исходного сообщения, чистит состояние и шлёт итог в личный чат.
- */
-async function resolvePublish(pending, { auto }) {
-  const timer = timers.get(pending.postId);
-  if (timer) {
-    clearTimeout(timer);
-    timers.delete(pending.postId);
+async function resolvePublish(pending) {
+  const current = loadPending();
+  if (!current || current.postId !== pending.postId || current.status !== 'awaiting_approval') {
+    throw new Error('Черновик уже обработан или ожидает ручной проверки');
   }
-  clearPending();
 
-  const results = await publish(pending.text);
-  const summary = formatPublishSummary(results, { auto });
+  // Claim before network calls so duplicate Telegram callbacks cannot publish twice.
+  const publishing = { ...current, status: 'publishing', approvedAt: new Date().toISOString() };
+  savePending(publishing);
 
-  if (pending.telegramMessageId && pending.telegramChatId) {
-    await telegram.markDraftDecided(pending.telegramChatId, pending.telegramMessageId, summary);
-  } else {
-    await telegram.sendPlainMessage(summary);
+  const results = await publish({ text: current.text, telegramText: current.telegramText || current.text });
+  const complete = results.telegram === 'ok' && results.vk === 'ok';
+
+  if (complete) {
+    clearPending();
+    await telegram.markDraftDecided(
+      current.telegramChatId,
+      current.telegramMessageId,
+      formatPublishSummary(results)
+    );
+    return;
   }
+
+  savePending({ ...publishing, status: 'needs_review', lastResults: results });
+  const summary = formatPublishSummary(results) +
+    '\n\nПроверьте обе площадки вручную. Не запускайте повторную отправку вслепую: одна из площадок уже могла получить пост.';
+  await telegram.markDraftNeedsReview(
+    current.telegramChatId,
+    current.telegramMessageId,
+    summary,
+    current.postId
+  );
 }
 
 async function resolveCancel(pending) {
-  const timer = timers.get(pending.postId);
-  if (timer) {
-    clearTimeout(timer);
-    timers.delete(pending.postId);
+  const current = loadPending();
+  if (!current || current.postId !== pending.postId || current.status !== 'awaiting_approval') {
+    throw new Error('Этот черновик уже нельзя отменить в текущем статусе');
   }
+
   clearPending();
+  await telegram.markDraftDecided(
+    current.telegramChatId,
+    current.telegramMessageId,
+    '❌ Черновик отклонён. Публикации не будет.'
+  );
+}
 
-  const text = '❌ Отменено — автопубликации не будет. Опубликуйте вручную в VK/Telegram, если решите использовать этот текст.';
-  if (pending.telegramMessageId && pending.telegramChatId) {
-    await telegram.markDraftDecided(pending.telegramChatId, pending.telegramMessageId, text);
-  } else {
-    await telegram.sendPlainMessage(text);
+async function resolveReviewed(pending) {
+  const current = loadPending();
+  if (!current || current.postId !== pending.postId || current.status !== 'needs_review') {
+    throw new Error('Нет черновика, ожидающего ручной проверки');
   }
+
+  clearPending();
+  await telegram.markDraftDecided(
+    current.telegramChatId,
+    current.telegramMessageId,
+    '✅ Ручная проверка отмечена. Черновик закрыт; повторную публикацию не запускали.'
+  );
 }
 
-function scheduleTimeout(pending) {
-  const msLeft = new Date(pending.scheduledPublishAt).getTime() - Date.now();
-  const timer = setTimeout(() => {
-    resolvePublish(pending, { auto: true }).catch((err) => {
-      console.error('[content-autopilot] Ошибка автопубликации по таймеру:', err.message);
-    });
-  }, Math.max(0, msLeft));
-  timers.set(pending.postId, timer);
-}
+let checkInProgress = false;
 
-/**
- * Раз в день (по расписанию) смотрит календарь на сегодня:
- * - готовый текст → шлёт черновик с кнопками, ставит таймер на автопубликацию
- * - только тема → шлёт напоминание без автопубликации (текста ещё нет)
- * - ничего не запланировано → тихо пропускает
- */
 async function checkAndSchedule() {
-  const today = todayInTimezone(TIMEZONE);
-  const post = getPostForDate(today);
-  if (!post) {
-    console.log(`[content-autopilot] На ${today} публикация не запланирована — пропуск`);
+  if (checkInProgress) {
+    console.log('[content-autopilot] Проверка уже выполняется — повторный запуск пропускаю');
     return;
   }
 
-  if (post.type === 'topic') {
-    console.log(`[content-autopilot] На ${today} только тема, без текста — шлю напоминание`);
-    await telegram.sendTopicReminder(post);
-    return;
-  }
+  checkInProgress = true;
+  try {
+    const existing = loadPending();
+    if (existing) {
+      console.log('[content-autopilot] Есть необработанный черновик (' +
+        existing.postId + ', ' + (existing.status || 'awaiting_approval') + '). Новый не создаю.');
+      return;
+    }
 
-  console.log(`[content-autopilot] На ${today} готов текст: "${post.title}" — шлю черновик`);
-  const messageId = await telegram.sendDraftPreview(post, APPROVAL_WINDOW_MINUTES);
-  const pending = {
-    postId: post.date,
-    text: post.text,
-    telegramMessageId: messageId,
-    telegramChatId: process.env.TELEGRAM_CHAT_ID,
-    scheduledPublishAt: new Date(Date.now() + APPROVAL_WINDOW_MINUTES * 60000).toISOString(),
-  };
-  savePending(pending);
-  scheduleTimeout(pending);
+    const today = todayInTimezone(TIMEZONE);
+    const post = getPostForDate(today);
+    if (!post) {
+      console.log('[content-autopilot] На ' + today + ' публикация не запланирована — пропуск');
+      return;
+    }
+
+    if (post.type === 'topic') {
+      console.log('[content-autopilot] На ' + today + ' только тема, без текста — шлю напоминание');
+      await telegram.sendTopicReminder(post);
+      return;
+    }
+
+    const pending = {
+      postId: post.date,
+      text: post.text,
+      telegramText: post.telegramText || post.text,
+      telegramChatId: process.env.TELEGRAM_CHAT_ID,
+      status: 'creating_draft',
+      createdAt: new Date().toISOString()
+    };
+    savePending(pending);
+
+    try {
+      const messageId = await telegram.sendDraftPreview(post);
+      savePending({
+        ...pending,
+        telegramMessageId: messageId,
+        status: 'awaiting_approval'
+      });
+    } catch (err) {
+      savePending({
+        ...pending,
+        status: 'needs_review',
+        lastError: 'Не удалось однозначно подтвердить отправку черновика: ' + err.message
+      });
+      throw err;
+    }
+  } finally {
+    checkInProgress = false;
+  }
 }
 
-// Ручной запуск — не дожидаясь расписания, удобно для проверки.
 app.post('/check/now', async (req, res) => {
+  if (!ADMIN_WEBHOOK_SECRET) {
+    return res.status(503).json({ ok: false, error: 'ADMIN_WEBHOOK_SECRET не настроен' });
+  }
+  if (!safeSecretEquals(req.get('x-taina-admin-secret') || '', ADMIN_WEBHOOK_SECRET)) {
+    return res.status(401).json({ ok: false });
+  }
+
   try {
     await checkAndSchedule();
-    res.status(200).json({ ok: true });
+    res.status(200).json({
+      ok: true,
+      message: 'Проверка выполнена. Публикация без явного подтверждения невозможна.'
+    });
   } catch (err) {
     console.error('[content-autopilot] Ошибка ручного запуска:', err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
 
-// Кнопки "Опубликовать сейчас" / "Отменить" под черновиком.
 app.post('/telegram/webhook', async (req, res) => {
-  if (TELEGRAM_WEBHOOK_SECRET) {
-    const header = req.headers['x-telegram-bot-api-secret-token'];
-    if (header !== TELEGRAM_WEBHOOK_SECRET) {
-      return res.status(401).json({ ok: false });
-    }
+  // Fail closed: never accept publish callbacks without Telegram's secret token.
+  if (!TELEGRAM_WEBHOOK_SECRET) {
+    return res.status(503).json({ ok: false, error: 'TELEGRAM_WEBHOOK_SECRET не настроен' });
   }
-  res.status(200).json({ ok: true }); // отвечаем Telegram сразу, обрабатываем асинхронно
+  const header = req.headers['x-telegram-bot-api-secret-token'];
+  if (!safeSecretEquals(header || '', TELEGRAM_WEBHOOK_SECRET)) {
+    return res.status(401).json({ ok: false });
+  }
 
   const callback = req.body && req.body.callback_query;
+  res.status(200).json({ ok: true });
   if (!callback) return;
 
-  const { action, postId } = telegram.parseCallbackData(callback.data);
+  const parsed = telegram.parseCallbackData(callback.data);
+  const action = parsed.action;
+  const postId = parsed.postId;
   const pending = loadPending();
 
   if (!pending || pending.postId !== postId) {
-    try {
-      await telegram.answerCallbackQuery(callback.id, 'Черновик уже устарел или обработан');
-    } catch {
-      // не критично
-    }
+    await telegram.answerCallbackQuery(callback.id, 'Черновик уже закрыт или устарел').catch(() => {});
+    return;
+  }
+
+  if (!isAuthorizedCallback(callback, pending, TELEGRAM_APPROVER_ID)) {
+    await telegram.answerCallbackQuery(callback.id, 'Нет разрешения на это действие').catch(() => {});
     return;
   }
 
   try {
-    if (action === 'publish') {
-      await resolvePublish(pending, { auto: false });
-      await telegram.answerCallbackQuery(callback.id, 'Опубликовано');
-    } else if (action === 'cancel') {
+    if (action === 'publish' && pending.status === 'awaiting_approval') {
+      await telegram.answerCallbackQuery(callback.id, 'Подтверждение принято. Начинаю публикацию.');
+      await resolvePublish(pending);
+    } else if (action === 'cancel' && pending.status === 'awaiting_approval') {
+      await telegram.answerCallbackQuery(callback.id, 'Черновик отклонён.');
       await resolveCancel(pending);
-      await telegram.answerCallbackQuery(callback.id, 'Отменено');
+    } else if (action === 'reviewed' && pending.status === 'needs_review') {
+      await telegram.answerCallbackQuery(callback.id, 'Проверка отмечена.');
+      await resolveReviewed(pending);
+    } else {
+      await telegram.answerCallbackQuery(callback.id, 'Действие недоступно для текущего статуса черновика');
     }
   } catch (err) {
     console.error('[content-autopilot] Ошибка обработки решения из Telegram:', err.message);
-    try {
-      await telegram.answerCallbackQuery(callback.id, 'Ошибка, попробуйте ещё раз');
-    } catch {
-      // не критично
-    }
+    await telegram.answerCallbackQuery(callback.id, 'Не удалось завершить действие. Проверьте статус сообщения.').catch(() => {});
   }
 });
 
@@ -169,26 +226,62 @@ cron.schedule(
   { timezone: TIMEZONE }
 );
 
-// При старте — если остался черновик от предыдущего запуска (сервис
-// перезапустился в середине окна), не теряем его: время уже прошло —
-// публикуем сразу; не прошло — ставим таймер на остаток.
-(function resumePendingOnStartup() {
+async function resumePendingOnStartup() {
   const pending = loadPending();
   if (!pending) return;
 
-  const msLeft = new Date(pending.scheduledPublishAt).getTime() - Date.now();
-  if (msLeft <= 0) {
-    console.log(`[content-autopilot] Найден черновик от предыдущего запуска, время истекло — публикую сейчас`);
-    resolvePublish(pending, { auto: true }).catch((err) => {
-      console.error('[content-autopilot] Ошибка догоняющей публикации:', err.message);
-    });
-  } else {
-    console.log(`[content-autopilot] Найден черновик от предыдущего запуска — ставлю таймер на остаток (${Math.round(msLeft / 60000)} мин)`);
-    scheduleTimeout(pending);
+  // Legacy drafts had a timer but no status. Ignore their deadline completely.
+  if (!pending.status) {
+    pending.status = 'awaiting_approval';
+    delete pending.scheduledPublishAt;
+    savePending(pending);
   }
-})();
+
+  // If the process stopped while sending a preview, no publication could
+  // have happened. Notify the owner, discard the orphan marker, and let the
+  // next scheduled/manual check recreate a draft safely.
+  if (pending.status === 'creating_draft' || (pending.status === 'needs_review' && !pending.telegramMessageId)) {
+    await telegram.sendPlainMessage(
+      '⚠️ Сервис прервался во время отправки черновика ' + pending.postId +
+      '. Проверьте личный чат: сообщение могло прийти без сохранённой кнопки. Ничего не опубликовано автоматически.'
+    ).catch((err) => console.error('[content-autopilot] Не удалось отправить уведомление о черновике:', err.message));
+    clearPending();
+    return;
+  }
+
+  // A crash during a network request has an ambiguous outcome.
+  // Never retry automatically because one platform may already have received the post.
+  if (pending.status === 'publishing') {
+    pending.status = 'needs_review';
+    pending.lastError = 'Сервис перезапустился во время попытки публикации';
+    savePending(pending);
+  }
+
+  if (pending.status === 'needs_review') {
+    await telegram.markDraftNeedsReview(
+      pending.telegramChatId,
+      pending.telegramMessageId,
+      '⚠️ Предыдущая попытка могла пройти частично или прерваться при перезапуске. Проверьте VK и Telegram вручную. Автоматического повтора не будет.',
+      pending.postId
+    ).catch((err) => console.error('[content-autopilot] Не удалось обновить сообщение для ручной проверки:', err.message));
+    return;
+  }
+
+  if (pending.status === 'awaiting_approval') {
+    await telegram.sendPlainMessage(
+      '📝 Есть черновик ' + pending.postId +
+      ', который всё ещё ждёт явного решения. Без нажатия кнопки публикации не будет.'
+    );
+  }
+}
 
 app.listen(PORT, () => {
-  console.log(`TAINA Content Autopilot запущен, слушаю порт ${PORT}`);
-  console.log(`Проверка расписания: "${CRON_SCHEDULE}" (${TIMEZONE}), окно на правку: ${APPROVAL_WINDOW_MINUTES} мин`);
+  console.log('TAINA Content Autopilot запущен, порт ' + PORT);
+  console.log('Проверка расписания: "' + CRON_SCHEDULE + '" (' + TIMEZONE + ')');
+  if (!TELEGRAM_WEBHOOK_SECRET) {
+    console.error('[content-autopilot] TELEGRAM_WEBHOOK_SECRET не задан: webhook закрыт до настройки секрета');
+  }
+  resumePendingOnStartup().catch((err) => {
+    console.error('[content-autopilot] Не удалось восстановить состояние черновика:', err.message);
+  });
 });
