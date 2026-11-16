@@ -6,8 +6,17 @@ const API_VERSION = process.env.VK_API_VERSION || '5.199';
 const REQUEST_TIMEOUT_MS = 15000;
 
 function buildWallPostParams({ groupId, message, accessToken }) {
+  const rawGroupId = String(groupId ?? '').trim();
+  if (!/^-?\\d+$/.test(rawGroupId)) {
+    throw new Error('VK_GROUP_ID должен быть целым положительным ID сообщества');
+  }
+  const absoluteGroupId = BigInt(rawGroupId);
+  const normalizedGroupId = absoluteGroupId < 0n ? -absoluteGroupId : absoluteGroupId;
+  if (normalizedGroupId <= 0n || normalizedGroupId > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error('VK_GROUP_ID должен быть положительным безопасным целым числом');
+  }
   return {
-    owner_id: String(-Math.abs(Number(groupId))),
+    owner_id: '-' + normalizedGroupId.toString(),
     message,
     from_group: '1',
     access_token: accessToken,
