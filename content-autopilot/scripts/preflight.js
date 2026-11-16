@@ -94,8 +94,9 @@ function runPreflight(env = process.env, dataDir) {
     errors.push('TELEGRAM_APPROVER_ID должен быть положительным числовым Telegram user ID');
   }
 
-  if (env.VK_GROUP_ID && (!/^\d+$/.test(env.VK_GROUP_ID) || Number(env.VK_GROUP_ID) <= 0)) {
-    errors.push('VK_GROUP_ID должен быть положительным числовым ID сообщества без знака минус');
+  if (env.VK_GROUP_ID && (!/^\d+$/.test(env.VK_GROUP_ID) ||
+      !Number.isSafeInteger(Number(env.VK_GROUP_ID)) || Number(env.VK_GROUP_ID) <= 0)) {
+    errors.push('VK_GROUP_ID должен быть положительным безопасным целым числом без знака минус');
   }
 
   try {
