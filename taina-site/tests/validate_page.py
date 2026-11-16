@@ -83,7 +83,7 @@ def main():
 
     required = [
         "TAINA STUDIO / AI PROCESS CONSULTING",
-        "4 900 ₽",
+        "5 000 ₽",
         "60 минут онлайн",
         "Записаться на консультацию в VK",
     ]
