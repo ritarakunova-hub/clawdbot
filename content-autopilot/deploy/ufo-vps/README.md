@@ -96,14 +96,18 @@ The script rejects non-HTTPS webhook URLs, validates the secret format, checks T
 
 ## 6. Smoke tests before production
 
-1. Export the local environment file and invoke the protected manual check (this sends a draft only if today's calendar has a ready post):
+1. Read only the admin secret from the protected environment file and invoke the manual check. The secret is written to a temporary file with owner-only permissions, not passed as a curl command-line argument:
    ```bash
-   set -a
-   . ./.env
-   set +a
-   curl -X POST http://127.0.0.1:3000/check/now \
-     -H "x-taina-admin-secret: $ADMIN_WEBHOOK_SECRET"
+   ADMIN_WEBHOOK_SECRET=$(sed -n 's/^ADMIN_WEBHOOK_SECRET=//p' .env)
+   test -n "$ADMIN_WEBHOOK_SECRET"
+   umask 077
+   curl_config=$(mktemp)
+   trap 'rm -f "$curl_config"; unset ADMIN_WEBHOOK_SECRET' EXIT
+   printf 'header = "x-taina-admin-secret: %s"\n' "$ADMIN_WEBHOOK_SECRET" > "$curl_config"
+   unset ADMIN_WEBHOOK_SECRET
+   curl --config "$curl_config" --request POST http://127.0.0.1:3000/check/now
    ```
+   This sends a draft only if today's calendar has a ready post.
 2. Confirm a draft arrives in the private Telegram chat and contains both VK and Telegram variants.
 3. Confirm no channel post is created before the approval button is pressed.
 4. Approve only against test Telegram and VK destinations. Confirm each gets the correct text.
