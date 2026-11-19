@@ -1,4 +1,9 @@
-const PROCESSED_STATES = new Set(['published', 'cancelled', 'topic_reminder']);
+const PROCESSED_STATES = new Set([
+  'published', // Legacy state from the former direct-publishing flow.
+  'cancelled',
+  'topic_reminder',
+  'approved_for_smmplanner',
+]);
 
 function getPendingDecision(existing, today) {
   if (!existing) return 'create';
