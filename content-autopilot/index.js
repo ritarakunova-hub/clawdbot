@@ -160,7 +160,16 @@ async function checkAndSchedule() {
 
     if (post.type === 'topic') {
       await telegram.sendTopicReminder(post);
-      return { status: 'topic_reminder' };
+      // Persist a daily marker so repeated manual checks do not spam the owner.
+      savePending({
+        postId: post.date,
+        title: post.title,
+        rubric: post.rubric,
+        text: '',
+        status: 'topic_reminder',
+        notifiedAt: new Date().toISOString(),
+      });
+      return { status: 'topic_reminder', postId: post.date };
     }
 
     const pending = {
@@ -288,7 +297,7 @@ cron.schedule(
   const pending = loadPending();
   if (!pending) return;
 
-  if (['published', 'cancelled'].includes(pending.status)) {
+  if (['published', 'cancelled', 'topic_reminder'].includes(pending.status)) {
     console.log('[content-autopilot] The latest post is already ' + pending.status + '; no action to resume');
     return;
   }
