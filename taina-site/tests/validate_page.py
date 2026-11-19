@@ -1,11 +1,13 @@
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import urlparse
 
 PAGE = Path(__file__).resolve().parents[1] / "index.html"
 VOID_TAGS = {
     "area", "base", "br", "col", "embed", "hr", "img", "input",
     "link", "meta", "param", "source", "track", "wbr"
 }
+EXPECTED_VK_URL = "https://vk.ru/tainastudio"
 
 
 class PageCheck(HTMLParser):
@@ -14,6 +16,7 @@ class PageCheck(HTMLParser):
         self.stack = []
         self.ids = set()
         self.anchors = []
+        self.links = []
         self.errors = []
         self.h1_count = 0
         self.form_count = 0
@@ -26,9 +29,13 @@ class PageCheck(HTMLParser):
             if element_id in self.ids:
                 self.errors.append("duplicate id: " + element_id)
             self.ids.add(element_id)
+
         href = attrs.get("href", "")
         if href.startswith("#") and len(href) > 1:
             self.anchors.append(href[1:])
+        if href:
+            self.links.append((tag, href, attrs))
+
         if tag == "h1":
             self.h1_count += 1
         if tag == "form":
@@ -65,15 +72,19 @@ class PageCheck(HTMLParser):
 def main():
     if not PAGE.exists():
         raise SystemExit("Missing page: " + str(PAGE))
+
     source = PAGE.read_text(encoding="utf-8")
     parser = PageCheck()
     parser.feed(source)
     parser.close()
+
     if parser.stack:
         parser.errors.append("unclosed tags: " + ", ".join(parser.stack))
+
     missing = sorted(set(parser.anchors) - parser.ids)
     if missing:
         parser.errors.append("broken anchor targets: " + ", ".join(missing))
+
     if parser.h1_count != 1:
         parser.errors.append("expected exactly one h1, found " + str(parser.h1_count))
     if parser.form_count:
@@ -81,24 +92,46 @@ def main():
     if parser.external_font_links:
         parser.errors.append("external font requests are not expected")
 
+    external_links = [(tag, href, attrs) for tag, href, attrs in parser.links
+                      if urlparse(href).scheme in ("http", "https")]
+    unexpected_vk = [href for _, href, _ in external_links
+                     if urlparse(href).netloc in ("vk.ru", "www.vk.ru") and href.rstrip("/") != EXPECTED_VK_URL]
+    if unexpected_vk:
+        parser.errors.append("unexpected VK destination(s): " + ", ".join(sorted(set(unexpected_vk))))
+
+    vk_links = [item for item in external_links if item[1].rstrip("/") == EXPECTED_VK_URL]
+    if len(vk_links) != 3:
+        parser.errors.append("expected exactly 3 VK CTA links, found " + str(len(vk_links)))
+
+    for tag, href, attrs in vk_links:
+        if tag != "a":
+            parser.errors.append("VK destination must be an anchor link: " + href)
+        if attrs.get("target") == "_blank":
+            rel = set((attrs.get("rel") or "").lower().split())
+            if not {"noopener", "noreferrer"}.issubset(rel):
+                parser.errors.append("VK target=_blank link missing safe rel attributes")
+
     required = [
         "TAINA STUDIO / AI PROCESS CONSULTING",
         "5 000 ₽",
         "60 минут онлайн",
         "Записаться на консультацию в VK",
+        "УЧЕБНЫЙ ПРИМЕР · ВЫМЫШЛЕННЫЕ ДАННЫЕ",
     ]
     for phrase in required:
         if phrase not in source:
             parser.errors.append("missing current offer element: " + phrase)
+
     obsolete = ["9 900 ₽", "5–7 часов", "Первые два платных пилота", "1 490 ₽"]
     for phrase in obsolete:
         if phrase in source:
             parser.errors.append("obsolete offer element remains: " + phrase)
 
     if parser.errors:
-        print("\n".join("ERROR: " + error for error in parser.errors))
+        print("\\n".join("ERROR: " + error for error in parser.errors))
         raise SystemExit(1)
-    print("OK: HTML structure, anchors, privacy form gate and current consultation offer")
+
+    print("OK: HTML nesting, unique IDs, internal anchors, one H1, form gate, safe external links, three VK CTAs and current offer")
 
 
 if __name__ == "__main__":
