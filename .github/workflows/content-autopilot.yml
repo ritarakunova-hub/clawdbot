@@ -33,6 +33,11 @@ jobs:
       - name: Run unit and safety tests
         working-directory: content-autopilot
         run: npm test
+      - name: Audit dependencies
+        working-directory: content-autopilot
+        run: |
+          npm audit --json > audit-report.json || true
+          node -e "const r=require('./audit-report.json'); for (const [name, v] of Object.entries(r.vulnerabilities || {})) console.log(JSON.stringify({name, severity:v.severity, range:v.range, fixAvailable:v.fixAvailable, via:v.via}))"
       - name: Check JavaScript syntax
         working-directory: content-autopilot
         run: |
