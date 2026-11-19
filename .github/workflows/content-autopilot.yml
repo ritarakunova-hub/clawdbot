@@ -36,6 +36,25 @@ jobs:
       - name: Audit dependencies
         working-directory: content-autopilot
         run: npm audit --audit-level=moderate
+      - name: Build Docker image
+        working-directory: content-autopilot
+        run: docker build -t taina-content-autopilot:ci .
+      - name: Smoke-test Docker container
+        run: |
+          docker run -d --name taina-content-autopilot-ci \
+            -p 127.0.0.1:31888:3000 \
+            -e PORT=3000 \
+            -e CRON_SCHEDULE="0 0 1 1 *" \
+            taina-content-autopilot:ci
+          trap 'docker rm -f taina-content-autopilot-ci >/dev/null 2>&1 || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:31888/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs taina-content-autopilot-ci
+          exit 1
       - name: Check JavaScript syntax
         working-directory: content-autopilot
         run: |
