@@ -2,14 +2,17 @@
   "name": "taina-content-autopilot",
   "version": "1.0.0",
   "private": true,
-  "description": "TAINA Content Autopilot — черновик поста по расписанию в Telegram, окно на правку/отмену, автопубликация в VK и Telegram-канал, если ничего не тронули",
+  "description": "TAINA content review and approved-copy handoff to SMMplanner",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "node test/run.js"
+    "test": "node test/run.js && node test/smoke.js"
   },
   "dependencies": {
     "express": "^4.19.2",
     "node-cron": "^4.6.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

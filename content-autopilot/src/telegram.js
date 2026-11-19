@@ -1,143 +1,169 @@
 /**
- * Работа с Telegram Bot API: черновик с кнопками в личный чат,
- * публикация в канал, обработка нажатий. Тот же бот, что уже
- * настроен для мини-CRM / Sales Engine — используется встроенный
- * fetch (Node 18+), отдельная библиотека не нужна.
+ * Telegram Bot API: owner review and handoff of approved copy to SMMplanner.
+ * This service never publishes directly to VK or Telegram channels.
  */
 
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function isIsoDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return false;
+  const date = new Date(value + 'T00:00:00.000Z');
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
 function buildCallbackData(action, postId) {
-  return `${action}:${postId}`;
+  if (!['approve', 'cancel'].includes(action) || !isIsoDate(postId)) {
+    throw new Error('Invalid Telegram callback data');
+  }
+  return action + ':' + postId;
 }
 
 function parseCallbackData(data) {
-  const [action, postId] = String(data || '').split(':');
-  return { action, postId };
+  const match = /^(approve|cancel):(\d{4}-\d{2}-\d{2})$/.exec(String(data || ''));
+  if (!match || !isIsoDate(match[2])) return { action: '', postId: undefined };
+  return { action: match[1], postId: match[2] };
 }
 
-/**
- * Черновик, который приходит в личный чат перед публикацией —
- * с кнопками "Опубликовать сейчас" / "Отменить" и предупреждением
- * про автопубликацию по таймеру.
- */
-function formatDraftPreview(post, minutesLeft) {
+function formatDraftPreview(post) {
   const lines = [
-    `📤 <b>Черновик на сегодня (${escapeHtml(post.rubric)})</b>`,
-    `<b>${escapeHtml(post.title)}</b>`,
+    '📝 <b>Черновик TAINA на ' + escapeHtml(post.date) + '</b>',
+    '<b>' + escapeHtml(post.title) + '</b>',
+    'Рубрика: ' + escapeHtml(post.rubric),
     '',
     escapeHtml(post.text),
     '',
-    `⏱ Если ничего не сделать — опубликую в VK и Telegram-канал через ${minutesLeft} минут само.`,
+    'После согласования пришлю отдельное сообщение с готовым текстом для размещения в SMMplanner. Самостоятельной публикации бот не делает.',
   ];
   return lines.join('\n');
 }
 
 function formatTopicReminder(post) {
-  const lines = [
-    `📝 <b>Сегодня публикация (${escapeHtml(post.rubric)})</b>`,
-    `Тема: <b>${escapeHtml(post.title)}</b>`,
+  return [
+    '📝 <b>Тема для публикации (' + escapeHtml(post.rubric) + ')</b>',
+    'Тема: <b>' + escapeHtml(post.title) + '</b>',
     '',
-    'Текст ещё не написан — автопубликации не будет. Соберите по формуле: сцена → закономерность → тихое приглашение, или попросите помочь с текстом здесь, в чате с Claude.',
-  ];
-  return lines.join('\n');
+    'Готового текста в календаре нет. В SMMplanner ничего не отправлено. Можно попросить подготовить черновик и проверить его перед размещением.',
+  ].join('\n');
 }
 
 function draftKeyboard(postId) {
   return {
-    inline_keyboard: [
-      [
-        { text: '✅ Опубликовать сейчас', callback_data: buildCallbackData('publish', postId) },
-        { text: '❌ Отменить', callback_data: buildCallbackData('cancel', postId) },
-      ],
-    ],
+    inline_keyboard: [[
+      { text: '✅ Согласовать для SMMplanner', callback_data: buildCallbackData('approve', postId) },
+      { text: '❌ Отменить', callback_data: buildCallbackData('cancel', postId) },
+    ]],
   };
 }
 
 async function apiCall(method, payload) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token) throw new Error('Не задана переменная окружения TELEGRAM_BOT_TOKEN');
+  if (!token) throw new Error('TELEGRAM_BOT_TOKEN is not configured');
 
-  const url = `https://api.telegram.org/bot${token}/${method}`;
-  const res = await fetch(url, {
+  const url = 'https://api.telegram.org/bot' + token + '/' + method;
+  const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Telegram API (${method}) вернул ${res.status}: ${body}`);
+
+  const body = await response.json().catch(() => null);
+  if (!response.ok || !body || body.ok !== true) {
+    const description = body && body.description ? body.description : 'unknown error';
+    throw new Error('Telegram API (' + method + ') returned ' + response.status + ': ' + description);
   }
-  return res.json();
+  return body;
 }
 
-/**
- * Личный чат — обычный текст, без кнопок (уведомления/итоги).
- */
 async function sendPlainMessage(text) {
   const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!chatId) throw new Error('Не задана переменная окружения TELEGRAM_CHAT_ID');
-  return apiCall('sendMessage', { chat_id: chatId, text, parse_mode: 'HTML' });
+  if (!chatId) throw new Error('TELEGRAM_CHAT_ID is not configured');
+  return apiCall('sendMessage', { chat_id: chatId, text });
 }
 
-/**
- * Присылает черновик с кнопками в личный чат, возвращает message_id —
- * он нужен, чтобы потом отредактировать это же сообщение (показать решение).
- */
-async function sendDraftPreview(post, minutesLeft) {
+async function sendDraftPreview(post) {
   const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!chatId) throw new Error('Не задана переменная окружения TELEGRAM_CHAT_ID');
+  if (!chatId) throw new Error('TELEGRAM_CHAT_ID is not configured');
   const result = await apiCall('sendMessage', {
     chat_id: chatId,
-    text: formatDraftPreview(post, minutesLeft),
+    text: formatDraftPreview(post),
     parse_mode: 'HTML',
     reply_markup: draftKeyboard(post.date),
   });
   return result.result.message_id;
 }
 
+async function sendSmmplannerReadyMessage(post) {
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!chatId) throw new Error('TELEGRAM_CHAT_ID is not configured');
+
+  const text = [
+    'TAINA · ТЕКСТ СОГЛАСОВАН',
+    'Дата публикации: ' + post.postId,
+    'Площадки: Telegram + VK',
+    'Добавь этот текст в SMMplanner и выбери обе площадки и время публикации.',
+    '',
+    post.text,
+  ].join('\n');
+
+  return apiCall('sendMessage', {
+    chat_id: chatId,
+    text,
+    reply_markup: {
+      inline_keyboard: [[
+        { text: 'Открыть SMMplanner', url: 'https://smmplanner.com/' },
+      ]],
+    },
+  });
+}
+
 async function sendTopicReminder(post) {
   const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!chatId) throw new Error('Не задана переменная окружения TELEGRAM_CHAT_ID');
-  return apiCall('sendMessage', { chat_id: chatId, text: formatTopicReminder(post), parse_mode: 'HTML' });
+  if (!chatId) throw new Error('TELEGRAM_CHAT_ID is not configured');
+  return apiCall('sendMessage', {
+    chat_id: chatId,
+    text: formatTopicReminder(post),
+    parse_mode: 'HTML',
+  });
 }
 
-/**
- * Публикация в канал TAINA — отдельный чат от личных уведомлений.
- */
-async function sendChannelPost(text) {
-  const channelId = process.env.TELEGRAM_CHANNEL_ID;
-  if (!channelId) throw new Error('Не задана переменная окружения TELEGRAM_CHANNEL_ID');
-  return apiCall('sendMessage', { chat_id: channelId, text, parse_mode: 'HTML' });
+async function removeDraftButtons(chatId, messageId) {
+  return apiCall('editMessageReplyMarkup', {
+    chat_id: chatId,
+    message_id: messageId,
+    reply_markup: { inline_keyboard: [] },
+  });
 }
 
-/**
- * Убирает кнопки с уже решённого черновика и дописывает статус в текст —
- * чтобы не оставалось активных кнопок на устаревшем сообщении.
- */
 async function markDraftDecided(chatId, messageId, statusLine) {
-  await apiCall('editMessageReplyMarkup', { chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: [] } });
-  return apiCall('sendMessage', { chat_id: chatId, text: statusLine, parse_mode: 'HTML' });
+  await removeDraftButtons(chatId, messageId);
+  return apiCall('sendMessage', { chat_id: chatId, text: statusLine });
 }
 
 async function answerCallbackQuery(callbackQueryId, text) {
-  return apiCall('answerCallbackQuery', { callback_query_id: callbackQueryId, text, show_alert: false });
+  return apiCall('answerCallbackQuery', {
+    callback_query_id: callbackQueryId,
+    text,
+    show_alert: false,
+  });
 }
 
 module.exports = {
+  escapeHtml,
   formatDraftPreview,
   formatTopicReminder,
   buildCallbackData,
   parseCallbackData,
   sendPlainMessage,
   sendDraftPreview,
+  sendSmmplannerReadyMessage,
   sendTopicReminder,
-  sendChannelPost,
+  removeDraftButtons,
   markDraftDecided,
   answerCallbackQuery,
 };
