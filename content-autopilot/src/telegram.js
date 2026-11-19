@@ -1,7 +1,6 @@
 /**
- * Telegram Bot API: drafts, reminders and channel publishing.
- * Publication requires an explicit owner action unless timed auto-publish
- * is deliberately enabled with AUTO_PUBLISH_ENABLED=true.
+ * Telegram Bot API: owner review and handoff of approved copy to SMMplanner.
+ * This service never publishes directly to VK or Telegram channels.
  */
 
 function escapeHtml(str) {
@@ -19,28 +18,27 @@ function isIsoDate(value) {
 }
 
 function buildCallbackData(action, postId) {
-  if (!['publish', 'cancel'].includes(action) || !isIsoDate(postId)) {
+  if (!['approve', 'cancel'].includes(action) || !isIsoDate(postId)) {
     throw new Error('Invalid Telegram callback data');
   }
   return action + ':' + postId;
 }
 
 function parseCallbackData(data) {
-  const match = /^(publish|cancel):(\d{4}-\d{2}-\d{2})$/.exec(String(data || ''));
+  const match = /^(approve|cancel):(\d{4}-\d{2}-\d{2})$/.exec(String(data || ''));
   if (!match || !isIsoDate(match[2])) return { action: '', postId: undefined };
   return { action: match[1], postId: match[2] };
 }
 
-function formatDraftPreview(post, { autoPublishEnabled = false, minutesLeft = 30 } = {}) {
+function formatDraftPreview(post) {
   const lines = [
-    '📤 <b>Черновик на сегодня (' + escapeHtml(post.rubric) + ')</b>',
+    '📝 <b>Черновик TAINA на ' + escapeHtml(post.date) + '</b>',
     '<b>' + escapeHtml(post.title) + '</b>',
+    'Рубрика: ' + escapeHtml(post.rubric),
     '',
     escapeHtml(post.text),
     '',
-    autoPublishEnabled
-      ? '⚠️ Автопубликация включена настройкой. Если не отменить, отправлю через ' + minutesLeft + ' минут.'
-      : '🔒 Ничего не будет опубликовано, пока вы явно не нажмёте «Опубликовать сейчас».',
+    'После согласования пришлю отдельное сообщение с готовым текстом для размещения в SMMplanner. Самостоятельной публикации бот не делает.',
   ];
   return lines.join('\n');
 }
@@ -50,14 +48,14 @@ function formatTopicReminder(post) {
     '📝 <b>Тема для публикации (' + escapeHtml(post.rubric) + ')</b>',
     'Тема: <b>' + escapeHtml(post.title) + '</b>',
     '',
-    'Готового текста в календаре нет. Публикации не будет. Можно попросить подготовить черновик и проверить его перед отправкой.',
+    'Готового текста в календаре нет. В SMMplanner ничего не отправлено. Можно попросить подготовить черновик и проверить его перед размещением.',
   ].join('\n');
 }
 
 function draftKeyboard(postId) {
   return {
     inline_keyboard: [[
-      { text: '✅ Опубликовать сейчас', callback_data: buildCallbackData('publish', postId) },
+      { text: '✅ Согласовать для SMMplanner', callback_data: buildCallbackData('approve', postId) },
       { text: '❌ Отменить', callback_data: buildCallbackData('cancel', postId) },
     ]],
   };
@@ -88,16 +86,40 @@ async function sendPlainMessage(text) {
   return apiCall('sendMessage', { chat_id: chatId, text });
 }
 
-async function sendDraftPreview(post, options = {}) {
+async function sendDraftPreview(post) {
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!chatId) throw new Error('TELEGRAM_CHAT_ID is not configured');
   const result = await apiCall('sendMessage', {
     chat_id: chatId,
-    text: formatDraftPreview(post, options),
+    text: formatDraftPreview(post),
     parse_mode: 'HTML',
     reply_markup: draftKeyboard(post.date),
   });
   return result.result.message_id;
+}
+
+async function sendSmmplannerReadyMessage(post) {
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!chatId) throw new Error('TELEGRAM_CHAT_ID is not configured');
+
+  const text = [
+    'TAINA · ТЕКСТ СОГЛАСОВАН',
+    'Дата публикации: ' + post.postId,
+    'Площадки: Telegram + VK',
+    'Добавь этот текст в SMMplanner и выбери обе площадки и время публикации.',
+    '',
+    post.text,
+  ].join('\n');
+
+  return apiCall('sendMessage', {
+    chat_id: chatId,
+    text,
+    reply_markup: {
+      inline_keyboard: [[
+        { text: 'Открыть SMMplanner', url: 'https://smmplanner.com/' },
+      ]],
+    },
+  });
 }
 
 async function sendTopicReminder(post) {
@@ -110,19 +132,16 @@ async function sendTopicReminder(post) {
   });
 }
 
-async function sendChannelPost(text) {
-  const channelId = process.env.TELEGRAM_CHANNEL_ID;
-  if (!channelId) throw new Error('TELEGRAM_CHANNEL_ID is not configured');
-  // Plain text avoids parse errors for characters such as <, > and & in posts.
-  return apiCall('sendMessage', { chat_id: channelId, text });
-}
-
-async function markDraftDecided(chatId, messageId, statusLine) {
-  await apiCall('editMessageReplyMarkup', {
+async function removeDraftButtons(chatId, messageId) {
+  return apiCall('editMessageReplyMarkup', {
     chat_id: chatId,
     message_id: messageId,
     reply_markup: { inline_keyboard: [] },
   });
+}
+
+async function markDraftDecided(chatId, messageId, statusLine) {
+  await removeDraftButtons(chatId, messageId);
   return apiCall('sendMessage', { chat_id: chatId, text: statusLine });
 }
 
@@ -142,8 +161,9 @@ module.exports = {
   parseCallbackData,
   sendPlainMessage,
   sendDraftPreview,
+  sendSmmplannerReadyMessage,
   sendTopicReminder,
-  sendChannelPost,
+  removeDraftButtons,
   markDraftDecided,
   answerCallbackQuery,
 };
