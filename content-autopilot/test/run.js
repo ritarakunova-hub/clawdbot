@@ -18,6 +18,7 @@ const { loadPending, savePending, clearPending } = require('../src/pending');
 const { isTimedAutoPublishEnabled, isInternalRequestAuthorized, isTelegramWebhookAuthorized, isTelegramOwnerCallback } = require('../src/config');
 const { getPendingDecision } = require('../src/schedule');
 const { getReadiness } = require('../src/preflight');
+const { startApprovedAction } = require('../src/callback');
 
 async function main() {
   // 1. Safety defaults and authentication guards.
@@ -249,6 +250,32 @@ async function main() {
   {
     assert.match(todayInTimezone('Europe/Moscow'), /^\d{4}-\d{2}-\d{2}$/);
     console.log('OK: timezone helper returns YYYY-MM-DD');
+  }
+
+  // 16. Telegram callback is acknowledged before a slow publishing action starts.
+  {
+    const events = [];
+    let finishAction;
+    const actionPromise = new Promise((resolve) => { finishAction = resolve; });
+
+    startApprovedAction('test-callback-id', () => {
+      events.push('action');
+      return actionPromise;
+    }, {
+      // Simulate a Telegram acknowledgement that remains pending.
+      answerCallbackQuery: () => {
+        events.push('acknowledgement');
+        return new Promise(() => {});
+      },
+      onActionError: async () => {},
+      logger: { error: () => {} },
+    });
+
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(events, ['acknowledgement', 'action']);
+    finishAction();
+    await actionPromise;
+    console.log('OK: a slow Telegram acknowledgement does not delay the publishing action');
   }
 
   clearPending();
