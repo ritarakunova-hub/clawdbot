@@ -4,7 +4,8 @@ const { getPostForDate, todayInTimezone } = require('./src/posts');
 const telegram = require('./src/telegram');
 const { publish, formatPublishSummary } = require('./src/publisher');
 const { loadPending, savePending, clearPending } = require('./src/pending');
-const { isTimedAutoPublishEnabled, isInternalRequestAuthorized, isTelegramWebhookAuthorized } = require('./src/config');
+const { isTimedAutoPublishEnabled, isInternalRequestAuthorized, isTelegramWebhookAuthorized, isTelegramOwnerCallback } = require('./src/config');
+const { getPendingDecision } = require('./src/schedule');
 
 const app = express();
 app.use(express.json({ limit: '64kb' }));
@@ -38,7 +39,7 @@ async function resolvePublish(pending, { auto = false } = {}) {
 
   try {
     const current = loadPending();
-    if (!current || current.postId !== pending.postId) {
+    if (!current || current.postId !== pending.postId || ['published', 'cancelled'].includes(current.status)) {
       throw new Error('Draft is stale or has already been processed');
     }
 
@@ -53,7 +54,13 @@ async function resolvePublish(pending, { auto = false } = {}) {
     };
 
     if (published.telegram && published.vk) {
-      clearPending();
+      // Keep a same-day tombstone so /check/now cannot recreate and republish this post.
+      savePending({
+        ...current,
+        published,
+        status: 'published',
+        completedAt: new Date().toISOString(),
+      });
       const summary = formatPublishSummary(results, { auto });
       if (current.telegramMessageId && current.telegramChatId) {
         try {
@@ -89,12 +96,16 @@ async function resolveCancel(pending) {
 
   try {
     const current = loadPending();
-    if (!current || current.postId !== pending.postId) {
+    if (!current || current.postId !== pending.postId || ['published', 'cancelled'].includes(current.status)) {
       throw new Error('Draft is stale or has already been processed');
     }
 
     stopTimer(current.postId);
-    clearPending();
+    savePending({
+      ...current,
+      status: 'cancelled',
+      cancelledAt: new Date().toISOString(),
+    });
     const alreadyPublished = current.published || {};
     const text = alreadyPublished.telegram || alreadyPublished.vk
       ? 'Remaining publication cancelled. Already published destinations were not changed.'
@@ -126,13 +137,19 @@ async function checkAndSchedule() {
   checkInProgress = true;
 
   try {
+    const today = todayInTimezone(TIMEZONE);
     const existing = loadPending();
-    if (existing) {
-      console.log('[content-autopilot] Draft ' + existing.postId + ' is already waiting for a decision');
+    const pendingDecision = getPendingDecision(existing, today);
+    if (pendingDecision === 'already_processed') {
+      console.log('[content-autopilot] Post for ' + today + ' was already ' + existing.status);
+      return { status: 'already_processed', postId: existing.postId };
+    }
+    if (pendingDecision === 'keep_pending') {
+      console.log('[content-autopilot] Draft ' + existing.postId + ' is still awaiting a decision');
       return { status: 'pending_exists', postId: existing.postId };
     }
+    if (pendingDecision === 'clear_and_create') clearPending();
 
-    const today = todayInTimezone(TIMEZONE);
     const post = getPostForDate(today);
     if (!post) {
       console.log('[content-autopilot] No post scheduled for ' + today);
@@ -152,6 +169,7 @@ async function checkAndSchedule() {
       telegramMessageId: null,
       telegramChatId: process.env.TELEGRAM_CHAT_ID || null,
       published: { telegram: false, vk: false },
+      status: 'pending',
       createdAt: new Date().toISOString(),
       scheduledPublishAt: AUTO_PUBLISH_ENABLED
         ? new Date(Date.now() + APPROVAL_WINDOW_MINUTES * 60000).toISOString()
@@ -216,14 +234,13 @@ app.post('/telegram/webhook', (req, res) => {
   if (!callback) return;
 
   const parsed = telegram.parseCallbackData(callback.data);
-  const callbackChatId = callback.message && callback.message.chat && callback.message.chat.id;
-  if (!parsed.action || String(callbackChatId) !== String(process.env.TELEGRAM_CHAT_ID || '')) {
+  if (!parsed.action || !isTelegramOwnerCallback(callback, process.env.TELEGRAM_CHAT_ID)) {
     telegram.answerCallbackQuery(callback.id, 'Access denied or invalid button').catch(() => {});
     return;
   }
 
   const pending = loadPending();
-  if (!pending || pending.postId !== parsed.postId) {
+  if (!pending || pending.postId !== parsed.postId || ['published', 'cancelled'].includes(pending.status)) {
     telegram.answerCallbackQuery(callback.id, 'This draft is stale or already processed').catch(() => {});
     return;
   }
@@ -262,6 +279,11 @@ cron.schedule(
 (function resumePendingOnStartup() {
   const pending = loadPending();
   if (!pending) return;
+
+  if (['published', 'cancelled'].includes(pending.status)) {
+    console.log('[content-autopilot] The latest post is already ' + pending.status + '; no action to resume');
+    return;
+  }
 
   if (!AUTO_PUBLISH_ENABLED) {
     console.log('[content-autopilot] Draft ' + pending.postId + ' is waiting for manual approval');
