@@ -1,10 +1,10 @@
 const express = require('express');
 const cron = require('node-cron');
-const { timingSafeEqual } = require('node:crypto');
 const { getPostForDate, todayInTimezone } = require('./src/posts');
 const telegram = require('./src/telegram');
 const { publish, formatPublishSummary } = require('./src/publisher');
 const { loadPending, savePending, clearPending } = require('./src/pending');
+const { isTimedAutoPublishEnabled, isInternalRequestAuthorized, isTelegramWebhookAuthorized } = require('./src/config');
 
 const app = express();
 app.use(express.json({ limit: '64kb' }));
@@ -14,7 +14,7 @@ const TIMEZONE = process.env.TIMEZONE || 'Europe/Moscow';
 const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '0 9 * * *';
 const APPROVAL_WINDOW_MINUTES = Number(process.env.APPROVAL_WINDOW_MINUTES || 30);
 // Safe by default: no post is published without an explicit button press.
-const AUTO_PUBLISH_ENABLED = process.env.AUTO_PUBLISH_ENABLED === 'true';
+const AUTO_PUBLISH_ENABLED = isTimedAutoPublishEnabled();
 const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || '';
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET || '';
 
@@ -25,12 +25,6 @@ if (!Number.isFinite(APPROVAL_WINDOW_MINUTES) || APPROVAL_WINDOW_MINUTES < 1) {
 const timers = new Map();
 const resolving = new Set();
 let checkInProgress = false;
-
-function safeEqual(actual, expected) {
-  const left = Buffer.from(String(actual || ''));
-  const right = Buffer.from(String(expected || ''));
-  return left.length === right.length && timingSafeEqual(left, right);
-}
 
 function stopTimer(postId) {
   const timer = timers.get(postId);
@@ -194,7 +188,7 @@ app.post('/check/now', async (req, res) => {
   if (!INTERNAL_API_SECRET) {
     return res.status(503).json({ ok: false, error: 'INTERNAL_API_SECRET is not configured' });
   }
-  if (!safeEqual(req.headers.authorization, 'Bearer ' + INTERNAL_API_SECRET)) {
+  if (!isInternalRequestAuthorized(req.headers.authorization, INTERNAL_API_SECRET)) {
     return res.status(401).json({ ok: false });
   }
 
@@ -213,7 +207,7 @@ app.post('/telegram/webhook', (req, res) => {
   if (!TELEGRAM_WEBHOOK_SECRET) {
     return res.status(503).json({ ok: false, error: 'TELEGRAM_WEBHOOK_SECRET is not configured' });
   }
-  if (!safeEqual(req.headers['x-telegram-bot-api-secret-token'], TELEGRAM_WEBHOOK_SECRET)) {
+  if (!isTelegramWebhookAuthorized(req.headers['x-telegram-bot-api-secret-token'], TELEGRAM_WEBHOOK_SECRET)) {
     return res.status(401).json({ ok: false });
   }
 
