@@ -72,6 +72,15 @@ async function main() {
     assert.deepEqual(health, { ok: true, approvalRequired: true });
     console.log('OK: application starts and /health reports manual approval');
 
+    const readyResponse = await fetch(baseUrl + '/ready');
+    assert.equal(readyResponse.status, 503);
+    const readiness = await readyResponse.json();
+    assert.ok(readiness.missing.includes('TELEGRAM_BOT_TOKEN'));
+    assert.ok(readiness.missing.includes('VK_COMMUNITY_TOKEN'));
+    assert.equal(readiness.storageWritable, true);
+    assert.ok(!JSON.stringify(readiness).includes('test-internal-secret'));
+    console.log('OK: /ready reports missing setup values but never exposes secrets');
+
     const manualResponse = await fetch(baseUrl + '/check/now', {
       method: 'POST',
       headers: { Authorization: 'Bearer wrong-secret' },
