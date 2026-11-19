@@ -13,7 +13,7 @@ on:
       - ".github/workflows/content-autopilot.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   test:
@@ -39,14 +39,19 @@ jobs:
       - name: Fail on known dependency vulnerabilities
         working-directory: content-autopilot
         run: npm audit --audit-level=moderate
-      - name: Upload refreshed lockfile for review
-        uses: actions/upload-artifact@v4
-        with:
-          name: content-autopilot-package-lock
-          path: content-autopilot/package-lock.json
-          if-no-files-found: error
       - name: Check JavaScript syntax
         working-directory: content-autopilot
         run: |
           node --check index.js
           find src test -name "*.js" -print0 | xargs -0 -n1 node --check
+      - name: Commit security-updated lockfile to this feature branch
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if ! git diff --quiet -- content-autopilot/package-lock.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add content-autopilot/package-lock.json
+            git commit -m "fix(deps): apply npm security updates"
+            git push origin "HEAD:${BRANCH_NAME}"
+          fi
