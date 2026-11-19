@@ -7,6 +7,7 @@ const { loadPending, savePending, clearPending } = require('./src/pending');
 const { isTimedAutoPublishEnabled, isInternalRequestAuthorized, isTelegramWebhookAuthorized, isTelegramOwnerCallback } = require('./src/config');
 const { getPendingDecision } = require('./src/schedule');
 const { getReadiness } = require('./src/preflight');
+const { startApprovedAction } = require('./src/callback');
 
 const app = express();
 app.use(express.json({ limit: '64kb' }));
@@ -257,20 +258,20 @@ app.post('/telegram/webhook', (req, res) => {
     return;
   }
 
-  const action = parsed.action === 'publish'
-    ? resolvePublish(pending, { auto: false })
-    : resolveCancel(pending);
-
-  action
-    .then(() => telegram.answerCallbackQuery(callback.id, parsed.action === 'publish' ? 'Publication check finished' : 'Cancelled'))
-    .catch(async (err) => {
-      console.error('[content-autopilot] Telegram decision failed:', err.message);
-      try {
-        await telegram.answerCallbackQuery(callback.id, 'Could not complete the action. The draft was kept for review.');
-      } catch {
-        // The Telegram callback may have expired; the pending state is more important.
-      }
-    });
+  startApprovedAction(
+    callback.id,
+    () => parsed.action === 'publish'
+      ? resolvePublish(pending, { auto: false })
+      : resolveCancel(pending),
+    {
+      answerCallbackQuery: telegram.answerCallbackQuery,
+      onActionError: async () => {
+        await telegram.sendPlainMessage(
+          'Не удалось подтвердить результат действия. Проверь VK и Telegram перед повторной попыткой, чтобы не создать дубль.'
+        );
+      },
+    }
+  );
 });
 
 cron.schedule(
