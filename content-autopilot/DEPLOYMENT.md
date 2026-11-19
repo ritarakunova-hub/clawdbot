@@ -18,7 +18,8 @@ Use content-autopilot as the build context and content-autopilot/Dockerfile as t
 
 Set:
 - Container port: 3000 (or the value supplied in PORT).
-- Health check: GET /health.
+- Liveness health check: GET /health.
+- Readiness check after configuration: GET /ready (returns 503 until all required settings and persistent storage are present).
 - Persistent volume mount: /data.
 - Environment variable: PENDING_FILE=/data/pending.json.
 - Replicas/instances: 1.
