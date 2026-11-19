@@ -20,8 +20,17 @@ function isTelegramWebhookAuthorized(header, secret) {
   return safeEqual(header, secret);
 }
 
+function isTelegramOwnerCallback(callback, ownerChatId) {
+  if (!callback || !callback.message || !callback.message.chat || !callback.from || !ownerChatId) {
+    return false;
+  }
+  return safeEqual(callback.message.chat.id, ownerChatId)
+    && safeEqual(callback.from.id, ownerChatId);
+}
+
 module.exports = {
   isTimedAutoPublishEnabled,
   isInternalRequestAuthorized,
   isTelegramWebhookAuthorized,
+  isTelegramOwnerCallback,
 };
