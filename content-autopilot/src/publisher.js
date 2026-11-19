@@ -1,40 +1,46 @@
-/**
- * Публикация в оба канала сразу. Площадки независимы: если одна упала,
- * вторая всё равно публикуется — и в личном чате будет видно, что именно
- * не получилось, а не тишина.
- */
 const telegram = require('./telegram');
 const vk = require('./vk');
 
-async function publish(text) {
-  const results = { telegram: null, vk: null };
-
+async function attemptPublish(send, text) {
   try {
-    await telegram.sendChannelPost(text);
-    results.telegram = 'ok';
+    await send(text);
+    return 'ok';
   } catch (err) {
-    results.telegram = `ошибка: ${err.message}`;
+    return 'ошибка: ' + (err && err.message ? err.message : String(err));
   }
-
-  try {
-    await vk.postToWall(text);
-    results.vk = 'ok';
-  } catch (err) {
-    results.vk = `ошибка: ${err.message}`;
-  }
-
-  return results;
 }
 
-function formatPublishSummary(results, { auto }) {
+/**
+ * VK and Telegram are independent destinations. A destination confirmed
+ * as published is skipped on retry to reduce duplicate posts.
+ */
+async function publish(text, {
+  alreadyPublished = {},
+  sendToTelegram = telegram.sendChannelPost,
+  sendToVk = vk.postToWall,
+} = {}) {
+  const telegramResult = alreadyPublished.telegram
+    ? 'ok'
+    : await attemptPublish(sendToTelegram, text);
+  const vkResult = alreadyPublished.vk
+    ? 'ok'
+    : await attemptPublish(sendToVk, text);
+
+  return { telegram: telegramResult, vk: vkResult };
+}
+
+function formatPublishSummary(results, { auto = false, remaining = false } = {}) {
   const heading = auto
-    ? '⏱ Автопубликация по таймеру завершена'
-    : '✅ Опубликовано вручную';
+    ? '⏱ Автопубликация по включённой настройке'
+    : '📣 Результат публикации по вашему подтверждению';
   const lines = [
     heading,
-    `Telegram-канал: ${results.telegram === 'ok' ? '✅' : '⚠️ ' + results.telegram}`,
-    `VK: ${results.vk === 'ok' ? '✅' : '⚠️ ' + results.vk}`,
+    'Telegram-канал: ' + (results.telegram === 'ok' ? '✅ опубликовано' : '⚠️ ' + (results.telegram || 'не подтверждено')),
+    'VK: ' + (results.vk === 'ok' ? '✅ опубликовано' : '⚠️ ' + (results.vk || 'не подтверждено')),
   ];
+  if (remaining) {
+    lines.push('Черновик сохранён. После проверки ошибки нажмите «Опубликовать сейчас» ещё раз. Подтверждённая площадка повторно не отправится.');
+  }
   return lines.join('\n');
 }
 
