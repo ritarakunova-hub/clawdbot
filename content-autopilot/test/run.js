@@ -88,7 +88,7 @@ async function main() {
     console.log('OK: date lookup returns the right post and skips empty days');
   }
 
-  // 5. Duplicate and impossible dates are rejected.
+  // 6. Duplicate and impossible dates are rejected.
   {
     assert.throws(() => validatePosts([
       { date: '2026-11-20', type: 'topic', title: 'A', rubric: 'B' },
@@ -100,7 +100,7 @@ async function main() {
     console.log('OK: invalid and duplicate calendar dates are blocked');
   }
 
-  // 6. Default draft is manual; timed publishing requires an explicit option.
+  // 7. Default draft is manual; timed publishing requires an explicit option.
   {
     const post = { date: '2026-11-20', rubric: 'Практика', title: 'Тест <b>', text: 'A & B' };
     const draft = formatDraftPreview(post);
@@ -113,7 +113,7 @@ async function main() {
     console.log('OK: publishing requires a button press unless timed mode is explicitly enabled');
   }
 
-  // 7. A topic without copy is never published.
+  // 8. A topic without copy is never published.
   {
     const reminder = formatTopicReminder({ rubric: 'Практика', title: 'Тема без текста' });
     assert.ok(reminder.includes('Тема без текста'));
@@ -121,7 +121,7 @@ async function main() {
     console.log('OK: topic-only entries do not publish');
   }
 
-  // 8. Callback data accepts only supported actions and real dates.
+  // 9. Callback data accepts only supported actions and real dates.
   {
     const data = buildCallbackData('publish', '2026-11-20');
     assert.equal(data, 'publish:2026-11-20');
@@ -132,7 +132,7 @@ async function main() {
     console.log('OK: Telegram callback payloads are validated');
   }
 
-  // 9. VK group ID is normalized and invalid IDs are rejected.
+  // 10. VK group ID is normalized and invalid IDs are rejected.
   {
     const params = buildWallPostParams({ groupId: '12345', message: 'привет', accessToken: 'fake-test-token' });
     assert.equal(params.owner_id, '-12345');
@@ -142,7 +142,7 @@ async function main() {
     console.log('OK: VK wall.post parameters are validated');
   }
 
-  // 10. VK credentials are sent in the POST body, never in the request URL.
+  // 11. VK credentials are sent in the POST body, never in the request URL.
   {
     const originalFetch = global.fetch;
     const originalGroupId = process.env.VK_GROUP_ID;
@@ -171,7 +171,7 @@ async function main() {
     }
   }
 
-  // 11. Partial failure: retry skips the already-confirmed destination.
+  // 12. Partial failure: retry skips the already-confirmed destination.
   {
     let telegramCalls = 0;
     let vkCalls = 0;
@@ -194,7 +194,7 @@ async function main() {
     console.log('OK: retry sends only to the destination without confirmation');
   }
 
-  // 11. Partial publication is reported as partial, not as complete success.
+  // 13. Partial publication is reported as partial, not as complete success.
   {
     const partial = formatPublishSummary({ telegram: 'ok', vk: 'ошибка: 403' }, { remaining: true });
     assert.ok(partial.includes('Telegram-канал: ✅'));
@@ -203,7 +203,7 @@ async function main() {
     console.log('OK: partial publication stays visible and retryable');
   }
 
-  // 12. Pending state is written atomically, read back and removed.
+  // 14. Pending state is written atomically, read back and removed.
   {
     clearPending();
     const pending = {
@@ -218,7 +218,7 @@ async function main() {
     console.log('OK: pending state is persisted and cleared');
   }
 
-  // 13. Timezone helper returns an ISO date.
+  // 15. Timezone helper returns an ISO date.
   {
     assert.match(todayInTimezone('Europe/Moscow'), /^\d{4}-\d{2}-\d{2}$/);
     console.log('OK: timezone helper returns YYYY-MM-DD');
