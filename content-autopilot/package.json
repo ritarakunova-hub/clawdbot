@@ -2,7 +2,7 @@
   "name": "taina-content-autopilot",
   "version": "1.0.0",
   "private": true,
-  "description": "TAINA Content Autopilot — scheduled Telegram drafts with owner approval and cross-posting to VK and Telegram",
+  "description": "TAINA content review and approved-copy handoff to SMMplanner",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
