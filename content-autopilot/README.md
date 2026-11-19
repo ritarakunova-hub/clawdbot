@@ -1,102 +1,86 @@
 # TAINA Content Autopilot
 
-Каждый день по расписанию (по умолчанию 9:00 МСК) сервис смотрит
-календарь постов, и если на сегодня есть готовый текст — присылает
-вам в Telegram черновик с двумя кнопками:
+The service prepares a post from the content calendar and sends it to the owner's private Telegram chat. The owner can publish it to the VK community and Telegram channel or cancel it.
 
-**✅ Опубликовать сейчас** / **❌ Отменить**
+## Safe default flow
 
-Если ничего не нажать — через 30 минут (настраивается) публикует
-сам, в VK-паблик и Telegram-канал одновременно. Это тот же принцип
-«Одобрить», что в Sales Engine, только approve — по умолчанию,
-через таймер, а не обязательным кликом: не трогаете — значит,
-согласны с текстом как есть.
+1. At the configured schedule (default 09:00 Europe/Moscow), the service looks for a post for the current date.
+2. If the calendar entry contains only a topic, the bot sends a reminder. It does not publish anything.
+3. If the entry contains final copy, the bot sends a draft with two buttons: "Publish now" and "Cancel".
+4. By default, publication happens only after the owner explicitly taps "Publish now". Silence is not consent.
+5. If one platform fails, the service stores the result per platform. A retry sends only to the destination that has not confirmed publication.
 
-Если на сегодня в календаре только тема без готового текста —
-присылает тему и предупреждение, что автопубликации не будет:
-писать текст всё равно нужно вам (или попросите меня в чате).
+Timed auto-publishing is an optional mode and is disabled by default with AUTO_PUBLISH_ENABLED=false. Do not enable it without a separate owner decision.
 
-## Что нужно от вас
+## Requirements
 
-### 1. То, что уже есть — переиспользуем
+- Node.js 20 or newer.
+- A Telegram bot that is an administrator in the destination channel with permission to publish.
+- A VK community token with permission to publish to the community wall.
+- A public HTTPS application URL for the Telegram webhook.
 
-`TELEGRAM_BOT_TOKEN` и `TELEGRAM_CHAT_ID` — те же, что в мини-CRM.
-Заводить новый бот не нужно.
+## Environment variables
 
-### 2. Telegram-канал для публикации
+Set all credentials in local environment variables or in the hosting provider's secret manager. Do not add them to Git.
 
-Отдельный чат от личных уведомлений — тот самый канал TAINA, куда
-должны уходить посты.
+| Variable | Required | Purpose |
+|---|---:|---|
+| TELEGRAM_BOT_TOKEN | Yes | Bot token |
+| TELEGRAM_CHAT_ID | Yes | Private chat for drafts and approvals |
+| TELEGRAM_CHANNEL_ID | Yes | Telegram destination channel |
+| TELEGRAM_WEBHOOK_SECRET | Yes | Verify incoming Telegram webhooks |
+| VK_GROUP_ID | Yes | Numeric VK community ID |
+| VK_COMMUNITY_TOKEN | Yes | VK community access token |
+| INTERNAL_API_SECRET | Yes | Protect manual /check/now trigger |
+| TIMEZONE | No | Defaults to Europe/Moscow |
+| CRON_SCHEDULE | No | Defaults to 0 9 * * * |
+| APPROVAL_WINDOW_MINUTES | No | Used only if timed publishing is explicitly enabled |
+| AUTO_PUBLISH_ENABLED | No | Defaults to false |
+| PORT | No | Defaults to 3000 |
 
-1. Если канала ещё нет — создайте (Telegram → Новый канал)
-2. Добавьте вашего бота в канал как администратора с правом
-   **«Публикация сообщений»**
-3. Узнайте ID канала: перешлите любое сообщение из канала боту
-   [@getidsbot](https://t.me/getidsbot) — он покажет ID вида
-   `-1001234567890`. Это `TELEGRAM_CHANNEL_ID`
-   (если канал публичный, можно использовать `@имя_канала` вместо ID)
+Generate two separate strong random values for TELEGRAM_WEBHOOK_SECRET and INTERNAL_API_SECRET. Do not reuse one secret for both purposes.
 
-### 3. Токен сообщества VK
+## Telegram setup
 
-У вас TAINA STUDIO — паблик, это хороший вариант: токен сообщества
-получается без OAuth и без риска для аккаунта.
+1. Add the bot to the TAINA channel as an administrator with permission to publish messages.
+2. Set the owner's private chat ID as TELEGRAM_CHAT_ID and the channel ID as TELEGRAM_CHANNEL_ID.
+3. After deployment, configure the webhook:
 
-1. Зайдите в сообщество → **Управление → Работа с API → Ключи доступа**
-2. **Создать ключ** → отметьте право **«Стена»** (`wall`)
-3. Скопируйте ключ — это `VK_COMMUNITY_TOKEN`
-4. **ID сообщества** — число в URL управления сообществом
-   (`vk.ru/club<ID>` или в разделе «Информация о сообществе»,
-   поле «ID сообщества») — это `VK_GROUP_ID`, без минуса, сервис
-   сам подставит его как нужно
+    curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
+      -d "url=https://YOUR-AMVERA-APP/telegram/webhook" \
+      -d "secret_token=$TELEGRAM_WEBHOOK_SECRET"
 
-### 4. Деплой на Amvera
+Check the Telegram API response and confirm that ok is true. Never paste a bot token into a public issue, code file or chat.
 
-1. Создайте новое приложение на Amvera, подключите репозиторий,
-   папка `content-autopilot`
-2. В **«Переменные и секреты»** добавьте (как секреты):
-   - `TELEGRAM_BOT_TOKEN` — тот же, что в мини-CRM
-   - `TELEGRAM_CHAT_ID` — тот же, что в мини-CRM
-   - `TELEGRAM_CHANNEL_ID` — из шага 2
-   - `VK_GROUP_ID`, `VK_COMMUNITY_TOKEN` — из шага 3
-   - `TELEGRAM_WEBHOOK_SECRET` — придумайте пароль
-   - `TIMEZONE`, `CRON_SCHEDULE`, `APPROVAL_WINDOW_MINUTES` —
-     необязательные, по умолчанию `Europe/Moscow`, `0 9 * * *` (9:00),
-     `30` (минут на правку)
-3. `git push` → Amvera соберёт и запустит
+## Protected manual trigger
 
-### 5. Подключить кнопки к сервису
+The /check/now endpoint requires a separate bearer secret:
 
-Чтобы нажатия «Опубликовать/Отменить» доходили до сервиса:
+    curl -X POST "https://YOUR-AMVERA-APP/check/now" \
+      -H "Authorization: Bearer $INTERNAL_API_SECRET"
 
-```
-curl "https://api.telegram.org/botВАШ_ТОКЕН/setWebhook?url=https://ВАШ-АДРЕС-НА-AMVERA/telegram/webhook&secret_token=ВАШ_TELEGRAM_WEBHOOK_SECRET"
-```
+If INTERNAL_API_SECRET is missing, the endpoint returns 503. An incorrect secret returns 401.
 
-## Проверить прямо сейчас, не дожидаясь 9 утра
+## Content calendar
 
-```
-curl -X POST https://ВАШ-АДРЕС-НА-AMVERA/check/now
-```
+The file content-autopilot/data/posts.json contains entries with date, rubric, title and type:
+- full: final copy sent as a draft for approval;
+- topic: a reminder only; no post is published.
 
-## Обновление календаря
+The calendar is validated when loaded. Dates must be real and unique. Each entry needs a title and rubric, and every full entry must contain text.
 
-Весь календарь — в `data/posts.json`. Чтобы дописать текст для темы
-из будущих недель — просто попросите меня в чате, допишу прямо в
-файл, деплой подхватит сам при следующем push.
+## Pending state and retries
 
-## Если сервис перезапустится в середине 30-минутного окна
+The current pending draft is persisted in data/pending.json using an atomic file replacement. If Telegram confirms publication but VK fails, the state records the successful Telegram destination. A retry does not deliberately send the Telegram post again.
 
-Не страшно: состояние черновика сохраняется в `data/pending.json`.
-При старте сервис проверяет — если время уже прошло, публикует
-сразу («догоняющая» публикация), если нет — ставит таймер на
-оставшееся время.
+A network interruption can happen after a platform accepts a post but before the service receives the response. In that rare case, check the destination manually before retrying, to avoid a duplicate.
 
-## Локальный запуск для проверки
+## Local verification
 
-```
-cp .env.example .env
-# заполните .env своими значениями
-npm install
-npm test      # проверка логики без реальных Telegram/VK
-npm start     # http://localhost:3000
-```
+    npm ci
+    npm test
+    node --check index.js
+
+Tests do not send real messages to Telegram or VK. They cover the calendar, validation, manual approval default, callback data, state persistence, and partial retry behavior.
+
+Deployment and publishing to the real social accounts are not performed by this repository change.
