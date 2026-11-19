@@ -1,4 +1,4 @@
-const PROCESSED_STATES = new Set(['published', 'cancelled']);
+const PROCESSED_STATES = new Set(['published', 'cancelled', 'topic_reminder']);
 
 function getPendingDecision(existing, today) {
   if (!existing) return 'create';
