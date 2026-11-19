@@ -1,0 +1,29 @@
+name: TAINA Site Checks
+
+on:
+  pull_request:
+    paths:
+      - "taina-site/**"
+      - ".github/workflows/taina-site.yml"
+  push:
+    branches:
+      - "feat/taina-knowledge-map-launch-site"
+    paths:
+      - "taina-site/**"
+      - ".github/workflows/taina-site.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate landing page
+        run: python taina-site/tests/validate_page.py
