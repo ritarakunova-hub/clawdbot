@@ -1,6 +1,11 @@
-// Простые проверки без обращения к реальным Telegram/VK — запускаются: npm test
-const assert = require('node:assert');
-const { getPostForDate, loadPosts, todayInTimezone } = require('../src/posts');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+
+process.env.PENDING_FILE = path.join(os.tmpdir(), 'taina-pending-test-' + process.pid + '.json');
+
+const { getPostForDate, loadPosts, todayInTimezone, validatePosts } = require('../src/posts');
 const {
   formatDraftPreview,
   formatTopicReminder,
@@ -8,90 +13,154 @@ const {
   parseCallbackData,
 } = require('../src/telegram');
 const { buildWallPostParams } = require('../src/vk');
-const { formatPublishSummary } = require('../src/publisher');
+const { publish, formatPublishSummary } = require('../src/publisher');
+const { loadPending, savePending, clearPending } = require('../src/pending');
 
-// 1. Календарь: 46 записей (12 полных + 34 темы)
-{
-  const posts = loadPosts();
-  assert.strictEqual(posts.length, 46);
-  assert.strictEqual(posts.filter((p) => p.type === 'full').length, 12);
-  assert.strictEqual(posts.filter((p) => p.type === 'topic').length, 34);
-  console.log('OK: календарь загружен, 12 полных + 34 темы');
+async function main() {
+  // 1. Calendar structure and date uniqueness.
+  {
+    const posts = loadPosts();
+    assert.ok(posts.length >= 1);
+    assert.equal(new Set(posts.map((post) => post.date)).size, posts.length);
+    assert.ok(posts.every((post) => /^\d{4}-\d{2}-\d{2}$/.test(post.date)));
+    assert.ok(posts.every((post) => ['full', 'topic'].includes(post.type)));
+    assert.ok(posts.filter((post) => post.type === 'full').every((post) => post.text.trim()));
+    console.log('OK: calendar is valid; dates are unique and full posts have text');
+  }
+
+  // 2. Forward campaign reflects the current TAINA offer, not the retired offer.
+  {
+    const campaign = loadPosts().filter((post) => post.date >= '2026-11-19');
+    assert.equal(campaign.length, 12);
+    assert.ok(campaign.every((post) => post.type === 'full' && post.text.trim()));
+    const forbidden = /(архетип|rag-ассистент|форма на сайте|70\s?000\s?₽|1\s?490\s?₽)/i;
+    for (const post of campaign) {
+      assert.ok(!forbidden.test(post.title + '\n' + post.text), 'Retired offer in post ' + post.date);
+    }
+    console.log('OK: 12 ready-to-review posts match the current offer');
+  }
+
+  // 3. Lookup by date and a day with no post.
+  {
+    const post = getPostForDate('2026-11-20');
+    assert.ok(post && post.type === 'full');
+    assert.equal(getPostForDate('2026-11-22'), null);
+    console.log('OK: date lookup returns the right post and skips empty days');
+  }
+
+  // 4. Duplicate and impossible dates are rejected.
+  {
+    assert.throws(() => validatePosts([
+      { date: '2026-11-20', type: 'topic', title: 'A', rubric: 'B' },
+      { date: '2026-11-20', type: 'topic', title: 'C', rubric: 'D' },
+    ]), /повторяется дата/);
+    assert.throws(() => validatePosts([
+      { date: '2026-02-30', type: 'topic', title: 'A', rubric: 'B' },
+    ]), /некорректная дата/);
+    console.log('OK: invalid and duplicate calendar dates are blocked');
+  }
+
+  // 5. Default draft is manual; timed publishing requires an explicit option.
+  {
+    const post = { date: '2026-11-20', rubric: 'Практика', title: 'Тест <b>', text: 'A & B' };
+    const draft = formatDraftPreview(post);
+    assert.ok(draft.includes('&lt;b&gt;'));
+    assert.ok(draft.includes('A &amp; B'));
+    assert.ok(draft.includes('не будет опубликовано'));
+    assert.ok(!draft.includes('через 30 минут'));
+    const timed = formatDraftPreview(post, { autoPublishEnabled: true, minutesLeft: 30 });
+    assert.ok(timed.includes('через 30 минут'));
+    console.log('OK: publishing requires a button press unless timed mode is explicitly enabled');
+  }
+
+  // 6. A topic without copy is never published.
+  {
+    const reminder = formatTopicReminder({ rubric: 'Практика', title: 'Тема без текста' });
+    assert.ok(reminder.includes('Тема без текста'));
+    assert.ok(reminder.includes('Публикации не будет'));
+    console.log('OK: topic-only entries do not publish');
+  }
+
+  // 7. Callback data accepts only supported actions and real dates.
+  {
+    const data = buildCallbackData('publish', '2026-11-20');
+    assert.equal(data, 'publish:2026-11-20');
+    assert.deepEqual(parseCallbackData(data), { action: 'publish', postId: '2026-11-20' });
+    assert.deepEqual(parseCallbackData('delete:2026-11-20'), { action: '', postId: undefined });
+    assert.deepEqual(parseCallbackData('publish:2026-02-30'), { action: '', postId: undefined });
+    assert.throws(() => buildCallbackData('other', '2026-11-20'));
+    console.log('OK: Telegram callback payloads are validated');
+  }
+
+  // 8. VK group ID is normalized and invalid IDs are rejected.
+  {
+    const params = buildWallPostParams({ groupId: '12345', message: 'привет', accessToken: 'fake-test-token' });
+    assert.equal(params.owner_id, '-12345');
+    assert.equal(params.from_group, '1');
+    assert.equal(params.message, 'привет');
+    assert.throws(() => buildWallPostParams({ groupId: 'abc', message: 'x', accessToken: 'test' }), /целым/);
+    console.log('OK: VK wall.post parameters are validated');
+  }
+
+  // 9. Partial failure: retry skips the already-confirmed destination.
+  {
+    let telegramCalls = 0;
+    let vkCalls = 0;
+    const first = await publish('тест', {
+      sendToTelegram: async () => { telegramCalls += 1; },
+      sendToVk: async () => { vkCalls += 1; throw new Error('временная ошибка'); },
+    });
+    assert.equal(first.telegram, 'ok');
+    assert.match(first.vk, /временная ошибка/);
+
+    const second = await publish('тест', {
+      alreadyPublished: { telegram: true },
+      sendToTelegram: async () => { telegramCalls += 1; },
+      sendToVk: async () => { vkCalls += 1; },
+    });
+    assert.equal(second.telegram, 'ok');
+    assert.equal(second.vk, 'ok');
+    assert.equal(telegramCalls, 1);
+    assert.equal(vkCalls, 2);
+    console.log('OK: retry sends only to the destination without confirmation');
+  }
+
+  // 10. Partial publication is reported as partial, not as complete success.
+  {
+    const partial = formatPublishSummary({ telegram: 'ok', vk: 'ошибка: 403' }, { remaining: true });
+    assert.ok(partial.includes('Telegram-канал: ✅'));
+    assert.ok(partial.includes('VK: ⚠️'));
+    assert.ok(partial.includes('Черновик сохранён'));
+    console.log('OK: partial publication stays visible and retryable');
+  }
+
+  // 11. Pending state is written atomically, read back and removed.
+  {
+    clearPending();
+    const pending = {
+      postId: '2026-11-20',
+      text: 'Тестовый черновик',
+      published: { telegram: true, vk: false },
+    };
+    savePending(pending);
+    assert.deepEqual(loadPending(), pending);
+    clearPending();
+    assert.equal(loadPending(), null);
+    console.log('OK: pending state is persisted and cleared');
+  }
+
+  // 12. Timezone helper returns an ISO date.
+  {
+    assert.match(todayInTimezone('Europe/Moscow'), /^\d{4}-\d{2}-\d{2}$/);
+    console.log('OK: timezone helper returns YYYY-MM-DD');
+  }
+
+  clearPending();
+  console.log('\nAll Content Autopilot checks passed.');
 }
 
-// 2. getPostForDate — дата старта и день без публикации
-{
-  const post = getPostForDate('2026-09-17');
-  assert.ok(post && post.type === 'full');
-  assert.strictEqual(getPostForDate('2026-09-18'), null);
-  console.log('OK: getPostForDate — дата старта и день без публикации');
-}
-
-// 3. formatDraftPreview — экранирует HTML, показывает минуты до автопубликации
-{
-  const text = formatDraftPreview({ rubric: 'Путь', title: 'Тест <b>', text: 'A & B' }, 30);
-  assert.ok(text.includes('&lt;b&gt;'));
-  assert.ok(!text.includes('Тест <b>')); // сырой ввод не должен просочиться неэкранированным
-  assert.ok(text.includes('A &amp; B'));
-  assert.ok(text.includes('30 минут'));
-  console.log('OK: formatDraftPreview экранирует HTML и показывает окно');
-}
-
-// 4. formatTopicReminder — предупреждает, что автопубликации не будет
-{
-  const text = formatTopicReminder({ rubric: 'Система', title: 'Тема без текста' });
-  assert.ok(text.includes('Тема без текста'));
-  assert.ok(text.includes('не будет'));
-  console.log('OK: formatTopicReminder предупреждает об отсутствии автопубликации');
-}
-
-// 5. callback_data — собирается и разбирается обратно
-{
-  const data = buildCallbackData('publish', '2026-09-17');
-  assert.strictEqual(data, 'publish:2026-09-17');
-  const parsed = parseCallbackData(data);
-  assert.strictEqual(parsed.action, 'publish');
-  assert.strictEqual(parsed.postId, '2026-09-17');
-  console.log('OK: buildCallbackData / parseCallbackData');
-}
-
-// 6. parseCallbackData — не падает на мусоре
-{
-  const parsed = parseCallbackData('');
-  assert.strictEqual(parsed.action, '');
-  assert.strictEqual(parsed.postId, undefined);
-  console.log('OK: parseCallbackData не падает на пустой строке');
-}
-
-// 7. buildWallPostParams — owner_id всегда отрицательный для паблика,
-// независимо от того, передали ли groupId с минусом или без
-{
-  const params1 = buildWallPostParams({ groupId: '12345', message: 'привет', accessToken: 'tok' });
-  assert.strictEqual(params1.owner_id, '-12345');
-  const params2 = buildWallPostParams({ groupId: '-12345', message: 'привет', accessToken: 'tok' });
-  assert.strictEqual(params2.owner_id, '-12345');
-  assert.strictEqual(params1.from_group, '1');
-  assert.strictEqual(params1.message, 'привет');
-  console.log('OK: buildWallPostParams — owner_id корректный для паблика');
-}
-
-// 8. formatPublishSummary — показывает статус по каждой площадке отдельно
-{
-  const ok = formatPublishSummary({ telegram: 'ok', vk: 'ok' }, { auto: true });
-  assert.ok(ok.includes('Автопубликация'));
-  assert.ok(ok.includes('✅'));
-
-  const partial = formatPublishSummary({ telegram: 'ok', vk: 'ошибка: 403' }, { auto: false });
-  assert.ok(partial.includes('Опубликовано вручную'));
-  assert.ok(partial.includes('⚠️ ошибка: 403'));
-  console.log('OK: formatPublishSummary показывает частичный сбой');
-}
-
-// 9. todayInTimezone — корректный формат
-{
-  const today = todayInTimezone('Europe/Moscow');
-  assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(today));
-  console.log('OK: todayInTimezone — корректный формат даты');
-}
-
-console.log('\nВсе проверки пройдены.');
+main().catch((err) => {
+  try { clearPending(); } catch {}
+  console.error(err);
+  process.exitCode = 1;
+});
