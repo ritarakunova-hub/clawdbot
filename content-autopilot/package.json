@@ -11,5 +11,8 @@
   "dependencies": {
     "express": "^4.19.2",
     "node-cron": "^4.6.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
