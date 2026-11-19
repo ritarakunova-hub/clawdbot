@@ -48,11 +48,19 @@ async function main() {
     const campaign = loadPosts().filter((post) => post.date >= '2026-11-19');
     assert.equal(campaign.length, 12);
     assert.ok(campaign.every((post) => post.type === 'full' && post.text.trim()));
-    const forbidden = /(архетип|rag-ассистент|форма на сайте|70\s?000\s?₽|1\s?490\s?₽)/i;
+    const forbidden = /(архетип|rag-ассистент|форма на сайте|70\\s?000\\s?₽|1\\s?490\\s?₽)/i;
+    const weeklyCounts = new Map();
+    const weekdays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
     for (const post of campaign) {
-      assert.ok(!forbidden.test(post.title + '\n' + post.text), 'Retired offer in post ' + post.date);
+      assert.ok(!forbidden.test(post.title + '\\n' + post.text), 'Retired offer in post ' + post.date);
+      const date = new Date(post.date + 'T00:00:00.000Z');
+      assert.equal(post.weekday, weekdays[date.getUTCDay()], 'Wrong weekday for ' + post.date);
+      date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7));
+      const week = date.toISOString().slice(0, 10);
+      weeklyCounts.set(week, (weeklyCounts.get(week) || 0) + 1);
     }
-    console.log('OK: 12 ready-to-review posts match the current offer');
+    assert.ok([...weeklyCounts.values()].every((count) => count <= 2), 'Calendar must not exceed two posts per week');
+    console.log('OK: 12 ready-to-review posts match the offer and respect the two-post weekly cap');
   }
 
   // 4. Lookup by date and a day with no post.
