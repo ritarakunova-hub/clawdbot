@@ -13,6 +13,10 @@ The service prepares a post from the content calendar and sends it to the owner'
 
 Timed auto-publishing is an optional mode and is disabled by default with AUTO_PUBLISH_ENABLED=false. Do not enable it without a separate owner decision.
 
+## Deployment
+
+The app is provider-neutral and includes a Dockerfile. See DEPLOYMENT.md for container and native Node.js setup. Any host is suitable only if it supports a continuously running service, a public HTTPS URL, and persistent writable storage for /data. Run a single instance unless shared-state locking is added.
+
 ## Requirements
 
 - Node.js 22 or newer.
@@ -50,7 +54,7 @@ Generate two separate strong random values for TELEGRAM_WEBHOOK_SECRET and INTER
 3. After deployment, configure the webhook:
 
     curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
-      -d "url=https://YOUR-AMVERA-APP/telegram/webhook" \
+      -d "url=https://YOUR-PUBLIC-APP-URL/telegram/webhook" \
       -d "secret_token=$TELEGRAM_WEBHOOK_SECRET"
 
 Check the Telegram API response and confirm that ok is true. Never paste a bot token into a public issue, code file or chat.
@@ -61,7 +65,7 @@ The owner check compares the callback sender's Telegram user ID and the callback
 
 The /check/now endpoint requires a separate bearer secret:
 
-    curl -X POST "https://YOUR-AMVERA-APP/check/now" \
+    curl -X POST "https://YOUR-PUBLIC-APP-URL/check/now" \
       -H "Authorization: Bearer $INTERNAL_API_SECRET"
 
 If INTERNAL_API_SECRET is missing, the endpoint returns 503. An incorrect secret returns 401.
