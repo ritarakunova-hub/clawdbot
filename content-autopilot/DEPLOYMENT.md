@@ -1,6 +1,6 @@
 # TAINA Content Autopilot — deployment guide
 
-This service is not tied to Amvera or another specific cloud provider. The repository includes a Dockerfile and can also run as a native Node.js service.
+This service is not tied to a specific cloud provider. The repository includes a Dockerfile and can also run as a native Node.js service.
 
 ## The host must support
 
