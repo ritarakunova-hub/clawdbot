@@ -1,3 +1,4 @@
 node_modules/
 .env
 data/pending.json
+data/pending.json.tmp
