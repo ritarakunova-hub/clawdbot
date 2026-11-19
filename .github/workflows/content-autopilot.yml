@@ -27,17 +27,24 @@ jobs:
           node-version: "20"
           cache: npm
           cache-dependency-path: content-autopilot/package-lock.json
+      - name: Refresh dependency lockfile
+        working-directory: content-autopilot
+        run: npm audit fix --package-lock-only
       - name: Install dependencies
         working-directory: content-autopilot
         run: npm ci
       - name: Run unit and safety tests
         working-directory: content-autopilot
         run: npm test
-      - name: Audit dependencies
+      - name: Fail on known dependency vulnerabilities
         working-directory: content-autopilot
-        run: |
-          npm audit --json > audit-report.json || true
-          node -e "const r=require('./audit-report.json'); for (const [name, v] of Object.entries(r.vulnerabilities || {})) console.log(JSON.stringify({name, severity:v.severity, range:v.range, fixAvailable:v.fixAvailable, via:v.via}))"
+        run: npm audit --audit-level=moderate
+      - name: Upload refreshed lockfile for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: content-autopilot-package-lock
+          path: content-autopilot/package-lock.json
+          if-no-files-found: error
       - name: Check JavaScript syntax
         working-directory: content-autopilot
         run: |
