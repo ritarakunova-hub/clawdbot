@@ -49,14 +49,10 @@ async function main() {
       PORT: String(port),
       TIMEZONE: 'Europe/Moscow',
       CRON_SCHEDULE: '0 0 1 1 *',
-      AUTO_PUBLISH_ENABLED: 'false',
       INTERNAL_API_SECRET: 'test-internal-secret',
       TELEGRAM_WEBHOOK_SECRET: 'test-webhook-secret',
       TELEGRAM_CHAT_ID: '123456789',
-      TELEGRAM_BOT_TOKEN: '',
-      TELEGRAM_CHANNEL_ID: '',
-      VK_GROUP_ID: '',
-      VK_COMMUNITY_TOKEN: '',
+      TELEGRAM_BOT_TOKEN: 'test-telegram-token',
       PENDING_FILE: pendingFile,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -69,17 +65,21 @@ async function main() {
   try {
     const healthResponse = await waitForServer(child);
     const health = await healthResponse.json();
-    assert.deepEqual(health, { ok: true, approvalRequired: true });
-    console.log('OK: application starts and /health reports manual approval');
+    assert.deepEqual(health, {
+      ok: true,
+      workflow: 'smmplanner-handoff',
+      directPublishing: false,
+    });
+    console.log('OK: application starts in SMMplanner handoff mode');
 
     const readyResponse = await fetch(baseUrl + '/ready');
-    assert.equal(readyResponse.status, 503);
+    assert.equal(readyResponse.status, 200);
     const readiness = await readyResponse.json();
-    assert.ok(readiness.missing.includes('TELEGRAM_BOT_TOKEN'));
-    assert.ok(readiness.missing.includes('VK_COMMUNITY_TOKEN'));
+    assert.equal(readiness.publisher, 'SMMplanner');
+    assert.equal(readiness.directPublishing, false);
     assert.equal(readiness.storageWritable, true);
-    assert.ok(!JSON.stringify(readiness).includes('test-internal-secret'));
-    console.log('OK: /ready reports missing setup values but never exposes secrets');
+    assert.ok(!JSON.stringify(readiness).includes('test-telegram-token'));
+    console.log('OK: /ready confirms SMMplanner handoff configuration without exposing secrets');
 
     const manualResponse = await fetch(baseUrl + '/check/now', {
       method: 'POST',
