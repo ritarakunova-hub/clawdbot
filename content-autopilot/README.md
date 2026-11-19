@@ -15,7 +15,7 @@ Timed auto-publishing is an optional mode and is disabled by default with AUTO_P
 
 ## Requirements
 
-- Node.js 20 or newer.
+- Node.js 22 or newer.
 - A Telegram bot that is an administrator in the destination channel with permission to publish.
 - A VK community token with permission to publish to the community wall.
 - A public HTTPS application URL for the Telegram webhook.
