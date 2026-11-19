@@ -15,7 +15,8 @@ const {
 const { buildWallPostParams } = require('../src/vk');
 const { publish, formatPublishSummary } = require('../src/publisher');
 const { loadPending, savePending, clearPending } = require('../src/pending');
-const { isTimedAutoPublishEnabled, isInternalRequestAuthorized, isTelegramWebhookAuthorized } = require('../src/config');
+const { isTimedAutoPublishEnabled, isInternalRequestAuthorized, isTelegramWebhookAuthorized, isTelegramOwnerCallback } = require('../src/config');
+const { getPendingDecision } = require('../src/schedule');
 
 async function main() {
   // 1. Safety defaults and authentication guards.
@@ -29,7 +30,11 @@ async function main() {
     assert.equal(isTelegramWebhookAuthorized('secret', ''), false);
     assert.equal(isTelegramWebhookAuthorized('wrong', 'secret'), false);
     assert.equal(isTelegramWebhookAuthorized('secret', 'secret'), true);
-    console.log('OK: timed publishing is off by default and protected endpoints fail closed');
+    assert.equal(isTelegramOwnerCallback({ message: { chat: { id: 123 } }, from: { id: 123 } }, '123'), true);
+    assert.equal(isTelegramOwnerCallback({ message: { chat: { id: 123 } }, from: { id: 456 } }, '123'), false);
+    assert.equal(isTelegramOwnerCallback({ message: { chat: { id: -100 } }, from: { id: 123 } }, '123'), false);
+    assert.equal(isTelegramOwnerCallback({ from: { id: 123 } }, '123'), false);
+    console.log('OK: timed publishing is off by default and callbacks are restricted to the owner');
   }
 
   // 2. Calendar structure and date uniqueness.
@@ -63,7 +68,19 @@ async function main() {
     console.log('OK: 12 ready-to-review posts match the offer and respect the two-post weekly cap');
   }
 
-  // 4. Lookup by date and a day with no post.
+  // 4. A completed post cannot be recreated by a repeated manual check on the same day.
+  {
+    assert.equal(getPendingDecision(null, '2026-11-20'), 'create');
+    assert.equal(getPendingDecision({ postId: '2026-11-20', status: 'pending' }, '2026-11-20'), 'keep_pending');
+    assert.equal(getPendingDecision({ postId: '2026-11-20', status: 'published' }, '2026-11-20'), 'already_processed');
+    assert.equal(getPendingDecision({ postId: '2026-11-20', status: 'cancelled' }, '2026-11-20'), 'already_processed');
+    assert.equal(getPendingDecision({ postId: '2026-11-19', status: 'pending' }, '2026-11-20'), 'keep_pending');
+    assert.equal(getPendingDecision({ postId: '2026-11-19', status: 'published' }, '2026-11-20'), 'clear_and_create');
+    assert.equal(getPendingDecision({ postId: '2026-11-21', status: 'published' }, '2026-11-20'), 'keep_pending');
+    console.log('OK: same-day duplicate posts are blocked and unfinished drafts are preserved');
+  }
+
+  // 5. Lookup by date and a day with no post.
   {
     const post = getPostForDate('2026-11-20');
     assert.ok(post && post.type === 'full');
