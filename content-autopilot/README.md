@@ -1,103 +1,56 @@
-# TAINA Content Autopilot
+# TAINA Content Review → SMMplanner
 
-The service prepares a post from the content calendar and sends it to the owner's private Telegram chat. The owner can publish it to the VK community and Telegram channel or cancel it.
+This service prepares TAINA posts from the content calendar, sends each draft to the owner's private Telegram chat, and hands approved copy back to the owner for placement in SMMplanner.
 
-## Safe default flow
+**SMMplanner is the only publishing scheduler.** This app does not publish directly to VK or Telegram channels and does not store channel credentials.
 
-1. At the configured schedule (default 09:00 Europe/Moscow), the service looks for a post for the current date.
-2. If the calendar entry contains only a topic, the bot sends a reminder. It does not publish anything.
-3. If the entry contains final copy, the bot sends it as a draft with two buttons: "Publish now" and "Cancel".
-4. By default, publication happens only after the owner explicitly taps "Publish now". Silence is not consent.
-5. If one platform fails, the service stores the result per platform. A retry sends only to the destination that has not confirmed publication.
-6. A completed or cancelled post is marked for that calendar date. Repeated calls to /check/now on the same day do not recreate the post. An unfinished draft from an earlier day is preserved and must be resolved before a new one is generated.
+## Workflow
 
-Timed auto-publishing is an optional mode and is disabled by default with AUTO_PUBLISH_ENABLED=false. Do not enable it without a separate owner decision.
+1. At the configured schedule (default 09:00 Europe/Moscow), the service looks for a calendar entry for the current date.
+2. If the entry contains final copy, the bot sends a review draft to the owner's private Telegram chat.
+3. The owner chooses:
+   - **Approve for SMMplanner** — the bot sends a separate, copy-ready message containing the approved post, target platforms (Telegram + VK), the planned date, and a link to SMMplanner.
+   - **Cancel** — the draft is marked as cancelled and is not handed off.
+4. The owner places the approved text in SMMplanner, selects the Telegram and VK pages, and sets the desired publication time.
+5. SMMplanner handles scheduling and publication.
 
-## Deployment
+If a calendar entry contains only a topic, the bot sends a reminder; nothing is handed to SMMplanner.
 
-The app is provider-neutral and includes a Dockerfile. See DEPLOYMENT.md for container and native Node.js setup. Any host is suitable only if it supports a continuously running service, a public HTTPS URL, and persistent writable storage for /data. Run a single instance unless shared-state locking is added.
+## Why the handoff is manual
 
-## Requirements
+The public SMMplanner materials document scheduled posting to Telegram and VK, but we did not find an official public developer API for creating scheduled posts from this app. A third-party review updated in September 2026 also reports that no public publication API is available. Therefore this integration deliberately uses a safe copy-ready handoff. It does not call undocumented private endpoints, automate the SMMplanner website, or keep VK/Telegram channel tokens.
 
-- Node.js 22 or newer.
-- A Telegram bot that is an administrator in the destination channel with permission to publish.
-- A VK community token with permission to publish to the community wall.
-- A public HTTPS application URL for the Telegram webhook.
-- A persistent writable directory for the pending-state file on the production host.
+If SMMplanner provides an official API or a supported import format, a dedicated adapter can be added later without changing the content calendar or approval logic.
 
-## Environment variables
+## Safety and state
 
-Set all credentials in local environment variables or in the hosting provider's secret manager. Do not add them to Git.
+- The bot's default workflow is review → explicit approval → copy-ready handoff.
+- No button triggers direct publication to social channels.
+- Only the configured owner in the private Telegram chat can approve or cancel.
+- Telegram webhook requests require TELEGRAM_WEBHOOK_SECRET.
+- /check/now requires a separate bearer secret (INTERNAL_API_SECRET).
+- Approved, cancelled and topic-reminder entries are marked for their calendar date so repeated checks do not create duplicate handoffs.
+- Pending state is written atomically.
+- One app instance is required: the JSON state store has no distributed lock.
+- Production state must live on a persistent writable volume.
+
+## Schedule and deployment
+
+The service checks the current date using TIMEZONE (default Europe/Moscow) and runs on CRON_SCHEDULE (default 0 9 * * *).
+
+See DEPLOYMENT.md for Docker and native Node.js setup.
+
+## Environment
 
 | Variable | Required | Purpose |
 |---|---:|---|
-| TELEGRAM_BOT_TOKEN | Yes | Bot token |
-| TELEGRAM_CHAT_ID | Yes | Owner's private Telegram chat ID; the callback sender must match it |
-| TELEGRAM_CHANNEL_ID | Yes | Telegram destination channel |
-| TELEGRAM_WEBHOOK_SECRET | Yes | Verify incoming Telegram webhooks |
-| VK_GROUP_ID | Yes | Numeric VK community ID |
-| VK_COMMUNITY_TOKEN | Yes | VK community access token |
-| INTERNAL_API_SECRET | Yes | Protect manual /check/now trigger |
+| TELEGRAM_BOT_TOKEN | Yes | Bot token for private review messages |
+| TELEGRAM_CHAT_ID | Yes | Owner's private one-to-one chat ID |
+| TELEGRAM_WEBHOOK_SECRET | Yes | Telegram webhook verification secret |
+| INTERNAL_API_SECRET | Yes | Bearer secret for /check/now |
 | TIMEZONE | No | Defaults to Europe/Moscow |
 | CRON_SCHEDULE | No | Defaults to 0 9 * * * |
-| APPROVAL_WINDOW_MINUTES | No | Used only if timed publishing is explicitly enabled |
-| AUTO_PUBLISH_ENABLED | No | Defaults to false |
-| PENDING_FILE | Yes in production | Path for pending state on a persistent mounted directory |
-| PORT | No | Defaults to 3000 |
+| PENDING_FILE | Yes in production | JSON state file on the persistent volume |
+| PORT | Platform-defined | HTTP server port |
 
-Generate two separate strong random values for TELEGRAM_WEBHOOK_SECRET and INTERNAL_API_SECRET. Do not reuse one secret for both purposes.
-
-## Telegram setup
-
-1. Add the bot to the TAINA channel as an administrator with permission to publish messages.
-2. Start a private chat with the bot. Set the private chat ID as TELEGRAM_CHAT_ID and the destination channel ID as TELEGRAM_CHANNEL_ID.
-3. After deployment, configure the webhook:
-
-    curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
-      -d "url=https://YOUR-PUBLIC-APP-URL/telegram/webhook" \
-      -d "secret_token=$TELEGRAM_WEBHOOK_SECRET"
-
-Check the Telegram API response and confirm that ok is true. Never paste a bot token into a public issue, code file or chat.
-
-The owner check compares the callback sender's Telegram user ID and the callback chat ID to TELEGRAM_CHAT_ID. Use the owner's private one-to-one chat; group chats are intentionally rejected.
-
-## Health and readiness endpoints
-
-- GET /health checks that the process is alive; it does not prove that secrets or storage are configured.
-- GET /ready checks required environment variables and verifies that the pending-state directory is writable. It returns HTTP 503 with missing/invalid setting names, never secret values, until the service is configured.
-
-## Protected manual trigger
-
-The /check/now endpoint requires a separate bearer secret:
-
-    curl -X POST "https://YOUR-PUBLIC-APP-URL/check/now" \
-      -H "Authorization: Bearer $INTERNAL_API_SECRET"
-
-If INTERNAL_API_SECRET is missing, the endpoint returns 503. An incorrect secret returns 401.
-
-## Content calendar
-
-The file content-autopilot/data/posts.json contains entries with date, rubric, title and type:
-- full: final copy sent as a draft for approval;
-- topic: a reminder only; no post is published.
-
-The calendar is validated when loaded. Dates must be real and unique. Each entry needs a title and rubric, and every full entry must contain text. The current forward campaign is checked for the current TAINA offer and a maximum of two posts per week.
-
-## Pending state and retries
-
-The current pending draft and the latest completion marker are stored in data/pending.json by default. The file is written using an atomic replacement. On the production host, point PENDING_FILE to a persistent mounted directory; otherwise a redeploy or restart may remove the state and weaken duplicate protection.
-
-If Telegram confirms publication but VK fails, the state records the successful Telegram destination. A retry does not deliberately send the Telegram post again. A completed or cancelled marker prevents another draft for the same date from being generated.
-
-A network interruption can happen after a platform accepts a post but before the service receives the response. In that rare case, check the destination manually before retrying, to avoid a duplicate.
-
-## Local verification
-
-    npm ci
-    npm test
-    npm audit --audit-level=moderate
-    node --check index.js
-
-Tests do not send real messages to Telegram or VK. They cover the calendar, current campaign cadence, manual approval default, owner-only Telegram callbacks, VK request construction, same-day duplicate prevention, state persistence and partial retry behavior.
-
-Deployment and publishing to the real social accounts are not performed by this repository change.
+Do not add SMMplanner login credentials, VK tokens, or Telegram channel credentials to this service. Direct publishing has been removed.
