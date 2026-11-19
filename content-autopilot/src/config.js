@@ -6,10 +6,6 @@ function safeEqual(actual, expected) {
   return left.length === right.length && timingSafeEqual(left, right);
 }
 
-function isTimedAutoPublishEnabled(env = process.env) {
-  return env.AUTO_PUBLISH_ENABLED === 'true';
-}
-
 function isInternalRequestAuthorized(header, secret) {
   if (!secret) return false;
   return safeEqual(header, 'Bearer ' + secret);
@@ -29,7 +25,6 @@ function isTelegramOwnerCallback(callback, ownerChatId) {
 }
 
 module.exports = {
-  isTimedAutoPublishEnabled,
   isInternalRequestAuthorized,
   isTelegramWebhookAuthorized,
   isTelegramOwnerCallback,
