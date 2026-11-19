@@ -98,9 +98,6 @@ async function main() {
         if (err.code !== 'ENOENT') throw err;
       }
     }
-    if (child.exitCode !== 0 && child.exitCode !== null && !output.includes('SIGTERM')) {
-      // The process is expected to be stopped by the test after its HTTP checks.
-    }
   }
 }
 
