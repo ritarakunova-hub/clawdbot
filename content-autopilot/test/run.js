@@ -12,7 +12,7 @@ const {
   buildCallbackData,
   parseCallbackData,
 } = require('../src/telegram');
-const { buildWallPostParams } = require('../src/vk');
+const { buildWallPostParams, postToWall } = require('../src/vk');
 const { publish, formatPublishSummary } = require('../src/publisher');
 const { loadPending, savePending, clearPending } = require('../src/pending');
 const { isTimedAutoPublishEnabled, isInternalRequestAuthorized, isTelegramWebhookAuthorized, isTelegramOwnerCallback } = require('../src/config');
@@ -142,7 +142,36 @@ async function main() {
     console.log('OK: VK wall.post parameters are validated');
   }
 
-  // 10. Partial failure: retry skips the already-confirmed destination.
+  // 10. VK credentials are sent in the POST body, never in the request URL.
+  {
+    const originalFetch = global.fetch;
+    const originalGroupId = process.env.VK_GROUP_ID;
+    const originalToken = process.env.VK_COMMUNITY_TOKEN;
+    let capturedRequest;
+    try {
+      process.env.VK_GROUP_ID = '54321';
+      process.env.VK_COMMUNITY_TOKEN = 'test-token-not-a-real-secret';
+      global.fetch = async (url, options) => {
+        capturedRequest = { url, options };
+        return { ok: true, json: async () => ({ response: { post_id: 77 } }) };
+      };
+      const response = await postToWall('Проверочный текст');
+      assert.equal(response.post_id, 77);
+      assert.equal(capturedRequest.url, 'https://api.vk.com/method/wall.post');
+      assert.equal(capturedRequest.options.method, 'POST');
+      assert.ok(capturedRequest.options.body.includes('access_token=test-token-not-a-real-secret'));
+      assert.ok(!capturedRequest.url.includes('test-token-not-a-real-secret'));
+      console.log('OK: VK access token stays in the POST body and success response is verified');
+    } finally {
+      global.fetch = originalFetch;
+      if (originalGroupId === undefined) delete process.env.VK_GROUP_ID;
+      else process.env.VK_GROUP_ID = originalGroupId;
+      if (originalToken === undefined) delete process.env.VK_COMMUNITY_TOKEN;
+      else process.env.VK_COMMUNITY_TOKEN = originalToken;
+    }
+  }
+
+  // 11. Partial failure: retry skips the already-confirmed destination.
   {
     let telegramCalls = 0;
     let vkCalls = 0;
