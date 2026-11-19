@@ -15,9 +15,24 @@ const {
 const { buildWallPostParams } = require('../src/vk');
 const { publish, formatPublishSummary } = require('../src/publisher');
 const { loadPending, savePending, clearPending } = require('../src/pending');
+const { isTimedAutoPublishEnabled, isInternalRequestAuthorized, isTelegramWebhookAuthorized } = require('../src/config');
 
 async function main() {
-  // 1. Calendar structure and date uniqueness.
+  // 1. Safety defaults and authentication guards.
+  {
+    assert.equal(isTimedAutoPublishEnabled({}), false);
+    assert.equal(isTimedAutoPublishEnabled({ AUTO_PUBLISH_ENABLED: 'false' }), false);
+    assert.equal(isTimedAutoPublishEnabled({ AUTO_PUBLISH_ENABLED: 'true' }), true);
+    assert.equal(isInternalRequestAuthorized('Bearer secret', ''), false);
+    assert.equal(isInternalRequestAuthorized('Bearer wrong', 'secret'), false);
+    assert.equal(isInternalRequestAuthorized('Bearer secret', 'secret'), true);
+    assert.equal(isTelegramWebhookAuthorized('secret', ''), false);
+    assert.equal(isTelegramWebhookAuthorized('wrong', 'secret'), false);
+    assert.equal(isTelegramWebhookAuthorized('secret', 'secret'), true);
+    console.log('OK: timed publishing is off by default and protected endpoints fail closed');
+  }
+
+  // 2. Calendar structure and date uniqueness.
   {
     const posts = loadPosts();
     assert.ok(posts.length >= 1);
@@ -28,7 +43,7 @@ async function main() {
     console.log('OK: calendar is valid; dates are unique and full posts have text');
   }
 
-  // 2. Forward campaign reflects the current TAINA offer, not the retired offer.
+  // 3. Forward campaign reflects the current TAINA offer, not the retired offer.
   {
     const campaign = loadPosts().filter((post) => post.date >= '2026-11-19');
     assert.equal(campaign.length, 12);
@@ -40,7 +55,7 @@ async function main() {
     console.log('OK: 12 ready-to-review posts match the current offer');
   }
 
-  // 3. Lookup by date and a day with no post.
+  // 4. Lookup by date and a day with no post.
   {
     const post = getPostForDate('2026-11-20');
     assert.ok(post && post.type === 'full');
@@ -48,7 +63,7 @@ async function main() {
     console.log('OK: date lookup returns the right post and skips empty days');
   }
 
-  // 4. Duplicate and impossible dates are rejected.
+  // 5. Duplicate and impossible dates are rejected.
   {
     assert.throws(() => validatePosts([
       { date: '2026-11-20', type: 'topic', title: 'A', rubric: 'B' },
@@ -60,7 +75,7 @@ async function main() {
     console.log('OK: invalid and duplicate calendar dates are blocked');
   }
 
-  // 5. Default draft is manual; timed publishing requires an explicit option.
+  // 6. Default draft is manual; timed publishing requires an explicit option.
   {
     const post = { date: '2026-11-20', rubric: 'Практика', title: 'Тест <b>', text: 'A & B' };
     const draft = formatDraftPreview(post);
@@ -73,7 +88,7 @@ async function main() {
     console.log('OK: publishing requires a button press unless timed mode is explicitly enabled');
   }
 
-  // 6. A topic without copy is never published.
+  // 7. A topic without copy is never published.
   {
     const reminder = formatTopicReminder({ rubric: 'Практика', title: 'Тема без текста' });
     assert.ok(reminder.includes('Тема без текста'));
@@ -81,7 +96,7 @@ async function main() {
     console.log('OK: topic-only entries do not publish');
   }
 
-  // 7. Callback data accepts only supported actions and real dates.
+  // 8. Callback data accepts only supported actions and real dates.
   {
     const data = buildCallbackData('publish', '2026-11-20');
     assert.equal(data, 'publish:2026-11-20');
@@ -92,7 +107,7 @@ async function main() {
     console.log('OK: Telegram callback payloads are validated');
   }
 
-  // 8. VK group ID is normalized and invalid IDs are rejected.
+  // 9. VK group ID is normalized and invalid IDs are rejected.
   {
     const params = buildWallPostParams({ groupId: '12345', message: 'привет', accessToken: 'fake-test-token' });
     assert.equal(params.owner_id, '-12345');
@@ -102,7 +117,7 @@ async function main() {
     console.log('OK: VK wall.post parameters are validated');
   }
 
-  // 9. Partial failure: retry skips the already-confirmed destination.
+  // 10. Partial failure: retry skips the already-confirmed destination.
   {
     let telegramCalls = 0;
     let vkCalls = 0;
@@ -125,7 +140,7 @@ async function main() {
     console.log('OK: retry sends only to the destination without confirmation');
   }
 
-  // 10. Partial publication is reported as partial, not as complete success.
+  // 11. Partial publication is reported as partial, not as complete success.
   {
     const partial = formatPublishSummary({ telegram: 'ok', vk: 'ошибка: 403' }, { remaining: true });
     assert.ok(partial.includes('Telegram-канал: ✅'));
@@ -134,7 +149,7 @@ async function main() {
     console.log('OK: partial publication stays visible and retryable');
   }
 
-  // 11. Pending state is written atomically, read back and removed.
+  // 12. Pending state is written atomically, read back and removed.
   {
     clearPending();
     const pending = {
@@ -149,7 +164,7 @@ async function main() {
     console.log('OK: pending state is persisted and cleared');
   }
 
-  // 12. Timezone helper returns an ISO date.
+  // 13. Timezone helper returns an ISO date.
   {
     assert.match(todayInTimezone('Europe/Moscow'), /^\d{4}-\d{2}-\d{2}$/);
     console.log('OK: timezone helper returns YYYY-MM-DD');
