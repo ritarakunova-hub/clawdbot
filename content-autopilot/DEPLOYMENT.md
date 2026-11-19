@@ -85,6 +85,7 @@ Check that the Telegram response contains "ok": true. Then inspect webhook infor
 - [ ] The persistent volume is mounted at /data and PENDING_FILE=/data/pending.json.
 - [ ] /health returns HTTP 200 over HTTPS.
 - [ ] All required secrets are configured in the hosting dashboard.
+- [ ] /ready returns HTTP 200 and confirms writable persistent storage.
 - [ ] Telegram bot can message the owner's private chat.
 - [ ] Telegram bot is an administrator in the destination channel with permission to publish.
 - [ ] The webhook is configured and getWebhookInfo reports no pending delivery errors.
