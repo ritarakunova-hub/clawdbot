@@ -17,6 +17,7 @@ const { publish, formatPublishSummary } = require('../src/publisher');
 const { loadPending, savePending, clearPending } = require('../src/pending');
 const { isTimedAutoPublishEnabled, isInternalRequestAuthorized, isTelegramWebhookAuthorized, isTelegramOwnerCallback } = require('../src/config');
 const { getPendingDecision } = require('../src/schedule');
+const { getReadiness } = require('../src/preflight');
 
 async function main() {
   // 1. Safety defaults and authentication guards.
@@ -37,7 +38,33 @@ async function main() {
     console.log('OK: timed publishing is off by default and callbacks are restricted to the owner');
   }
 
-  // 2. Calendar structure and date uniqueness.
+  // 2. Readiness checks required settings without ever returning secret values.
+  {
+    const env = {
+      TELEGRAM_BOT_TOKEN: 'fake-token-for-tests',
+      TELEGRAM_CHAT_ID: '123456789',
+      TELEGRAM_CHANNEL_ID: '-100123456789',
+      TELEGRAM_WEBHOOK_SECRET: 'fake-webhook-secret',
+      VK_GROUP_ID: '12345',
+      VK_COMMUNITY_TOKEN: 'fake-vk-token',
+      INTERNAL_API_SECRET: 'fake-internal-secret',
+      PENDING_FILE: path.join(os.tmpdir(), 'taina-ready-test-' + process.pid, 'pending.json'),
+    };
+    const ready = getReadiness(env);
+    assert.equal(ready.ready, true);
+    assert.equal(ready.storageWritable, true);
+    assert.deepEqual(ready.missing, []);
+    assert.ok(!JSON.stringify(ready).includes('fake-token-for-tests'));
+    assert.ok(!JSON.stringify(ready).includes('fake-vk-token'));
+
+    const invalid = getReadiness({ ...env, VK_GROUP_ID: 'not-a-number', PENDING_FILE: '' });
+    assert.equal(invalid.ready, false);
+    assert.ok(invalid.missing.includes('PENDING_FILE'));
+    assert.ok(invalid.invalid.includes('VK_GROUP_ID'));
+    console.log('OK: readiness validates deployment settings and writable storage without exposing secrets');
+  }
+
+  // 3. Calendar structure and date uniqueness.
   {
     const posts = loadPosts();
     assert.ok(posts.length >= 1);
