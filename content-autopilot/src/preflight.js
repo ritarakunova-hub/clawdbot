@@ -4,10 +4,7 @@ const path = require('node:path');
 const REQUIRED_SETTINGS = [
   'TELEGRAM_BOT_TOKEN',
   'TELEGRAM_CHAT_ID',
-  'TELEGRAM_CHANNEL_ID',
   'TELEGRAM_WEBHOOK_SECRET',
-  'VK_GROUP_ID',
-  'VK_COMMUNITY_TOKEN',
   'INTERNAL_API_SECRET',
   'PENDING_FILE',
 ];
@@ -15,10 +12,6 @@ const REQUIRED_SETTINGS = [
 function getReadiness(env = process.env) {
   const missing = REQUIRED_SETTINGS.filter((name) => !String(env[name] || '').trim());
   const invalid = [];
-
-  if (env.VK_GROUP_ID && !/^\d+$/.test(String(env.VK_GROUP_ID))) {
-    invalid.push('VK_GROUP_ID');
-  }
 
   let storageWritable = false;
   let storageProbeDirectory = null;
@@ -47,17 +40,13 @@ function getReadiness(env = process.env) {
     invalid.push('PENDING_FILE');
   }
 
-  const warnings = [];
-  if (env.AUTO_PUBLISH_ENABLED === 'true') {
-    warnings.push('AUTO_PUBLISH_ENABLED is true; posts may be sent without manual approval after the configured timer');
-  }
-
   return {
     ready: missing.length === 0 && invalid.length === 0,
     missing,
     invalid,
     storageWritable,
-    warnings,
+    publisher: 'SMMplanner',
+    directPublishing: false,
   };
 }
 
