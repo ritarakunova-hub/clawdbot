@@ -1,7 +1,7 @@
 /**
  * Acknowledge an owner's Telegram button press before starting slow network work.
  * Telegram clients otherwise keep showing a spinner until answerCallbackQuery
- * is called, which must not wait for VK/Telegram publication to finish.
+ * is called, which must not wait for SMMplanner handoff or owner notification to finish.
  */
 function startApprovedAction(callbackId, action, {
   answerCallbackQuery,
