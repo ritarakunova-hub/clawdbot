@@ -42,7 +42,7 @@ Set all credentials in local environment variables or in the hosting provider's 
 | CRON_SCHEDULE | No | Defaults to 0 9 * * * |
 | APPROVAL_WINDOW_MINUTES | No | Used only if timed publishing is explicitly enabled |
 | AUTO_PUBLISH_ENABLED | No | Defaults to false |
-| PENDING_FILE | No | Path for pending state; set it to a persistent mounted directory in production |
+| PENDING_FILE | Yes in production | Path for pending state on a persistent mounted directory |
 | PORT | No | Defaults to 3000 |
 
 Generate two separate strong random values for TELEGRAM_WEBHOOK_SECRET and INTERNAL_API_SECRET. Do not reuse one secret for both purposes.
@@ -60,6 +60,11 @@ Generate two separate strong random values for TELEGRAM_WEBHOOK_SECRET and INTER
 Check the Telegram API response and confirm that ok is true. Never paste a bot token into a public issue, code file or chat.
 
 The owner check compares the callback sender's Telegram user ID and the callback chat ID to TELEGRAM_CHAT_ID. Use the owner's private one-to-one chat; group chats are intentionally rejected.
+
+## Health and readiness endpoints
+
+- GET /health checks that the process is alive; it does not prove that secrets or storage are configured.
+- GET /ready checks required environment variables and verifies that the pending-state directory is writable. It returns HTTP 503 with missing/invalid setting names, never secret values, until the service is configured.
 
 ## Protected manual trigger
 
