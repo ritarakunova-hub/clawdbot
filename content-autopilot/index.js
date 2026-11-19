@@ -6,6 +6,7 @@ const { publish, formatPublishSummary } = require('./src/publisher');
 const { loadPending, savePending, clearPending } = require('./src/pending');
 const { isTimedAutoPublishEnabled, isInternalRequestAuthorized, isTelegramWebhookAuthorized, isTelegramOwnerCallback } = require('./src/config');
 const { getPendingDecision } = require('./src/schedule');
+const { getReadiness } = require('./src/preflight');
 
 const app = express();
 app.use(express.json({ limit: '64kb' }));
@@ -200,6 +201,12 @@ app.get('/health', (req, res) => res.status(200).json({
   ok: true,
   approvalRequired: !AUTO_PUBLISH_ENABLED,
 }));
+
+// Readiness is separate from liveness and never returns secret values.
+app.get('/ready', (req, res) => {
+  const readiness = getReadiness(process.env);
+  res.status(readiness.ready ? 200 : 503).json(readiness);
+});
 
 // Protected manual trigger.
 app.post('/check/now', async (req, res) => {
