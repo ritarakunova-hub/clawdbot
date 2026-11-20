@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#171314">
-  <meta name="description" content="TAINA Studio: AI-разбор одного повторяющегося бизнес-процесса за 60 минут. Найдём узкие места и подготовим до трёх рекомендаций. Стартовая цена — 5 000 ₽.">
+  <meta name="description" content="Экспертная консультация TAINA: разберём один повторяющийся бизнес-процесс за встречу около 60 минут, выявим узкие места и подготовим до трёх рекомендаций. Тестовая стартовая цена — 5 000 ₽.">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="TAINA Studio — AI-разбор процесса за 5 000 ₽">
-  <meta property="og:description" content="Одна онлайн-консультация, один бизнес-процесс, краткий письменный итог и до трёх рекомендаций. Внедрение оценивается отдельно.">
-  <title>TAINA Studio — AI-разбор бизнес-процесса за 5 000 ₽</title>
+  <meta property="og:title" content="TAINA Studio — экспертный AI-разбор процесса за 5 000 ₽">
+  <meta property="og:description" content="Онлайн-встреча около 60 минут, один процесс, краткий письменный итог и до трёх рекомендаций. Экспертная консультация без автоматического анализа документов и подключения AI к системам.">
+  <title>TAINA Studio — экспертный AI-разбор процесса за 5 000 ₽</title>
   <style>
     :root {
       color-scheme: dark;
@@ -77,6 +77,9 @@
     .hero-copy { max-width: 610px; color: #cbbfbb; font-size: 17px; line-height: 1.8; }
     .actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 30px 0 16px; }
     .fine { max-width: 560px; color: #958786; font-size: 11px; }
+    .hero-result { max-width: 610px; margin: 18px 0; color: #e2d7d2; font-size: 15px; line-height: 1.7; }
+    .hero-price { margin: 14px 0 2px; color: var(--gold); font: 36px ui-monospace, monospace; }
+    .hero-price-note { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
     .visual {
       position: relative; padding: 20px;
       border: 1px solid #55434a; border-radius: 14px;
@@ -166,6 +169,8 @@
       .nav > .btn { display: none; }
       h1 { font-size: 43px; }
       .hero-copy { font-size: 15px; }
+      .hero-result { font-size: 14px; }
+      .hero-price { font-size: 32px; }
       .actions { flex-direction: column; }
       .actions .btn { width: 100%; }
       .section { padding: 64px 0; }
@@ -199,20 +204,24 @@
       <a href="#result">Результат</a>
       <a href="#pilot">Консультация</a>
     </nav>
-    <a class="btn small" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Записаться на AI-разбор ↗</a>
+    <a class="btn small" href="#pilot">Формат и цена</a>
   </div>
 </header>
 <main id="main">
   <section class="wrap hero" id="top">
     <div>
       <p class="eyebrow">TAINA STUDIO / AI PROCESS CONSULTING</p>
-      <h1 class="serif">Поймём, где в работе теряется время — и <em>что стоит автоматизировать.</em></h1>
-      <p class="hero-copy">TAINA Studio проводит платный разбор одного повторяющегося бизнес-процесса. За 60 минут мы выясним, где застревает работа, какая информация теряется и есть ли смысл менять правила, связывать инструменты или внедрять ИИ.</p>
+      <h1 class="serif">Разберём один бизнес-процесс и найдём, что мешает ему работать</h1>
+      <p class="hero-copy">За онлайн-встречу около 60 минут разберём повторяющийся процесс, выявим узкие места и определим, где помогут изменения в работе, автоматизация или ИИ.</p>
+      <p class="hero-result"><strong>После встречи:</strong> краткий письменный итог, основные узкие места, до трёх рекомендаций и следующий шаг.</p>
+      <div class="hero-price">5 000 ₽</div>
+      <p class="hero-price-note">Тестовая стартовая цена</p>
+      <p class="fine">Экспертная консультация. Не автоматический анализ документов и не подключение AI к вашим системам.</p>
       <div class="actions">
-        <a class="btn" href="#pilot">Посмотреть формат консультации <span aria-hidden="true">↘</span></a>
-        <a class="btn secondary" href="#approach">Как устроена диагностика</a>
+        <a class="btn" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Обсудить разбор во VK ↗</a>
+        <a class="btn secondary" href="#approach">Как проходит разбор</a>
       </div>
-      <p class="fine">Не предлагаем ИИ ради ИИ. Сначала разбираемся с вашей задачей и выбираем решение, которое имеет смысл для процесса.</p>
+      <p class="fine">Напишите, какой процесс хотите разобрать. Время и оплату согласуем до встречи.</p>
     </div>
     <div class="visual" aria-label="Схематичная карта одного бизнес-процесса">
       <div class="windowbar"><span>TAINA / PROCESS MAP</span><span class="dots"><span></span><span></span><span></span></span></div>
@@ -310,12 +319,12 @@
       <div>
         <p class="eyebrow">Для кого</p>
         <h2 class="serif">Когда повторяющаяся работа уже стала <em>дорогой привычкой.</em></h2>
-        <p class="section-lead">Для предпринимателей, собственников и небольших команд — в первую очередь в сервисном бизнесе, но не только. Разбираем повторяющиеся процессы, где заявки, информация или задачи проходят через нескольких людей, таблицы, CRM и чаты.</p>
+        <p class="section-lead">Для собственников и операционных руководителей небольших сервисных команд, где заявки, информация или задачи проходят через нескольких людей, таблицы, CRM и чаты.</p>
       </div>
       <div class="list">
-        <div class="list-item"><span class="list-mark">01</span><div><b>Собственник или руководитель</b><span>Хочет понять, почему процесс зависит от отдельных людей или постоянно требует ручного контроля.</span></div></div>
-        <div class="list-item"><span class="list-mark">02</span><div><b>Операционный руководитель</b><span>Видит задержки на стыках этапов, передачах и повторных проверках.</span></div></div>
-        <div class="list-item"><span class="list-mark">03</span><div><b>Небольшая команда</b><span>Хочет понять, что улучшить до того, как тратить бюджет на разработку.</span></div></div>
+        <div class="list-item"><span class="list-mark">01</span><div><b>Собственник сервиса</b><span>Хочет понять, почему процесс зависит от отдельных людей или постоянно требует ручного контроля.</span></div></div>
+        <div class="list-item"><span class="list-mark">02</span><div><b>Операционный руководитель сервиса</b><span>Видит задержки на стыках этапов, передачах и повторных проверках.</span></div></div>
+        <div class="list-item"><span class="list-mark">03</span><div><b>Руководитель небольшой сервисной команды</b><span>Хочет понять, что улучшить до того, как тратить бюджет на разработку.</span></div></div>
       </div>
     </div>
   </section>
@@ -327,11 +336,11 @@
           <p class="eyebrow">Стартовый формат</p>
           <h2 class="serif">Разберите один процесс — без обязательства сразу внедрять ИИ.</h2>
           <div class="price">5 000 ₽</div>
-          <p class="muted">Стартовая цена 60-минутной консультации TAINA AI-разбор.</p>
+          <p class="muted">Тестовая стартовая цена консультации TAINA AI-разбор.</p>
           <div class="actions">
-            <a class="btn" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Записаться на консультацию в VK ↗</a>
+            <a class="btn" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Обсудить разбор во VK ↗</a>
           </div>
-          <p class="fine">В стоимость входит встреча и краткий письменный итог. Оплата и детали согласуются в переписке; сайт не принимает платежи.</p>
+          <p class="fine">В стоимость входят онлайн-встреча около 60 минут и краткий письменный итог: основные узкие места, до трёх рекомендаций и следующий шаг. Напишите в сообщество, какой процесс хотите разобрать. Время и оплату согласуем до встречи.</p>
         </div>
         <div>
           <div class="offer-meta">
@@ -371,10 +380,10 @@
       </div>
       <div class="faq">
         <details><summary>Вы сразу разработаете AI-бота?</summary><p>Нет. Консультация помогает понять задачу и определить следующий шаг. Разработка, настройка и интеграции — отдельная работа с самостоятельной оценкой сроков и стоимости.</p></details>
-        <details><summary>Что я получу после встречи?</summary><p>Краткий письменный итог: схема одного процесса, основные узкие места, до трёх рекомендаций и возможный следующий шаг — изменить порядок работы или оценить автоматизацию.</p></details>
+        <details><summary>Что я получу после встречи?</summary><p>Краткий письменный итог: основные узкие места, до трёх рекомендаций и следующий разумный шаг — изменить порядок работы или отдельно оценить автоматизацию.</p></details>
         <details><summary>Что нужно подготовить?</summary><p>Кратко опишите один повторяющийся процесс и его участников. Для консультации не нужно отправлять документы: достаточно обезличенного описания и примеров без персональных или конфиденциальных данных.</p></details>
         <details><summary>Что, если автоматизация не нужна?</summary><p>Так и скажем. Иногда сначала достаточно уточнить роли, правила или порядок действий. Не будем предлагать разработку без понятной задачи.</p></details>
-        <details><summary>Как записаться?</summary><p>Напишите в сообщество TAINA Studio во VK. Коротко расскажите, какой процесс хотите разобрать. Мы уточним задачу, подтвердим доступное время и согласуем оплату до встречи.</p></details>
+        <details><summary>Как записаться?</summary><p>Напишите в сообщество TAINA Studio во VK, какой процесс хотите разобрать. Время и оплату согласуем до встречи.</p></details>
         <details><summary>Можно ли передать реальные клиентские документы?</summary><p>Нет. Не отправляйте персональные, клиентские, медицинские, финансовые и коммерчески чувствительные сведения. Для обсуждения используйте обезличенное описание процесса.</p></details>
       </div>
     </div>
@@ -384,6 +393,6 @@
   <div><div class="brand">TAINA<span class="brand-mark">◆</span></div><div>Сначала ясность в процессе. Затем — разумная автоматизация.</div></div>
   <div>© TAINA Studio · 2026</div>
 </footer>
-<a class="btn mobile-cta" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Записаться на консультацию в VK ↗</a>
+<a class="btn mobile-cta" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Обсудить разбор во VK ↗</a>
 </body>
 </html>
