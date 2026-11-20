@@ -1,5 +1,6 @@
 from html.parser import HTMLParser
 from pathlib import Path
+import re
 from urllib.parse import urlparse
 
 PAGE = Path(__file__).resolve().parents[1] / "index.html"
@@ -112,23 +113,56 @@ def main():
                 parser.errors.append("VK target=_blank link missing safe rel attributes")
 
     required = [
-        "TAINA STUDIO / AI PROCESS CONSULTING",
+        "Разберём один бизнес-процесс и найдём, что мешает ему работать",
+        "За онлайн-встречу около 60 минут",
         "5 000 ₽",
-        "60 минут онлайн",
-        "Записаться на консультацию в VK",
+        "Тестовая стартовая цена",
+        "краткий письменный итог",
+        "основные узкие места",
+        "до трёх рекомендаций",
+        "следующий шаг",
+        "Обсудить разбор во VK",
+        "Экспертная консультация. Не автоматический анализ документов и не подключение AI к вашим системам.",
         "УЧЕБНЫЙ ПРИМЕР · ВЫМЫШЛЕННЫЕ ДАННЫЕ",
     ]
     for phrase in required:
         if phrase not in source:
             parser.errors.append("missing current offer element: " + phrase)
 
+    faq_result = re.search(
+        r"<summary>\s*Что я получу после встречи\?\s*</summary>\s*<p>(.*?)</p>",
+        source,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if not faq_result:
+        parser.errors.append("missing FAQ answer about the consultation result")
+    else:
+        faq_text = faq_result.group(1).lower()
+        if re.search(r"\bсхем[а-яё]*\b", faq_text, flags=re.IGNORECASE):
+            parser.errors.append("FAQ result description must not promise a process scheme")
+        for phrase in ("краткий письменный итог", "основные узкие места",
+                       "до трёх рекомендаций", "следующий разумный шаг"):
+            if phrase not in faq_text:
+                parser.errors.append("FAQ result is missing: " + phrase)
+
     obsolete = ["9 900 ₽", "5–7 часов", "Первые два платных пилота", "1 490 ₽"]
     for phrase in obsolete:
         if phrase in source:
             parser.errors.append("obsolete offer element remains: " + phrase)
 
+    unsupported_promises = [
+        r"(?<!не )гарантируем\s+(?:экономию|рост выручки|результат|эффект|ROI)",
+        r"(?<!не )гарантируем\s+(?:сокращение|снижение)\s+(?:затрат|расходов|времени)",
+        r"увеличим\s+(?:вашу\s+)?(?:выручку|продажи)",
+        r"сэкономим\s+\d+",
+        r"гарантированный\s+ROI",
+    ]
+    for pattern in unsupported_promises:
+        if re.search(pattern, source, flags=re.IGNORECASE):
+            parser.errors.append("unsupported outcome promise detected: " + pattern)
+
     if parser.errors:
-        print("\\n".join("ERROR: " + error for error in parser.errors))
+        print("\n".join("ERROR: " + error for error in parser.errors))
         raise SystemExit(1)
 
     print("OK: HTML nesting, unique IDs, internal anchors, one H1, form gate, safe external links, three VK CTAs and current offer")
