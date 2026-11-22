@@ -2,12 +2,45 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlparse
 
-PAGE = Path(__file__).resolve().parents[1] / "index.html"
+SITE_DIR = Path(__file__).resolve().parents[1]
+PAGES = {
+    "index.html": {
+        "required": [
+            "TAINA / AI PRODUCTS & BUSINESS AUTOMATION",
+            "TAINA Knowledge Map",
+            "TAINA AI Assistant",
+            "5 000 ₽",
+            "1 490 ₽",
+            "Ранний запуск готовится",
+            'id="products"',
+            'id="solutions"',
+            'id="consulting"',
+            'name="description"',
+            'rel="icon"',
+            'href="knowledge-map.html"',
+        ],
+        "minimum_vk_links": 4,
+    },
+    "knowledge-map.html": {
+        "required": [
+            "TAINA",
+            "Knowledge Map",
+            "1 490 ₽",
+            "локальное хранение",
+            "нет облачной синхронизации",
+            "не открыт для покупки",
+            'name="description"',
+            'rel="icon"',
+            'href="index.html#products"',
+        ],
+        "minimum_vk_links": 2,
+    },
+}
+EXPECTED_VK_URL = "https://vk.ru/tainastudio"
 VOID_TAGS = {
     "area", "base", "br", "col", "embed", "hr", "img", "input",
     "link", "meta", "param", "source", "track", "wbr"
 }
-EXPECTED_VK_URL = "https://vk.ru/tainastudio"
 
 
 class PageCheck(HTMLParser):
@@ -70,72 +103,85 @@ class PageCheck(HTMLParser):
 
 
 def main():
-    if not PAGE.exists():
-        raise SystemExit("Missing page: " + str(PAGE))
+    all_errors = []
+    parsed = {}
 
-    source = PAGE.read_text(encoding="utf-8")
-    parser = PageCheck()
-    parser.feed(source)
-    parser.close()
+    for filename, config in PAGES.items():
+        page = SITE_DIR / filename
+        if not page.exists():
+            all_errors.append("missing page: " + filename)
+            continue
 
-    if parser.stack:
-        parser.errors.append("unclosed tags: " + ", ".join(parser.stack))
+        source = page.read_text(encoding="utf-8")
+        parser = PageCheck()
+        parser.feed(source)
+        parser.close()
 
-    missing = sorted(set(parser.anchors) - parser.ids)
-    if missing:
-        parser.errors.append("broken anchor targets: " + ", ".join(missing))
+        if parser.stack:
+            parser.errors.append("unclosed tags: " + ", ".join(parser.stack))
+        missing = sorted(set(parser.anchors) - parser.ids)
+        if missing:
+            parser.errors.append("broken anchor targets: " + ", ".join(missing))
+        if parser.h1_count != 1:
+            parser.errors.append("expected exactly one h1, found " + str(parser.h1_count))
+        if parser.form_count:
+            parser.errors.append("forms must remain disabled until privacy/legal review")
+        if parser.external_font_links:
+            parser.errors.append("external font requests are not expected")
 
-    if parser.h1_count != 1:
-        parser.errors.append("expected exactly one h1, found " + str(parser.h1_count))
-    if parser.form_count:
-        parser.errors.append("forms must remain disabled until privacy/legal review")
-    if parser.external_font_links:
-        parser.errors.append("external font requests are not expected")
+        vk_links = []
+        for tag, href, attrs in parser.links:
+            parsed_url = urlparse(href)
+            if parsed_url.scheme in ("http", "https"):
+                if parsed_url.netloc in ("vk.ru", "www.vk.ru"):
+                    if href.rstrip("/") != EXPECTED_VK_URL:
+                        parser.errors.append("unexpected VK destination: " + href)
+                    else:
+                        vk_links.append((tag, href, attrs))
+            elif not href.startswith("#"):
+                local_path = (SITE_DIR / parsed_url.path).resolve()
+                if parsed_url.path and not local_path.exists():
+                    parser.errors.append("broken local link: " + href)
 
-    external_links = [(tag, href, attrs) for tag, href, attrs in parser.links
-                      if urlparse(href).scheme in ("http", "https")]
-    unexpected_vk = [href for _, href, _ in external_links
-                     if urlparse(href).netloc in ("vk.ru", "www.vk.ru") and href.rstrip("/") != EXPECTED_VK_URL]
-    if unexpected_vk:
-        parser.errors.append("unexpected VK destination(s): " + ", ".join(sorted(set(unexpected_vk))))
+        if len(vk_links) < config["minimum_vk_links"]:
+            parser.errors.append(
+                "expected at least " + str(config["minimum_vk_links"]) +
+                " VK links, found " + str(len(vk_links))
+            )
+        for tag, href, attrs in vk_links:
+            if tag != "a":
+                parser.errors.append("VK destination must be an anchor link: " + href)
+            if attrs.get("target") == "_blank":
+                rel = set((attrs.get("rel") or "").lower().split())
+                if not {"noopener", "noreferrer"}.issubset(rel):
+                    parser.errors.append("VK target=_blank link missing safe rel attributes")
 
-    vk_links = [item for item in external_links if item[1].rstrip("/") == EXPECTED_VK_URL]
-    if len(vk_links) != 3:
-        parser.errors.append("expected exactly 3 VK CTA links, found " + str(len(vk_links)))
+        for phrase in config["required"]:
+            if phrase not in source:
+                parser.errors.append("missing required element: " + phrase)
 
-    for tag, href, attrs in vk_links:
-        if tag != "a":
-            parser.errors.append("VK destination must be an anchor link: " + href)
-        if attrs.get("target") == "_blank":
-            rel = set((attrs.get("rel") or "").lower().split())
-            if not {"noopener", "noreferrer"}.issubset(rel):
-                parser.errors.append("VK target=_blank link missing safe rel attributes")
+        if filename == "index.html":
+            obsolete = [
+                "TAINA STUDIO / РАЗБОР БИЗНЕС-ПРОЦЕССОВ",
+                "Первые два платных пилота",
+                "9 900 ₽",
+                "5–7 часов",
+            ]
+            for phrase in obsolete:
+                if phrase in source:
+                    parser.errors.append("obsolete consultation-only copy remains: " + phrase)
 
-    required = [
-        "TAINA STUDIO / РАЗБОР БИЗНЕС-ПРОЦЕССОВ",
-        "5 000 ₽",
-        "60 минут онлайн",
-        "Обсудить задачу",
-        "УЧЕБНЫЙ ПРИМЕР · ВЫМЫШЛЕННЫЕ ДАННЫЕ",
-        'id="example"',
-        'id="about"',
-        'name="description"',
-        'rel="icon"',
-    ]
-    for phrase in required:
-        if phrase not in source:
-            parser.errors.append("missing current offer element: " + phrase)
+        parsed[filename] = parser
+        all_errors.extend(filename + ": " + error for error in parser.errors)
 
-    obsolete = ["9 900 ₽", "5–7 часов", "Первые два платных пилота", "1 490 ₽", "Стартовая цена"]
-    for phrase in obsolete:
-        if phrase in source:
-            parser.errors.append("obsolete offer element remains: " + phrase)
-
-    if parser.errors:
-        print("\\n".join("ERROR: " + error for error in parser.errors))
+    if all_errors:
+        print("\n".join("ERROR: " + error for error in all_errors))
         raise SystemExit(1)
 
-    print("OK: HTML nesting, unique IDs, internal anchors, one H1, form gate, safe external links, three VK CTAs and current offer")
+    print(
+        "OK: both pages have valid nesting, unique IDs, working local links, "
+        "one H1 each, safe VK CTAs, no forms and current product/offer copy"
+    )
 
 
 if __name__ == "__main__":
