@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171314">
+  <meta name="description" content="TAINA Knowledge Map — локальный инструмент для структурирования записей, связей и знаний. Ранний запуск готовится.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="TAINA Knowledge Map — карта знаний">
+  <meta property="og:description" content="Собирайте знания в структуру, фиксируйте связи и изменения. Локальная V1, ранний запуск готовится.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <title>TAINA Knowledge Map — карта знаний</title>
+  <style>
+    :root { color-scheme: dark; --bg:#171314; --panel:#211b1d; --line:#49383d; --text:#f5eee9; --muted:#b9a9a8; --gold:#d2b878; --rose:#c99b9e; --max:1080px; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; line-height:1.65; }
+    a { color:inherit; text-decoration:none; }
+    a:focus-visible,summary:focus-visible { outline:2px solid var(--gold); outline-offset:4px; }
+    .wrap { width:min(var(--max),calc(100% - 40px)); margin:0 auto; }
+    .serif { font-family:Georgia,"Times New Roman",serif; font-weight:400; }
+    .serif em { color:var(--gold); font-style:italic; }
+    .eyebrow,.mono { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; letter-spacing:.09em; text-transform:uppercase; }
+    .eyebrow { color:var(--gold); font-size:11px; }
+    .muted { color:var(--muted); }
+    .top { border-bottom:1px solid rgba(210,184,120,.16); background:#1b1618; }
+    .nav { min-height:72px; display:flex; justify-content:space-between; align-items:center; gap:18px; }
+    .brand { font-size:20px; font-weight:800; letter-spacing:.2em; }
+    .mark { color:var(--gold); }
+    .back { color:var(--muted); font-size:13px; }
+    .btn { display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:13px 20px; border:1px solid var(--gold); border-radius:4px; background:var(--gold); color:#211a16; font-size:13px; font-weight:800; }
+    .btn.secondary { background:transparent; border-color:var(--line); color:var(--text); }
+    .hero { display:grid; grid-template-columns:1.05fr .95fr; gap:54px; align-items:center; padding:90px 0 86px; }
+    h1 { margin:16px 0 20px; font-size:clamp(42px,6vw,70px); line-height:1.05; letter-spacing:-.04em; }
+    h2 { margin:10px 0 16px; font-size:clamp(30px,4vw,46px); line-height:1.12; letter-spacing:-.03em; }
+    .copy { color:#cbbfbb; font-size:17px; }
+    .actions { display:flex; flex-wrap:wrap; gap:12px; margin:28px 0 12px; }
+    .fine { color:#958786; font-size:11px; }
+    .mock { padding:22px; border:1px solid #806c4b; border-radius:12px; background:linear-gradient(145deg,#2b2225,#191516); box-shadow:0 28px 80px rgba(0,0,0,.3); }
+    .mock-head { display:flex; justify-content:space-between; padding-bottom:14px; border-bottom:1px solid var(--line); color:#a99796; font:10px ui-monospace,monospace; }
+    .nodes { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:20px; }
+    .node { padding:16px; min-height:92px; border:1px solid #5b424a; border-radius:7px; background:#211a1c; }
+    .node b { display:block; color:var(--gold); font-size:11px; margin-bottom:7px; }
+    .node span { color:#c1b2ae; font-size:12px; }
+    .section { padding:76px 0; border-top:1px solid rgba(210,184,120,.13); }
+    .lead { max-width:760px; color:var(--muted); }
+    .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-top:30px; }
+    .card { padding:22px; border:1px solid var(--line); border-radius:8px; background:linear-gradient(145deg,#241d1f,#1c1719); }
+    .card h3 { margin:0 0 8px; font-size:17px; }
+    .card p { margin:0; color:var(--muted); font-size:13px; }
+    .notice { margin-top:24px; padding:18px 20px; border-left:2px solid var(--rose); background:rgba(122,59,73,.12); color:#dfd0ca; font-size:13px; }
+    .pricebox { display:grid; grid-template-columns:1fr auto; gap:22px; align-items:center; padding:28px; border:1px solid #806c4b; border-radius:10px; background:linear-gradient(135deg,#30262a,#1d181a); }
+    .price { color:var(--gold); font:34px ui-monospace,monospace; white-space:nowrap; }
+    .steps { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+    .step { padding:20px; border-top:1px solid var(--gold); background:#201a1c; }
+    .step b { display:block; margin-bottom:10px; color:var(--gold); font:11px ui-monospace,monospace; }
+    .step span { color:#d2c5c1; font-size:12px; }
+    .faq { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    details { padding:18px; border:1px solid var(--line); border-radius:6px; background:#1d181a; }
+    summary { cursor:pointer; font-size:13px; font-weight:750; }
+    details p { margin-bottom:0; color:var(--muted); font-size:12px; }
+    .footer { padding:30px 0 45px; border-top:1px solid var(--line); color:#928282; font-size:11px; }
+    @media(max-width:800px) { .hero { grid-template-columns:1fr; gap:34px; padding:60px 0; } .steps { grid-template-columns:1fr; } }
+    @media(max-width:600px) { .wrap { width:min(100% - 28px,var(--max)); } .nav { min-height:64px; } .back { font-size:11px; } .hero { padding:48px 0 56px; } h1 { font-size:43px; } .copy { font-size:15px; } .actions { flex-direction:column; } .actions .btn { width:100%; } .grid,.faq { grid-template-columns:1fr; } .pricebox { grid-template-columns:1fr; } .price { font-size:30px; } .mock { padding:14px; } }
+    @media(prefers-reduced-motion:reduce) { * { scroll-behavior:auto !important; transition:none !important; } }
+  </style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap nav">
+    <a class="brand" href="index.html" aria-label="TAINA">TAINA<span class="mark">◆</span></a>
+    <a class="back" href="index.html#products">← Все продукты TAINA</a>
+  </div>
+</header>
+<main>
+  <section class="wrap hero">
+    <div>
+      <p class="eyebrow">TAINA / DIGITAL PRODUCT</p>
+      <h1 class="serif">TAINA <em>Knowledge Map</em></h1>
+      <p class="copy">Карта знаний, которую можно собрать своими руками: структурируйте записи, связывайте объекты и сохраняйте контекст, который обычно теряется между файлами и таблицами.</p>
+      <div class="actions">
+        <a class="btn" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Узнать о раннем доступе ↗</a>
+        <a class="btn secondary" href="index.html#consulting">Нужна помощь с процессом?</a>
+      </div>
+      <p class="fine">Ранний запуск готовится. Покупка ещё не открыта: на этой странице нет онлайн-оплаты и автоматической выдачи продукта.</p>
+    </div>
+    <div class="mock" aria-label="Концептуальная иллюстрация карты знаний">
+      <div class="mock-head"><span>KNOWLEDGE MAP / V1</span><span>LOCAL FIRST</span></div>
+      <div class="nodes">
+        <div class="node"><b>ОБЪЕКТ</b><span>Клиентский процесс</span></div>
+        <div class="node"><b>СВЯЗЬ</b><span>Зависит от инструкции</span></div>
+        <div class="node"><b>СТАТУС</b><span>На проверке</span></div>
+        <div class="node"><b>ИСТОРИЯ</b><span>Изменение зафиксировано</span></div>
+      </div>
+      <p class="fine">Иллюстрация концепции, не скриншот актуального интерфейса.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <p class="eyebrow">Для чего продукт</p>
+      <h2 class="serif">Не ещё одна папка. <em>Структура и связи.</em></h2>
+      <p class="lead">Knowledge Map помогает не просто хранить отдельные записи, а организовать их как связанную систему. Это полезно, когда важно видеть не только сам объект, но и его статус, дату, историю и отношения с другими элементами.</p>
+      <div class="grid">
+        <article class="card"><h3>Собирайте записи</h3><p>Фиксируйте объекты и информацию в понятной структуре, вместо разрозненных заметок.</p></article>
+        <article class="card"><h3>Связывайте элементы</h3><p>Показывайте отношения между записями и замечайте, где не хватает связи.</p></article>
+        <article class="card"><h3>Отслеживайте изменения</h3><p>Используйте статусы, даты и журнал изменений, чтобы не терять контекст.</p></article>
+        <article class="card"><h3>Переносите данные</h3><p>Проверяйте импорт JSON и выгружайте данные в XLSX для дальнейшей работы.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <p class="eyebrow">Текущая версия</p>
+      <h2 class="serif">Простой локальный инструмент — <em>без притворства облачной платформой.</em></h2>
+      <div class="grid">
+        <article class="card"><h3>Работа в браузере</h3><p>V1 использует локальное хранение в браузере на одном устройстве.</p></article>
+        <article class="card"><h3>Без командной синхронизации</h3><p>Нет учётных записей, облачной синхронизации, совместной работы и разграничения прав.</p></article>
+        <article class="card"><h3>Без встроенного AI</h3><p>Knowledge Map не является RAG-системой, не отвечает на вопросы по документам и не разбирает файлы автоматически.</p></article>
+        <article class="card"><h3>Только несекретные данные</h3><p>Не используйте текущую V1 для персональной, клиентской, финансовой или конфиденциальной корпоративной информации.</p></article>
+      </div>
+      <div class="notice"><strong>Важно:</strong> ранний доступ пока не открыт. Перед продажей мы завершаем проверку сценариев, инструкции, импорта/экспорта и процесса выдачи. Эта страница описывает текущие границы продукта, а не обещает функции будущих версий.</div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <p class="eyebrow">Ранний доступ</p>
+      <div class="pricebox">
+        <div>
+          <h2 class="serif">Планируемая цена первого запуска</h2>
+          <p class="muted">Стартовая цена раннего доступа. Финальное предложение и условия будут опубликованы после завершения подготовки продукта.</p>
+        </div>
+        <div class="price">1 490 ₽</div>
+      </div>
+      <p class="fine">Сейчас переход во VK — только запрос информации о запуске, а не покупка и не резервирование лицензии.</p>
+      <div class="actions"><a class="btn" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Запросить информацию во VK ↗</a></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <p class="eyebrow">Как будет устроен запуск</p>
+      <h2 class="serif">Сначала проверка. <em>Затем открытые продажи.</em></h2>
+      <div class="steps">
+        <article class="step"><b>01 / QA</b><span>Проверяем пользовательские сценарии, импорт, экспорт и работу на разных экранах.</span></article>
+        <article class="step"><b>02 / ONBOARDING</b><span>Готовим понятную инструкцию, условия использования и выдачу продукта после оплаты.</span></article>
+        <article class="step"><b>03 / LAUNCH</b><span>Открываем покупку и собираем обратную связь первых пользователей.</span></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <p class="eyebrow">Частые вопросы</p>
+      <h2 class="serif">Что важно знать <em>до запуска.</em></h2>
+      <div class="faq">
+        <details><summary>Можно ли купить продукт сейчас?</summary><p>Пока нет. Мы готовим ранний запуск. Онлайн-оплата, выдача и поддержка ещё не открыты.</p></details>
+        <details><summary>Где хранятся мои данные?</summary><p>В текущей V1 — локально в браузере на устройстве пользователя. Не очищайте данные браузера без предварительного экспорта резервной копии.</p></details>
+        <details><summary>Можно использовать для базы знаний компании?</summary><p>Можно структурировать несекретную информацию для личной работы. Но текущая версия не поддерживает общую командную базу, серверную синхронизацию или контроль доступа.</p></details>
+        <details><summary>Это AI-ассистент?</summary><p>Нет. Knowledge Map — инструмент структурирования данных. AI-ассистент по корпоративным материалам — отдельное направление TAINA.</p></details>
+      </div>
+    </div>
+  </section>
+</main>
+<footer class="wrap footer">
+  <a href="index.html">← TAINA · AI Products & Business Automation</a>
+  <div>© TAINA · 2026</div>
+</footer>
+</body>
+</html>
