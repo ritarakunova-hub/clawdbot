@@ -4,11 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#171314">
-  <meta name="description" content="TAINA Studio: AI-разбор одного повторяющегося бизнес-процесса за 60 минут. Найдём узкие места и подготовим до трёх рекомендаций. Стартовая цена — 5 000 ₽.">
+  <meta name="description" content="Разбор бизнес-процесса для собственников небольших сервисных компаний. Около 60 минут онлайн, письменный итог и до трёх рекомендаций. Стоимость — 5 000 ₽.">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="TAINA Studio — AI-разбор процесса за 5 000 ₽">
-  <meta property="og:description" content="Одна онлайн-консультация, один бизнес-процесс, краткий письменный итог и до трёх рекомендаций. Внедрение оценивается отдельно.">
-  <title>TAINA Studio — AI-разбор бизнес-процесса за 5 000 ₽</title>
+  <meta property="og:title" content="TAINA Studio — разбор бизнес-процесса за 5 000 ₽">
+  <meta property="og:description" content="Найдём, где теряются заявки, информация и время. Один процесс, встреча около 60 минут и конкретные рекомендации.">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <title>TAINA Studio — разбор бизнес-процессов за 5 000 ₽</title>
   <style>
     :root {
       color-scheme: dark;
@@ -130,6 +131,17 @@
     .deliverable { padding: 20px; border: 1px solid var(--line); border-radius: 7px; }
     .deliverable b { display: block; margin-bottom: 6px; color: var(--gold); font-size: 14px; }
     .deliverable p { margin: 0; color: var(--muted); font-size: 12px; }
+    .sample-report { overflow: hidden; border: 1px solid #806c4b; border-radius: 10px; background: linear-gradient(145deg,#282124,#1d181a); }
+    .sample-report-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; padding: 22px 26px; border-bottom: 1px solid var(--line); }
+    .sample-report-head h3 { margin: 5px 0 0; font-size: 20px; }
+    .sample-label { color: var(--gold); font: 10px ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+    .sample-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 22px; }
+    .sample-panel { padding: 18px; border: 1px solid var(--line); border-radius: 7px; background: rgba(0,0,0,.12); }
+    .sample-panel h3 { margin: 0 0 10px; color: var(--gold); font-size: 14px; }
+    .sample-panel ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 12px; }
+    .sample-panel li + li { margin-top: 7px; }
+    .sample-next { margin: 0 22px 22px; padding: 16px 18px; border-left: 2px solid var(--rose); background: rgba(122,59,73,.12); color: #e0d3ce; font-size: 13px; }
+    .sample-disclaimer { margin: 14px 0 0; color: #958786; font-size: 11px; }
     .offer {
       display: grid; grid-template-columns: .9fr 1.1fr; gap: 38px;
       padding: 34px; border: 1px solid #806c4b; border-radius: 10px;
@@ -162,6 +174,9 @@
     }
     @media (max-width: 600px) {
       .wrap { width: min(100% - 28px, var(--max)); }
+      .sample-report-head { flex-direction: column; padding: 18px; }
+      .sample-grid { grid-template-columns: 1fr; padding: 14px; }
+      .sample-next { margin: 0 14px 14px; }
       .nav { min-height: 64px; }
       .nav > .btn { display: none; }
       h1 { font-size: 43px; }
@@ -199,20 +214,20 @@
       <a href="#result">Результат</a>
       <a href="#pilot">Консультация</a>
     </nav>
-    <a class="btn small" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Записаться на AI-разбор ↗</a>
+    <a class="btn small" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Обсудить задачу ↗</a>
   </div>
 </header>
 <main id="main">
   <section class="wrap hero" id="top">
     <div>
-      <p class="eyebrow">TAINA STUDIO / AI PROCESS CONSULTING</p>
-      <h1 class="serif">Поймём, где в работе теряется время — и <em>что стоит автоматизировать.</em></h1>
-      <p class="hero-copy">TAINA Studio проводит платный разбор одного повторяющегося бизнес-процесса. За 60 минут мы выясним, где застревает работа, какая информация теряется и есть ли смысл менять правила, связывать инструменты или внедрять ИИ.</p>
+      <p class="eyebrow">TAINA STUDIO / РАЗБОР БИЗНЕС-ПРОЦЕССОВ</p>
+      <h1 class="serif">Когда бизнес растёт, а процессы всё ещё держатся на <em>людях и переписках?</em></h1>
+      <p class="hero-copy">Разберём один повторяющийся процесс: найдём, где теряются заявки, информация и время, и определим, что стоит изменить до покупки новых инструментов или разработки автоматизации.</p>
       <div class="actions">
-        <a class="btn" href="#pilot">Посмотреть формат консультации <span aria-hidden="true">↘</span></a>
-        <a class="btn secondary" href="#approach">Как устроена диагностика</a>
+        <a class="btn" href="#pilot">Обсудить свою задачу <span aria-hidden="true">↘</span></a>
+        <a class="btn secondary" href="#example">Посмотреть пример результата</a>
       </div>
-      <p class="fine">Не предлагаем ИИ ради ИИ. Сначала разбираемся с вашей задачей и выбираем решение, которое имеет смысл для процесса.</p>
+      <p class="fine">Для собственников и руководителей небольших сервисных компаний. Около 60 минут онлайн · 5 000 ₽.</p>
     </div>
     <div class="visual" aria-label="Схематичная карта одного бизнес-процесса">
       <div class="windowbar"><span>TAINA / PROCESS MAP</span><span class="dots"><span></span><span></span><span></span></span></div>
@@ -229,8 +244,8 @@
           <div class="node"><strong>ОТВЕТСТВЕННЫЙ</strong><span>Менеджер</span></div>
           <div class="connector">↘ ИСТОЧНИКИ ↙</div>
           <div class="connector">↙ ПЕРЕДАЧА ↘</div>
-          <div class="node"><strong>ИНФОРМАЦИЯ</strong><span>Форма · CRM · регламент</span></div>
-          <div class="node"><strong>ВОПРОС</strong><span>Кто проверяет полноту данных?</span></div>
+          <div class="node"><strong>ИНФОРМАЦИЯ</strong><span>Чат · таблица · CRM</span></div>
+          <div class="node"><strong>ВОПРОС</strong><span>Кто отвечает за следующий шаг?</span></div>
         </div>
         <p class="visual-note">Это иллюстрация логики диагностики, не скриншот интерфейса и не клиентский кейс.</p>
       </div>
@@ -288,6 +303,61 @@
     </div>
   </section>
 
+  <section class="section" id="example">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Пример результата</p>
+        <h2 class="serif">Вот что остаётся у вас <em>после консультации.</em></h2>
+        <p class="section-lead">Не абстрактное «надо автоматизировать», а зафиксированная проблема, наблюдения и несколько конкретных следующих действий.</p>
+      </div>
+      <div class="sample-report">
+        <div class="sample-report-head">
+          <div>
+            <div class="sample-label">Учебный пример · вымышленные данные</div>
+            <h3>Разбор процесса обработки входящей заявки</h3>
+          </div>
+          <span class="badge">Один процесс</span>
+        </div>
+        <div class="sample-grid">
+          <article class="sample-panel">
+            <h3>Как процесс устроен сейчас</h3>
+            <ul>
+              <li>Заявка приходит в чат.</li>
+              <li>Менеджер вручную переносит данные в таблицу.</li>
+              <li>Задача передаётся исполнителю в переписке.</li>
+              <li>Руководитель отдельно уточняет статус.</li>
+            </ul>
+          </article>
+          <article class="sample-panel">
+            <h3>Что требует внимания</h3>
+            <ul>
+              <li>Информация повторно вводится вручную.</li>
+              <li>Следующий ответственный не всегда назначен.</li>
+              <li>Статус заявки приходится выяснять отдельно.</li>
+            </ul>
+          </article>
+          <article class="sample-panel">
+            <h3>Рекомендации</h3>
+            <ul>
+              <li>Определить единое место фиксации заявок.</li>
+              <li>Назначать ответственного и следующий шаг.</li>
+              <li>После упорядочивания процесса оценить пользу уведомлений.</li>
+            </ul>
+          </article>
+          <article class="sample-panel">
+            <h3>Следующий разумный шаг</h3>
+            <ul>
+              <li>Сначала согласовать статусы и правила передачи заявки.</li>
+              <li>Затем отдельно оценить, какую часть передачи имеет смысл автоматизировать.</li>
+            </ul>
+          </article>
+        </div>
+        <div class="sample-next"><strong>Вывод:</strong> прежде чем подключать бота, стоит устранить неопределённость с ответственностью и статусом заявки. Автоматизация не исправит неясный процесс сама по себе.</div>
+      </div>
+      <p class="sample-disclaimer">Это демонстрация формата, а не клиентский кейс и не обещание такого же результата для любой компании. Выводы по вашей задаче формируются на встрече.</p>
+    </div>
+  </section>
+
   <section class="section">
     <div class="wrap">
       <div class="section-head">
@@ -310,7 +380,7 @@
       <div>
         <p class="eyebrow">Для кого</p>
         <h2 class="serif">Когда повторяющаяся работа уже стала <em>дорогой привычкой.</em></h2>
-        <p class="section-lead">Для предпринимателей, собственников и небольших команд — в первую очередь в сервисном бизнесе, но не только. Разбираем повторяющиеся процессы, где заявки, информация или задачи проходят через нескольких людей, таблицы, CRM и чаты.</p>
+        <p class="section-lead">В первую очередь — для собственников и руководителей небольших сервисных компаний: агентств, образовательных и B2B-сервисов. Особенно полезно, если заявки и задачи проходят через нескольких сотрудников, чаты, таблицы или CRM, а контроль держится на постоянных ручных уточнениях.</p>
       </div>
       <div class="list">
         <div class="list-item"><span class="list-mark">01</span><div><b>Собственник или руководитель</b><span>Хочет понять, почему процесс зависит от отдельных людей или постоянно требует ручного контроля.</span></div></div>
@@ -320,18 +390,33 @@
     </div>
   </section>
 
+  <section class="section" id="about">
+    <div class="wrap split">
+      <div>
+        <p class="eyebrow">Кто проводит разбор</p>
+        <h2 class="serif">Не продаём технологию вслепую. <em>Сначала разбираемся в работе.</em></h2>
+        <p class="section-lead">TAINA Studio — независимая практика на стыке управления процессами и AI/low-code автоматизации. Разбор проводит основатель TAINA Studio: в работе соединяются управленческий опыт и создание практических прототипов решений.</p>
+      </div>
+      <aside class="callout">
+        <p class="eyebrow">Практический инструментарий</p>
+        <h3 class="serif">n8n · GigaChat API · базы знаний</h3>
+        <p>Используются инструменты автоматизации на n8n, GigaChat API, прототипы поиска по базе знаний и структурирования информации. Мы не выдаём собственные прототипы за клиентские внедрения и не обещаем экономический эффект без измерений.</p>
+      </aside>
+    </div>
+  </section>
+
   <section class="section" id="pilot">
     <div class="wrap">
       <div class="offer">
         <div>
-          <p class="eyebrow">Стартовый формат</p>
-          <h2 class="serif">Разберите один процесс — без обязательства сразу внедрять ИИ.</h2>
+          <p class="eyebrow">КОНСУЛЬТАЦИЯ · 60 МИНУТ</p>
+          <h2 class="serif">Разберите один процесс и определите разумный следующий шаг.</h2>
           <div class="price">5 000 ₽</div>
-          <p class="muted">Стартовая цена 60-минутной консультации TAINA AI-разбор.</p>
+          <p class="muted">Стоимость консультации — 5 000 ₽. Около 60 минут онлайн.</p>
           <div class="actions">
-            <a class="btn" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Записаться на консультацию в VK ↗</a>
+            <a class="btn" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Обсудить задачу во VK ↗</a>
           </div>
-          <p class="fine">В стоимость входит встреча и краткий письменный итог. Оплата и детали согласуются в переписке; сайт не принимает платежи.</p>
+          <p class="fine">После перехода откройте сообщения сообщества и нажмите «Написать сообщение». Коротко опишите процесс и основную трудность. Мы уточним задачу, подтвердим формат, предложим время и согласуем оплату. Сайт не собирает и не хранит заявки.</p>
         </div>
         <div>
           <div class="offer-meta">
@@ -340,7 +425,7 @@
             <div class="meta-item"><b>ИТОГ</b><span>Краткий письменный разбор после встречи</span></div>
             <div class="meta-item"><b>РЕЗУЛЬТАТ</b><span>До трёх рекомендаций и план следующего шага</span></div>
           </div>
-          <div class="note">Консультация не включает разработку или запуск бота, AI-ассистента и интеграций. Если внедрение действительно нужно, отдельно согласуем объём, сроки и стоимость — с учётом доступной загрузки и без обязательства продолжать работу.</div>
+          <div class="note">Встреча и письменный итог входят в стоимость. Разработка бота, AI-ассистента и интеграций не входит: подходящее внедрение оценивается отдельно, после уточнения задачи и доступной загрузки.</div>
         </div>
       </div>
     </div>
@@ -353,12 +438,10 @@
         <h2 class="serif">Сразу обозначаем, <em>что входит и чего здесь нет.</em></h2>
       </div>
       <div class="limits">
-        <article class="limit"><h3>Это не внедрение</h3><p>В консультацию не входят код, настройка бота и интеграции. Внедрение можно обсудить отдельно после оценки задачи, сроков и доступной загрузки.</p></article>
-        <article class="limit"><h3>Это не аудит всей компании</h3><p>Мы разбираем один согласованный процесс, а не проводим комплексную проверку бизнеса, информационной безопасности или соответствия стандартам.</p></article>
-        <article class="limit"><h3>Это не автоматический анализ документов</h3><p>Выводы строятся на разговоре и фактах, которые вы подтверждаете. Консультация не включает автоматическое чтение файлов или подключение AI к вашим системам.</p></article>
-        <article class="limit"><h3>Не передавайте чувствительные данные</h3><p>Не отправляйте персональные, клиентские, медицинские, финансовые и коммерчески чувствительные сведения. Для разбора достаточно описания процесса и обезличенных примеров.</p></article>
-        <article class="limit"><h3>Это не продажа программы</h3><p>Консультация — услуга эксперта, а не доступ к облачной платформе или лицензия на TAINA Knowledge Map.</p></article>
-        <article class="limit"><h3>Не обещаем заранее заданный эффект</h3><p>Не гарантируем экономию времени или рост выручки. Фиксируем наблюдения и рекомендации, а результат внедрения можно оценивать только отдельно.</p></article>
+        <article class="limit"><h3>Разбираем один процесс</h3><p>Это не аудит всей компании, информационной безопасности или соответствия стандартам.</p></article>
+        <article class="limit"><h3>Консультация, а не внедрение</h3><p>Код, настройка бота и интеграции не входят в стоимость. Возможное внедрение оценивается отдельно.</p></article>
+        <article class="limit"><h3>Без доступа к вашим системам</h3><p>Не присылайте документы и персональные, клиентские, медицинские, финансовые или коммерчески чувствительные данные. Достаточно обезличенного описания процесса.</p></article>
+        <article class="limit"><h3>Без обещаний ROI</h3><p>Мы фиксируем наблюдения и рекомендации, но не гарантируем заранее экономию времени или рост выручки.</p></article>
       </div>
     </div>
   </section>
@@ -374,7 +457,7 @@
         <details><summary>Что я получу после встречи?</summary><p>Краткий письменный итог: схема одного процесса, основные узкие места, до трёх рекомендаций и возможный следующий шаг — изменить порядок работы или оценить автоматизацию.</p></details>
         <details><summary>Что нужно подготовить?</summary><p>Кратко опишите один повторяющийся процесс и его участников. Для консультации не нужно отправлять документы: достаточно обезличенного описания и примеров без персональных или конфиденциальных данных.</p></details>
         <details><summary>Что, если автоматизация не нужна?</summary><p>Так и скажем. Иногда сначала достаточно уточнить роли, правила или порядок действий. Не будем предлагать разработку без понятной задачи.</p></details>
-        <details><summary>Как записаться?</summary><p>Напишите в сообщество TAINA Studio во VK. Коротко расскажите, какой процесс хотите разобрать. Мы уточним задачу, подтвердим доступное время и согласуем оплату до встречи.</p></details>
+        <details><summary>Как записаться?</summary><p>Откройте сообщество TAINA Studio во VK и нажмите «Написать сообщение». Опишите один процесс и основную трудность — без персональных и конфиденциальных данных. Мы проверим, подходит ли задача для консультации, затем согласуем время и оплату.</p></details>
         <details><summary>Можно ли передать реальные клиентские документы?</summary><p>Нет. Не отправляйте персональные, клиентские, медицинские, финансовые и коммерчески чувствительные сведения. Для обсуждения используйте обезличенное описание процесса.</p></details>
       </div>
     </div>
@@ -384,6 +467,6 @@
   <div><div class="brand">TAINA<span class="brand-mark">◆</span></div><div>Сначала ясность в процессе. Затем — разумная автоматизация.</div></div>
   <div>© TAINA Studio · 2026</div>
 </footer>
-<a class="btn mobile-cta" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Записаться на консультацию в VK ↗</a>
+<a class="btn mobile-cta" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Обсудить задачу ↗</a>
 </body>
 </html>
