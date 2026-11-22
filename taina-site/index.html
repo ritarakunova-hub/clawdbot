@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#171314">
-  <meta name="description" content="Разбор бизнес-процесса для собственников небольших сервисных компаний. Около 60 минут онлайн, письменный итог и до трёх рекомендаций. Стоимость — 5 000 ₽.">
+  <meta name="description" content="TAINA создаёт цифровые AI-продукты и проектирует автоматизацию бизнес-процессов: Knowledge Map, AI-ассистенты и решения для компаний.">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="TAINA Studio — разбор бизнес-процесса за 5 000 ₽">
-  <meta property="og:description" content="Найдём, где теряются заявки, информация и время. Один процесс, встреча около 60 минут и конкретные рекомендации.">
+  <meta property="og:title" content="TAINA — AI Products & Business Automation">
+  <meta property="og:description" content="Собственные AI-продукты и практическая автоматизация бизнес-процессов. Сначала задача, затем технология.">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <title>TAINA Studio — разбор бизнес-процессов за 5 000 ₽</title>
+  <title>TAINA — AI-продукты и автоматизация бизнес-процессов</title>
   <style>
     :root {
       color-scheme: dark;
@@ -22,371 +22,274 @@
       --gold: #d2b878;
       --wine: #7a3b49;
       --rose: #c99b9e;
-      --green: #9db6a5;
       --max: 1160px;
     }
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      line-height: 1.65;
-    }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.65; }
     a { color: inherit; text-decoration: none; }
     a:focus-visible, summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
     .wrap { width: min(var(--max), calc(100% - 40px)); margin: 0 auto; }
     .skip-link { position: absolute; left: -9999px; top: 0; z-index: 50; padding: 12px 16px; background: var(--gold); color: #211a16; }
     .skip-link:focus { left: 12px; top: 12px; }
-    .eyebrow, .mono, .step-no {
-      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-      letter-spacing: .09em;
-      text-transform: uppercase;
-    }
-    .eyebrow { color: var(--gold); font-size: 11px; }
-    .muted { color: var(--muted); }
     .serif { font-family: Georgia, "Times New Roman", serif; font-weight: 400; }
     .serif em { color: var(--gold); font-style: italic; }
-    .top {
-      position: sticky; top: 0; z-index: 20;
-      background: rgba(23, 19, 20, .92);
-      border-bottom: 1px solid rgba(210, 184, 120, .16);
-      backdrop-filter: blur(14px);
-    }
-    .nav { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .eyebrow, .mono, .number { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .09em; text-transform: uppercase; }
+    .eyebrow { color: var(--gold); font-size: 11px; }
+    .muted, .lead { color: var(--muted); }
+    .top { position: sticky; top: 0; z-index: 20; background: rgba(23,19,20,.94); border-bottom: 1px solid rgba(210,184,120,.16); backdrop-filter: blur(14px); }
+    .nav { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding-top: 9px; padding-bottom: 9px; }
     .brand { font-size: 21px; font-weight: 800; letter-spacing: .2em; white-space: nowrap; }
     .brand-mark { color: var(--gold); }
-    .navlinks { display: flex; gap: 26px; color: var(--muted); font-size: 13px; }
+    .navlinks { display: flex; gap: 24px; color: var(--muted); font-size: 13px; }
     .navlinks a:hover { color: var(--gold); }
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-      min-height: 48px; padding: 13px 20px;
-      border: 1px solid var(--gold); border-radius: 4px;
-      background: var(--gold); color: #211a16;
-      font-size: 13px; font-weight: 800; text-align: center;
-      transition: transform .2s ease, filter .2s ease;
-    }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 13px 20px; border: 1px solid var(--gold); border-radius: 4px; background: var(--gold); color: #211a16; font-size: 13px; font-weight: 800; text-align: center; transition: transform .2s ease, filter .2s ease; }
     .btn:hover { transform: translateY(-2px); filter: brightness(1.07); }
     .btn.secondary { background: transparent; border-color: var(--line); color: var(--text); }
     .btn.small { min-height: 40px; padding: 9px 14px; font-size: 12px; }
-    .hero {
-      display: grid; grid-template-columns: 1.05fr .95fr; align-items: center; gap: 58px;
-      min-height: 650px; padding-top: 86px; padding-bottom: 86px;
-    }
+    .hero { display: grid; grid-template-columns: 1.05fr .95fr; align-items: center; gap: 58px; min-height: 650px; padding-top: 78px; padding-bottom: 88px; }
     h1 { max-width: 720px; margin: 18px 0 22px; font-size: clamp(43px, 6vw, 76px); line-height: 1.04; letter-spacing: -.045em; }
-    .hero-copy { max-width: 610px; color: #cbbfbb; font-size: 17px; line-height: 1.8; }
+    .hero-copy { max-width: 620px; color: #cbbfbb; font-size: 17px; line-height: 1.8; }
     .actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 30px 0 16px; }
-    .fine { max-width: 560px; color: #958786; font-size: 11px; }
-    .visual {
-      position: relative; padding: 20px;
-      border: 1px solid #55434a; border-radius: 14px;
-      background: linear-gradient(145deg, #2b2225, #191516);
-      box-shadow: 0 28px 80px rgba(0,0,0,.32);
-    }
-    .visual::before {
-      content: ""; position: absolute; inset: -16px 16px 16px -16px; z-index: -1;
-      border: 1px solid rgba(210,184,120,.22); border-radius: 14px;
-    }
+    .fine { max-width: 580px; color: #958786; font-size: 11px; }
+    .visual { position: relative; padding: 22px; border: 1px solid #55434a; border-radius: 14px; background: linear-gradient(145deg,#2b2225,#191516); box-shadow: 0 28px 80px rgba(0,0,0,.32); }
+    .visual::before { content: ""; position: absolute; inset: -15px 15px 15px -15px; z-index: -1; border: 1px solid rgba(210,184,120,.22); border-radius: 14px; }
     .windowbar { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--line); color: #9f8e8c; font: 10px ui-monospace, monospace; }
     .dots { display: flex; gap: 5px; }
-    .dots span { width: 6px; height: 6px; border-radius: 50%; background: #795d62; }
-    .dash { padding-top: 20px; }
-    .dash-title { font-size: 16px; font-weight: 750; }
-    .dash-sub { margin-top: 3px; color: #a99796; font: 10px ui-monospace, monospace; }
-    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin: 18px 0; }
-    .stat { padding: 12px; border: 1px solid #45363b; border-radius: 7px; background: #211a1c; }
-    .stat b { display: block; color: var(--gold); font: 20px ui-monospace, monospace; }
-    .stat small { color: #a99796; font-size: 9px; }
-    .map { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .node { min-height: 76px; padding: 12px; border: 1px solid #5b424a; border-radius: 7px; background: #211a1c; }
-    .node strong { display: block; margin-bottom: 5px; font-size: 10px; letter-spacing: .06em; }
-    .node span { color: #b8a7a5; font-size: 11px; }
-    .node.accent { border-color: #a68d58; background: #2c251b; }
-    .connector { display: flex; align-items: center; justify-content: center; color: var(--gold); font: 10px ui-monospace, monospace; }
-    .visual-note { margin: 14px 0 0; color: #8f8080; font-size: 9px; }
+    .dots i { width: 6px; height: 6px; border-radius: 50%; background: #795d62; }
+    .map-screen { padding-top: 20px; }
+    .screen-title { font-size: 16px; font-weight: 750; }
+    .screen-sub { margin-top: 3px; color: #a99796; font: 10px ui-monospace, monospace; }
+    .graph { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px; }
+    .graph-card { min-height: 92px; padding: 15px; border: 1px solid #5b424a; border-radius: 8px; background: #211a1c; }
+    .graph-card strong { display: block; margin-bottom: 8px; color: var(--gold); font-size: 11px; letter-spacing: .07em; }
+    .graph-card span { color: #c1b2ae; font-size: 12px; }
+    .graph-card.accent { border-color: #a68d58; background: #2c251b; }
+    .screen-foot { margin: 16px 0 0; color: #8f8080; font-size: 10px; }
     .section { padding: 84px 0; border-top: 1px solid rgba(210,184,120,.13); }
-    .section-head { max-width: 760px; margin-bottom: 38px; }
-    h2 { margin: 12px 0 16px; font-size: clamp(32px, 4vw, 50px); line-height: 1.12; letter-spacing: -.035em; }
-    .section-lead { max-width: 720px; color: var(--muted); font-size: 16px; }
-    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-    .card { padding: 24px; border: 1px solid var(--line); border-radius: 8px; background: linear-gradient(145deg, #241d1f, #1c1719); }
-    .card .num { color: var(--gold); font: 11px ui-monospace, monospace; letter-spacing: .08em; }
-    .card h3 { margin: 14px 0 8px; font-size: 17px; }
+    .section-head { max-width: 780px; margin-bottom: 38px; }
+    h2 { margin: 12px 0 16px; font-size: clamp(32px,4vw,50px); line-height: 1.12; letter-spacing: -.035em; }
+    .lead { max-width: 740px; font-size: 16px; }
+    .grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+    .card { padding: 24px; border: 1px solid var(--line); border-radius: 8px; background: linear-gradient(145deg,#241d1f,#1c1719); }
+    .card .number { color: var(--gold); font-size: 11px; }
+    .card h3 { margin: 14px 0 8px; font-size: 18px; }
     .card p { margin: 0; color: var(--muted); font-size: 13px; }
+    .product-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 16px; align-items: stretch; }
+    .product { padding: 28px; border: 1px solid var(--line); border-radius: 10px; background: linear-gradient(145deg,#241d1f,#1c1719); }
+    .product.featured { border-color: #806c4b; background: linear-gradient(135deg,#30262a,#1d181a); }
+    .product-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .status { display: inline-block; padding: 5px 9px; border: 1px solid #6b575b; border-radius: 999px; color: #d1c0bb; font: 10px ui-monospace,monospace; letter-spacing: .05em; text-transform: uppercase; }
+    .product h3 { margin: 14px 0 8px; font: 30px Georgia,"Times New Roman",serif; }
+    .product p { color: var(--muted); font-size: 13px; }
+    .checks { display: grid; gap: 9px; margin: 20px 0 24px; padding: 0; list-style: none; }
+    .checks li { position: relative; padding-left: 22px; color: #e1d5d0; font-size: 13px; }
+    .checks li::before { content: "◆"; position: absolute; left: 0; color: var(--gold); font-size: 10px; top: 4px; }
+    .price-note { margin-top: 18px; padding: 14px 16px; border-left: 2px solid var(--rose); background: rgba(122,59,73,.12); color: #d8c9c6; font-size: 12px; }
     .split { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 50px; }
     .list { display: grid; gap: 16px; }
     .list-item { display: grid; grid-template-columns: 28px 1fr; gap: 12px; }
-    .list-mark { color: var(--gold); font: 17px ui-monospace, monospace; }
+    .list-mark { color: var(--gold); font: 17px ui-monospace,monospace; }
     .list-item b { display: block; font-size: 14px; }
     .list-item span { color: var(--muted); font-size: 12px; }
-    .process { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
-    .process article { padding: 17px 14px; border-top: 1px solid var(--gold); background: #201a1c; }
-    .process b { display: block; margin-bottom: 12px; color: var(--gold); font: 11px ui-monospace, monospace; }
-    .process span { color: #d2c5c1; font-size: 12px; }
-    .callout { padding: 28px; border: 1px solid #76565e; border-radius: 8px; background: linear-gradient(135deg,#302126,#211a1c); }
-    .callout h3 { margin: 8px 0 14px; font-size: 30px; line-height: 1.2; }
-    .callout p { color: var(--muted); font-size: 13px; }
-    .deliverables { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; }
-    .deliverable { padding: 20px; border: 1px solid var(--line); border-radius: 7px; }
-    .deliverable b { display: block; margin-bottom: 6px; color: var(--gold); font-size: 14px; }
-    .deliverable p { margin: 0; color: var(--muted); font-size: 12px; }
-    .sample-report { overflow: hidden; border: 1px solid #806c4b; border-radius: 10px; background: linear-gradient(145deg,#282124,#1d181a); }
-    .sample-report-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; padding: 22px 26px; border-bottom: 1px solid var(--line); }
-    .sample-report-head h3 { margin: 5px 0 0; font-size: 20px; }
-    .sample-label { color: var(--gold); font: 10px ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
-    .sample-pill { display: inline-block; padding: 5px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font: 10px ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
-    .sample-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 22px; }
-    .sample-panel { padding: 18px; border: 1px solid var(--line); border-radius: 7px; background: rgba(0,0,0,.12); }
-    .sample-panel h3 { margin: 0 0 10px; color: var(--gold); font-size: 14px; }
-    .sample-panel ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 12px; }
-    .sample-panel li + li { margin-top: 7px; }
-    .sample-next { margin: 0 22px 22px; padding: 16px 18px; border-left: 2px solid var(--rose); background: rgba(122,59,73,.12); color: #e0d3ce; font-size: 13px; }
-    .sample-disclaimer { margin: 14px 0 0; color: #958786; font-size: 11px; }
-    .offer {
-      display: grid; grid-template-columns: .9fr 1.1fr; gap: 38px;
-      padding: 34px; border: 1px solid #806c4b; border-radius: 10px;
-      background: linear-gradient(135deg,#282124,#1d181a);
-    }
-    .price { margin: 12px 0 4px; color: var(--gold); font: 42px ui-monospace, monospace; }
+    .steps { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+    .step { padding: 20px; border-top: 1px solid var(--gold); background: #201a1c; }
+    .step b { display: block; margin-bottom: 12px; color: var(--gold); font: 11px ui-monospace,monospace; }
+    .step span { color: #d2c5c1; font-size: 12px; }
+    .offer { display: grid; grid-template-columns: .9fr 1.1fr; gap: 38px; padding: 34px; border: 1px solid #806c4b; border-radius: 10px; background: linear-gradient(135deg,#282124,#1d181a); }
+    .price { margin: 12px 0 4px; color: var(--gold); font: 42px ui-monospace,monospace; }
     .offer-meta { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin: 20px 0; }
     .meta-item { padding: 14px; border: 1px solid var(--line); background: rgba(0,0,0,.12); }
-    .meta-item b { display: block; color: var(--gold); font: 11px ui-monospace, monospace; }
+    .meta-item b { display: block; color: var(--gold); font: 11px ui-monospace,monospace; }
     .meta-item span { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; }
     .note { padding: 16px 18px; border-left: 2px solid var(--rose); background: rgba(122,59,73,.12); color: #d8c9c6; font-size: 12px; }
-    .limits { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .limit { padding: 20px; border: 1px solid var(--line); border-radius: 8px; }
-    .limit h3 { margin: 0 0 8px; font-size: 15px; }
-    .limit p { margin: 0; color: var(--muted); font-size: 12px; }
     .faq { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .faq details { padding: 18px; border: 1px solid var(--line); border-radius: 6px; background: #1d181a; }
     .faq summary { cursor: pointer; font-size: 13px; font-weight: 750; }
     .faq p { margin-bottom: 0; color: var(--muted); font-size: 12px; }
     .footer { display: flex; justify-content: space-between; gap: 24px; padding: 32px 0 50px; border-top: 1px solid var(--line); color: #928282; font-size: 11px; }
     .footer .brand { color: var(--text); }
-    .mobile-cta { display: none; }
     @media (max-width: 900px) {
       .hero { grid-template-columns: 1fr; gap: 42px; min-height: 0; padding-top: 64px; padding-bottom: 68px; }
       .visual { max-width: 680px; }
       .split, .offer { grid-template-columns: 1fr; }
       .grid { grid-template-columns: 1fr 1fr; }
-      .process { grid-template-columns: repeat(2,1fr); }
-      .navlinks { display: none; }
+      .product-grid { grid-template-columns: 1fr; }
+      .navlinks { order: 3; width: 100%; overflow-x: auto; gap: 20px; padding: 4px 0; }
+      .nav { row-gap: 5px; }
     }
     @media (max-width: 600px) {
-      .wrap { width: min(100% - 28px, var(--max)); }
-      .sample-report-head { flex-direction: column; padding: 18px; }
-      .sample-grid { grid-template-columns: 1fr; padding: 14px; }
-      .sample-next { margin: 0 14px 14px; }
+      .wrap { width: min(100% - 28px,var(--max)); }
       .nav { min-height: 64px; }
-      .nav > .btn { display: none; }
+      .navlinks { font-size: 12px; }
+      .nav > .btn { min-height: 38px; padding: 8px 10px; font-size: 11px; }
       h1 { font-size: 43px; }
       .hero-copy { font-size: 15px; }
       .actions { flex-direction: column; }
       .actions .btn { width: 100%; }
       .section { padding: 64px 0; }
       h2 { font-size: 34px; }
-      .grid, .deliverables, .limits, .faq, .offer-meta { grid-template-columns: 1fr; }
-      .offer { padding: 22px; }
+      .grid, .steps, .faq, .offer-meta { grid-template-columns: 1fr; }
+      .product, .offer { padding: 22px; }
       .footer { flex-direction: column; }
-      body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
-      .mobile-cta {
-        position: fixed; display: flex; left: 12px; right: 12px;
-        bottom: max(12px, env(safe-area-inset-bottom)); z-index: 30;
-        box-shadow: 0 8px 28px rgba(0,0,0,.5);
-      }
-      .visual { padding: 12px; }
-      .stat b { font-size: 17px; }
+      .visual { padding: 14px; }
+      body { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+      .mobile-cta { position: fixed; display: flex; left: 12px; right: 12px; bottom: max(12px,env(safe-area-inset-bottom)); z-index: 30; box-shadow: 0 8px 28px rgba(0,0,0,.5); }
     }
-    @media (prefers-reduced-motion: reduce) {
-      html { scroll-behavior: auto; }
-      *, *::before, *::after { transition: none !important; }
-    }
+    .mobile-cta { display: none; }
+    @media (max-width: 600px) { .mobile-cta { display: flex; } }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *,*::before,*::after { transition: none !important; } }
   </style>
 </head>
 <body>
 <a class="skip-link" href="#main">Перейти к содержанию</a>
 <header class="top">
   <div class="wrap nav">
-    <a class="brand" href="#top" aria-label="TAINA Studio">TAINA<span class="brand-mark">◆</span></a>
+    <a class="brand" href="#top" aria-label="TAINA">TAINA<span class="brand-mark">◆</span></a>
     <nav class="navlinks" aria-label="Основная навигация">
-      <a href="#problem">Проблема</a>
+      <a href="#products">Продукты</a>
+      <a href="#solutions">Для бизнеса</a>
       <a href="#approach">Подход</a>
-      <a href="#result">Результат</a>
-      <a href="#pilot">Консультация</a>
+      <a href="#consulting">Консультация</a>
     </nav>
-    <a class="btn small" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Обсудить задачу ↗</a>
+    <a class="btn small" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Связаться ↗</a>
   </div>
 </header>
 <main id="main">
   <section class="wrap hero" id="top">
     <div>
-      <p class="eyebrow">TAINA STUDIO / РАЗБОР БИЗНЕС-ПРОЦЕССОВ</p>
-      <h1 class="serif">Когда бизнес растёт, а процессы всё ещё держатся на <em>людях и переписках?</em></h1>
-      <p class="hero-copy">Разберём один повторяющийся процесс: найдём, где теряются заявки, информация и время, и определим, что стоит изменить до покупки новых инструментов или разработки автоматизации.</p>
+      <p class="eyebrow">TAINA / AI PRODUCTS & BUSINESS AUTOMATION</p>
+      <h1 class="serif">Инструменты для знаний. <em>AI — для процессов.</em></h1>
+      <p class="hero-copy">TAINA разрабатывает собственные цифровые продукты и проектирует AI-решения для бизнеса. Помогаем структурировать знания, убирать повторяющуюся ручную работу и связывать разрозненные процессы.</p>
       <div class="actions">
-        <a class="btn" href="#pilot">Обсудить свою задачу <span aria-hidden="true">↘</span></a>
-        <a class="btn secondary" href="#example">Посмотреть пример результата</a>
+        <a class="btn" href="#products">Изучить продукты <span aria-hidden="true">↘</span></a>
+        <a class="btn secondary" href="#consulting">Обсудить задачу</a>
       </div>
-      <p class="fine">Для собственников и руководителей небольших сервисных компаний. Около 60 минут онлайн · 5 000 ₽.</p>
+      <p class="fine">Не внедряем AI ради моды. Сначала разбираемся в задаче, затем выбираем технологию и оцениваем реалистичный объём решения.</p>
     </div>
-    <div class="visual" aria-label="Схематичная карта одного бизнес-процесса">
-      <div class="windowbar"><span>TAINA / PROCESS MAP</span><span class="dots"><span></span><span></span><span></span></span></div>
-      <div class="dash">
-        <div class="dash-title">Процесс: обработка заявки</div>
-        <div class="dash-sub">УЧЕБНЫЙ ПРИМЕР · ВЫМЫШЛЕННЫЕ ДАННЫЕ</div>
-        <div class="stats">
-          <div class="stat"><b>01</b><small>процесс</small></div>
-          <div class="stat"><b>05</b><small>этапов</small></div>
-          <div class="stat"><b>03</b><small>точки внимания</small></div>
+    <div class="visual" aria-label="Иллюстрация структуры знаний и бизнес-процессов">
+      <div class="windowbar"><span>TAINA / SYSTEM MAP</span><span class="dots"><i></i><i></i><i></i></span></div>
+      <div class="map-screen">
+        <div class="screen-title">От разрозненной информации — к ясной системе</div>
+        <div class="screen-sub">КОНЦЕПТУАЛЬНАЯ ИЛЛЮСТРАЦИЯ · НЕ СКРИНШОТ ПРОДУКТА</div>
+        <div class="graph">
+          <div class="graph-card accent"><strong>KNOWLEDGE</strong><span>Записи, источники, связи</span></div>
+          <div class="graph-card"><strong>AI ASSISTANT</strong><span>Поиск ответа в базе знаний</span></div>
+          <div class="graph-card"><strong>PROCESS</strong><span>Этапы, роли, передача задач</span></div>
+          <div class="graph-card"><strong>AUTOMATION</strong><span>Повторяющиеся действия</span></div>
         </div>
-        <div class="map">
-          <div class="node accent"><strong>ЭТАП</strong><span>Получить заявку</span></div>
-          <div class="node"><strong>ОТВЕТСТВЕННЫЙ</strong><span>Менеджер</span></div>
-          <div class="connector">↘ ИСТОЧНИКИ ↙</div>
-          <div class="connector">↙ ПЕРЕДАЧА ↘</div>
-          <div class="node"><strong>ИНФОРМАЦИЯ</strong><span>Чат · таблица · CRM</span></div>
-          <div class="node"><strong>ВОПРОС</strong><span>Кто отвечает за следующий шаг?</span></div>
-        </div>
-        <p class="visual-note">Это иллюстрация логики диагностики, не скриншот интерфейса и не клиентский кейс.</p>
+        <p class="screen-foot">Состав решения зависит от задачи, исходных данных и технических ограничений компании.</p>
       </div>
     </div>
   </section>
 
-  <section class="section" id="problem">
+  <section class="section" id="why">
     <div class="wrap">
       <div class="section-head">
-        <p class="eyebrow">Когда работа держится на памяти</p>
-        <h2 class="serif">Процесс есть. <em>Общей картины часто нет.</em></h2>
-        <p class="section-lead">Пока команда небольшая, многое решается в переписке и устных договорённостях. С ростом компании это превращается в постоянные уточнения, ручные проверки и задержки на стыках между людьми и системами.</p>
+        <p class="eyebrow">С чего начинается работа</p>
+        <h2 class="serif">Когда важная информация живёт в чатах, таблицах и <em>головах сотрудников.</em></h2>
+        <p class="lead">По мере роста команды увеличивается цена ручных уточнений: нужные сведения сложно найти, ответственность теряется при передаче, а повторяющиеся вопросы отвлекают специалистов.</p>
       </div>
       <div class="grid">
-        <article class="card"><span class="num">01 / ПОИСК</span><h3>«Где последняя версия?»</h3><p>Сотрудники тратят время, чтобы найти актуальную инструкцию, условия или ответ на повторяющийся вопрос.</p></article>
-        <article class="card"><span class="num">02 / ПЕРЕДАЧА</span><h3>«Кто должен продолжить?»</h3><p>Запрос переходит между людьми, но следующий шаг и ответственный не всегда очевидны.</p></article>
-        <article class="card"><span class="num">03 / ЗАВИСИМОСТЬ</span><h3>«Спроси у того, кто знает»</h3><p>Важные исключения и рабочие правила остаются в памяти отдельных сотрудников.</p></article>
+        <article class="card"><span class="number">01 / ЗНАНИЯ</span><h3>Ответы разбросаны</h3><p>Инструкции, условия и рабочие правила находятся в разных местах. Сотрудникам приходится искать их или спрашивать коллег.</p></article>
+        <article class="card"><span class="number">02 / ПРОЦЕССЫ</span><h3>Задачи застревают</h3><p>При передаче между людьми и инструментами теряются контекст, статус и следующий ответственный.</p></article>
+        <article class="card"><span class="number">03 / РУТИНА</span><h3>Одно и то же вручную</h3><p>Команда снова отвечает на типовые вопросы, переносит данные и проверяет повторяющиеся действия.</p></article>
       </div>
+    </div>
+  </section>
+
+  <section class="section" id="products">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Собственные продукты TAINA</p>
+        <h2 class="serif">Создаём инструменты, которые можно <em>использовать снова.</em></h2>
+        <p class="lead">Начинаем с продукта для структурирования знаний. Следующий слой — AI-помощники, которые работают с проверенной информацией компании.</p>
+      </div>
+      <div class="product-grid">
+        <article class="product featured">
+          <div class="product-top"><span class="number">01 / DIGITAL PRODUCT</span><span class="status">Ранний запуск готовится</span></div>
+          <h3>TAINA Knowledge Map</h3>
+          <p>Локальный инструмент, чтобы собирать информацию в единую структуру, фиксировать связи между объектами и видеть, как элементы знаний относятся друг к другу.</p>
+          <ul class="checks">
+            <li>Структурированные записи и связи между ними</li>
+            <li>Поиск, статусы и даты для работы с объектами</li>
+            <li>Журнал изменений и проверка JSON-импорта</li>
+            <li>Экспорт данных в XLSX</li>
+          </ul>
+          <a class="btn" href="knowledge-map.html">Открыть страницу продукта ↗</a>
+          <p class="price-note">Планируемая стартовая цена раннего доступа — <strong>1 490 ₽</strong>. Онлайн-оплата и автоматическая выдача ещё не подключены; продукт не открыт для покупки.</p>
+        </article>
+        <article class="product">
+          <div class="product-top"><span class="number">02 / B2B KNOWLEDGE</span><span class="status">Технический прототип</span></div>
+          <h3>TAINA AI Assistant</h3>
+          <p>AI-помощник, который ищет ответы в базе знаний компании, а не придумывает их по общим сведениям.</p>
+          <ul class="checks">
+            <li>Поиск по согласованным материалам и FAQ</li>
+            <li>Ответы на типовые вопросы сотрудников или клиентов</li>
+            <li>Честное сообщение, если нужной информации нет</li>
+            <li>Возможность передать сложный запрос человеку</li>
+          </ul>
+          <p class="fine">Обсуждаем ограниченные пилоты после проверки состава данных, канала работы и требований к качеству. Коммерческий запуск не является универсальным коробочным решением.</p>
+          <a class="btn secondary" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Обсудить пилот ↗</a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="solutions">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">AI-решения для компаний</p>
+        <h2 class="serif">Не набор модных функций. <em>Решение конкретной задачи.</em></h2>
+        <p class="lead">Проектируем и оцениваем внедрения индивидуально. Состав работ зависит от текущего процесса, качества исходной информации, используемых систем и требований к безопасности.</p>
+      </div>
+      <div class="grid">
+        <article class="card"><span class="number">01 / ЗНАНИЯ</span><h3>Корпоративные AI-ассистенты</h3><p>Поиск по регламентам, инструкциям, FAQ и другим согласованным источникам. При необходимости — ссылки на источник и передача нестандартного вопроса специалисту.</p></article>
+        <article class="card"><span class="number">02 / ОБРАЩЕНИЯ</span><h3>Помощники входящих заявок</h3><p>Первичные ответы, уточнение потребности, фиксация контакта и передача обращения ответственному сотруднику — после отдельной оценки сценария.</p></article>
+        <article class="card"><span class="number">03 / ОПЕРАЦИИ</span><h3>Автоматизация процессов</h3><p>Связь таблиц, CRM, мессенджеров и рабочих инструментов; устранение повторного ввода и ручной передачи данных там, где это оправдано.</p></article>
+      </div>
+      <p class="fine">Это направления проектной работы, а не список готовых интеграций. Перед началом согласуем границы, доступы, стоимость, сроки и критерии приёмки.</p>
     </div>
   </section>
 
   <section class="section" id="approach">
-    <div class="wrap split">
-      <div>
-        <p class="eyebrow">Диагностика прежде разработки</p>
-        <h2 class="serif">Не продаём автоматизацию, пока не поняли, <em>что именно мешает.</em></h2>
-        <p class="section-lead">На консультации разбираем один повторяющийся процесс: от входящего события до результата. Выясняем, какие сведения нужны на каждом шаге, где они находятся, кто ими пользуется и где возникают разрывы.</p>
-        <div class="list" style="margin-top:28px">
-          <div class="list-item"><span class="list-mark">◆</span><div><b>Границы процесса</b><span>Что запускает работу, где она заканчивается и какие этапы входят в разбор.</span></div></div>
-          <div class="list-item"><span class="list-mark">◆</span><div><b>Источники и ответственность</b><span>Какие документы, системы и люди поддерживают каждый этап.</span></div></div>
-          <div class="list-item"><span class="list-mark">◆</span><div><b>Пробелы и вопросы</b><span>Что подтверждено, чего не хватает и что нужно уточнить у владельца процесса.</span></div></div>
-          <div class="list-item"><span class="list-mark">◆</span><div><b>Приоритеты</b><span>Какие действия разумно выполнить сначала и есть ли основание переходить к автоматизации.</span></div></div>
-        </div>
-      </div>
-      <aside class="callout">
-        <p class="eyebrow">Принцип TAINA</p>
-        <h3 class="serif">Иногда лучший результат диагностики — решение пока ничего не автоматизировать.</h3>
-        <p>Если узкое место связано с неясной ответственностью, устаревшими правилами или отсутствующим решением руководителя, новый бот не устранит причину. Мы фиксируем это прямо.</p>
-      </aside>
-    </div>
-  </section>
-
-  <section class="section" id="result">
     <div class="wrap">
       <div class="section-head">
-        <p class="eyebrow">Что вы получаете</p>
-        <h2 class="serif">Не презентацию про технологии, а <em>рабочую картину процесса.</em></h2>
-        <p class="section-lead">Разбор ограничен одним согласованным процессом и информацией, которую можно безопасно обсуждать.</p>
+        <p class="eyebrow">Как мы работаем</p>
+        <h2 class="serif">Сначала ясность. <em>Потом автоматизация.</em></h2>
+        <p class="lead">Небольшие проверяемые шаги помогают не тратить бюджет на технологию, которая не решает реальную проблему.</p>
       </div>
-      <div class="deliverables">
-        <article class="deliverable"><b>Краткий письменный итог</b><p>Главные наблюдения по одному согласованному процессу после консультации.</p></article>
-        <article class="deliverable"><b>Основные узкие места</b><p>Где возникают задержки, повторы, ручные проверки или потери информации.</p></article>
-        <article class="deliverable"><b>До трёх рекомендаций</b><p>Приоритетные действия и следующий разумный шаг — без обязательства заказывать внедрение.</p></article>
+      <div class="steps">
+        <article class="step"><b>01 / DISCOVER</b><span>Разбираем один процесс, его участников, входные данные и результат.</span></article>
+        <article class="step"><b>02 / DESIGN</b><span>Определяем границы решения, ограничения и критерии проверки.</span></article>
+        <article class="step"><b>03 / PILOT</b><span>Проверяем узкий сценарий на согласованных и обезличенных данных.</span></article>
+        <article class="step"><b>04 / IMPROVE</b><span>Оцениваем результат и решаем, нужно ли расширение или сопровождение.</span></article>
       </div>
     </div>
   </section>
 
-  <section class="section" id="example">
+  <section class="section" id="consulting">
     <div class="wrap">
-      <div class="section-head">
-        <p class="eyebrow">Пример результата</p>
-        <h2 class="serif">Вот что остаётся у вас <em>после консультации.</em></h2>
-        <p class="section-lead">Не абстрактное «надо автоматизировать», а зафиксированная проблема, наблюдения и несколько конкретных следующих действий.</p>
-      </div>
-      <div class="sample-report">
-        <div class="sample-report-head">
-          <div>
-            <div class="sample-label">Учебный пример · вымышленные данные</div>
-            <h3>Разбор процесса обработки входящей заявки</h3>
+      <div class="offer">
+        <div>
+          <p class="eyebrow">ПЕРВЫЙ ШАГ · КОНСУЛЬТАЦИЯ</p>
+          <h2 class="serif">Разберите один процесс и поймите, что делать дальше.</h2>
+          <div class="price">5 000 ₽</div>
+          <p class="muted">Около 60 минут онлайн. Один повторяющийся процесс — от входящего события до результата.</p>
+          <div class="actions">
+            <a class="btn" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Обсудить задачу во VK ↗</a>
           </div>
-          <span class="sample-pill">Один процесс</span>
+          <p class="fine">Напишите в сообщения сообщества. Коротко опишите процесс и главную трудность — мы проверим, подходит ли запрос для такого формата, и согласуем время и оплату.</p>
         </div>
-        <div class="sample-grid">
-          <article class="sample-panel">
-            <h3>Как процесс устроен сейчас</h3>
-            <ul>
-              <li>Заявка приходит в чат.</li>
-              <li>Менеджер вручную переносит данные в таблицу.</li>
-              <li>Задача передаётся исполнителю в переписке.</li>
-              <li>Руководитель отдельно уточняет статус.</li>
-            </ul>
-          </article>
-          <article class="sample-panel">
-            <h3>Что требует внимания</h3>
-            <ul>
-              <li>Информация повторно вводится вручную.</li>
-              <li>Следующий ответственный не всегда назначен.</li>
-              <li>Статус заявки приходится выяснять отдельно.</li>
-            </ul>
-          </article>
-          <article class="sample-panel">
-            <h3>Рекомендации</h3>
-            <ul>
-              <li>Определить единое место фиксации заявок.</li>
-              <li>Назначать ответственного и следующий шаг.</li>
-              <li>После упорядочивания процесса оценить пользу уведомлений.</li>
-            </ul>
-          </article>
-          <article class="sample-panel">
-            <h3>Следующий разумный шаг</h3>
-            <ul>
-              <li>Сначала согласовать статусы и правила передачи заявки.</li>
-              <li>Затем отдельно оценить, какую часть передачи имеет смысл автоматизировать.</li>
-            </ul>
-          </article>
+        <div>
+          <div class="offer-meta">
+            <div class="meta-item"><b>ОБЪЁМ</b><span>Один повторяющийся процесс</span></div>
+            <div class="meta-item"><b>ФОРМАТ</b><span>Около 60 минут онлайн</span></div>
+            <div class="meta-item"><b>ИТОГ</b><span>Краткое письменное резюме</span></div>
+            <div class="meta-item"><b>РЕЗУЛЬТАТ</b><span>До трёх рекомендаций и следующий шаг</span></div>
+          </div>
+          <div class="note">Консультация не включает разработку или внедрение. Подходящий проект оценивается отдельно. Мы не обещаем ROI, экономию времени или рост продаж без измерений.</div>
         </div>
-        <div class="sample-next"><strong>Вывод:</strong> прежде чем подключать бота, стоит устранить неопределённость с ответственностью и статусом заявки. Автоматизация не исправит неясный процесс сама по себе.</div>
-      </div>
-      <p class="sample-disclaimer">Это демонстрация формата, а не клиентский кейс и не обещание такого же результата для любой компании. Выводы по вашей задаче формируются на встрече.</p>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="wrap">
-      <div class="section-head">
-        <p class="eyebrow">Формат консультации</p>
-        <h2 class="serif">Один созвон. <em>Один процесс.</em></h2>
-        <p class="section-lead">Встреча длится около 60 минут. До неё мы выбираем один повторяющийся процесс; после вы получаете короткий письменный итог с наблюдениями и рекомендациями.</p>
-      </div>
-      <div class="process">
-        <article><b>01 / DEFINE</b><span>Выбираем один повторяющийся процесс и его границы.</span></article>
-        <article><b>02 / TRACE</b><span>Уточняем этапы, участников и нужную информацию.</span></article>
-        <article><b>03 / MAP</b><span>Прослеживаем, как задача проходит от начала до результата.</span></article>
-        <article><b>04 / FIND</b><span>Находим узкие места, повторы и ручные проверки.</span></article>
-        <article><b>05 / NEXT</b><span>Фиксируем до трёх рекомендаций и следующий шаг.</span></article>
-      </div>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="wrap split">
-      <div>
-        <p class="eyebrow">Для кого</p>
-        <h2 class="serif">Когда повторяющаяся работа уже стала <em>дорогой привычкой.</em></h2>
-        <p class="section-lead">В первую очередь — для собственников и руководителей небольших сервисных компаний: агентств, образовательных и B2B-сервисов. Особенно полезно, если заявки и задачи проходят через нескольких сотрудников, чаты, таблицы или CRM, а контроль держится на постоянных ручных уточнениях.</p>
-      </div>
-      <div class="list">
-        <div class="list-item"><span class="list-mark">01</span><div><b>Собственник или руководитель</b><span>Хочет понять, почему процесс зависит от отдельных людей или постоянно требует ручного контроля.</span></div></div>
-        <div class="list-item"><span class="list-mark">02</span><div><b>Операционный руководитель</b><span>Видит задержки на стыках этапов, передачах и повторных проверках.</span></div></div>
-        <div class="list-item"><span class="list-mark">03</span><div><b>Небольшая команда</b><span>Хочет понять, что улучшить до того, как тратить бюджет на разработку.</span></div></div>
       </div>
     </div>
   </section>
@@ -394,79 +297,43 @@
   <section class="section" id="about">
     <div class="wrap split">
       <div>
-        <p class="eyebrow">Кто проводит разбор</p>
-        <h2 class="serif">Не продаём технологию вслепую. <em>Сначала разбираемся в работе.</em></h2>
-        <p class="section-lead">TAINA Studio — независимая практика на стыке управления процессами и AI/low-code автоматизации. Разбор проводит основатель TAINA Studio: в работе соединяются управленческий опыт и создание практических прототипов решений.</p>
+        <p class="eyebrow">О TAINA</p>
+        <h2 class="serif">Практика на стыке продукта, процессов и <em>AI.</em></h2>
+        <p class="lead">TAINA — небольшая AI-продуктовая практика: создаём собственные цифровые инструменты и проектируем прикладные решения для компаний. В работе используем n8n, GigaChat API, поиск по базе знаний и прототипирование low-code систем.</p>
       </div>
-      <aside class="callout">
-        <p class="eyebrow">Практический инструментарий</p>
-        <h3 class="serif">n8n · GigaChat API · базы знаний</h3>
-        <p>Используются инструменты автоматизации на n8n, GigaChat API, прототипы поиска по базе знаний и структурирования информации. Мы не выдаём собственные прототипы за клиентские внедрения и не обещаем экономический эффект без измерений.</p>
+      <aside class="product">
+        <p class="eyebrow">Принципы работы</p>
+        <ul class="checks">
+          <li>Не выдаём прототип за готовое внедрение</li>
+          <li>Не придумываем клиентские кейсы и цифры эффективности</li>
+          <li>Не подключаем данные компании без согласования границ и доступа</li>
+          <li>Не предлагаем AI там, где достаточно исправить процесс</li>
+        </ul>
+        <p class="fine">Демонстрационные сценарии не являются подтверждёнными коммерческими кейсами.</p>
       </aside>
-    </div>
-  </section>
-
-  <section class="section" id="pilot">
-    <div class="wrap">
-      <div class="offer">
-        <div>
-          <p class="eyebrow">КОНСУЛЬТАЦИЯ · 60 МИНУТ</p>
-          <h2 class="serif">Разберите один процесс и определите разумный следующий шаг.</h2>
-          <div class="price">5 000 ₽</div>
-          <p class="muted">Стоимость консультации — 5 000 ₽. Около 60 минут онлайн.</p>
-          <div class="actions">
-            <a class="btn" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Обсудить задачу во VK ↗</a>
-          </div>
-          <p class="fine">После перехода откройте сообщения сообщества и нажмите «Написать сообщение». Коротко опишите процесс и основную трудность. Мы уточним задачу, подтвердим формат, предложим время и согласуем оплату. Сайт не собирает и не хранит заявки.</p>
-        </div>
-        <div>
-          <div class="offer-meta">
-            <div class="meta-item"><b>ОБЪЁМ</b><span>Один повторяющийся процесс</span></div>
-            <div class="meta-item"><b>ВСТРЕЧА</b><span>Около 60 минут онлайн</span></div>
-            <div class="meta-item"><b>ИТОГ</b><span>Краткий письменный разбор после встречи</span></div>
-            <div class="meta-item"><b>РЕЗУЛЬТАТ</b><span>До трёх рекомендаций и план следующего шага</span></div>
-          </div>
-          <div class="note">Встреча и письменный итог входят в стоимость. Разработка бота, AI-ассистента и интеграций не входит: подходящее внедрение оценивается отдельно, после уточнения задачи и доступной загрузки.</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="limits">
-    <div class="wrap">
-      <div class="section-head">
-        <p class="eyebrow">Границы и безопасность</p>
-        <h2 class="serif">Сразу обозначаем, <em>что входит и чего здесь нет.</em></h2>
-      </div>
-      <div class="limits">
-        <article class="limit"><h3>Разбираем один процесс</h3><p>Это не аудит всей компании, информационной безопасности или соответствия стандартам.</p></article>
-        <article class="limit"><h3>Консультация, а не внедрение</h3><p>Код, настройка бота и интеграции не входят в стоимость. Возможное внедрение оценивается отдельно.</p></article>
-        <article class="limit"><h3>Без доступа к вашим системам</h3><p>Не присылайте документы и персональные, клиентские, медицинские, финансовые или коммерчески чувствительные данные. Достаточно обезличенного описания процесса.</p></article>
-        <article class="limit"><h3>Без обещаний ROI</h3><p>Мы фиксируем наблюдения и рекомендации, но не гарантируем заранее экономию времени или рост выручки.</p></article>
-      </div>
     </div>
   </section>
 
   <section class="section" id="faq">
     <div class="wrap">
       <div class="section-head">
-        <p class="eyebrow">Вопросы перед стартом</p>
-        <h2 class="serif">Коротко и без обещаний лишнего.</h2>
+        <p class="eyebrow">Вопросы</p>
+        <h2 class="serif">Честно о возможностях и <em>границах.</em></h2>
       </div>
       <div class="faq">
-        <details><summary>Вы сразу разработаете AI-бота?</summary><p>Нет. Консультация помогает понять задачу и определить следующий шаг. Разработка, настройка и интеграции — отдельная работа с самостоятельной оценкой сроков и стоимости.</p></details>
-        <details><summary>Что я получу после встречи?</summary><p>Краткий письменный итог: схема одного процесса, основные узкие места, до трёх рекомендаций и возможный следующий шаг — изменить порядок работы или оценить автоматизацию.</p></details>
-        <details><summary>Что нужно подготовить?</summary><p>Кратко опишите один повторяющийся процесс и его участников. Для консультации не нужно отправлять документы: достаточно обезличенного описания и примеров без персональных или конфиденциальных данных.</p></details>
-        <details><summary>Что, если автоматизация не нужна?</summary><p>Так и скажем. Иногда сначала достаточно уточнить роли, правила или порядок действий. Не будем предлагать разработку без понятной задачи.</p></details>
-        <details><summary>Как записаться?</summary><p>Откройте сообщество TAINA Studio во VK и нажмите «Написать сообщение». Опишите один процесс и основную трудность — без персональных и конфиденциальных данных. Мы проверим, подходит ли задача для консультации, затем согласуем время и оплату.</p></details>
-        <details><summary>Можно ли передать реальные клиентские документы?</summary><p>Нет. Не отправляйте персональные, клиентские, медицинские, финансовые и коммерчески чувствительные сведения. Для обсуждения используйте обезличенное описание процесса.</p></details>
+        <details><summary>Можно ли уже купить Knowledge Map?</summary><p>Пока нет. Мы готовим ранний запуск: проверяем пользовательский сценарий, инструкции и выдачу продукта. Планируемая стартовая цена — 1 490 ₽; оплата на сайте ещё не подключена.</p></details>
+        <details><summary>Knowledge Map — это облачная корпоративная база знаний?</summary><p>Нет. Текущая V1 — локальный инструмент с хранением данных в браузере одного устройства. Нет облачной синхронизации, командного доступа и встроенной AI-модели. Не используйте его для конфиденциальных данных.</p></details>
+        <details><summary>Вы можете внедрить AI-ассистента в компанию?</summary><p>Можно обсудить ограниченный пилот. Сначала нужно оценить материалы, сценарий, канал, требования к качеству и доступную инфраструктуру. Готовность и цену подтверждаем после оценки.</p></details>
+        <details><summary>Что входит в консультацию за 5 000 ₽?</summary><p>Около 60 минут по одному процессу, краткое письменное резюме, основные узкие места, до трёх рекомендаций и следующий разумный шаг. Разработка не входит.</p></details>
+        <details><summary>Можно прислать документы компании?</summary><p>Не отправляйте персональные, клиентские, медицинские, финансовые или коммерчески чувствительные сведения через открытые каналы. Для первого разговора достаточно обезличенного описания процесса.</p></details>
+        <details><summary>У вас уже есть клиентские кейсы с измеренным результатом?</summary><p>Мы не публикуем неподтверждённые результаты. Демонстрации показывают принцип работы, но не являются коммерческими кейсами с измеренным ROI.</p></details>
       </div>
     </div>
   </section>
 </main>
 <footer class="wrap footer">
-  <div><div class="brand">TAINA<span class="brand-mark">◆</span></div><div>Сначала ясность в процессе. Затем — разумная автоматизация.</div></div>
-  <div>© TAINA Studio · 2026</div>
+  <div><div class="brand">TAINA<span class="brand-mark">◆</span></div><div>AI Products & Business Automation</div></div>
+  <div><a href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Связаться во VK ↗</a><br>© TAINA · 2026</div>
 </footer>
 <a class="btn mobile-cta" href="https://vk.ru/tainastudio" target="_blank" rel="noopener noreferrer">Обсудить задачу ↗</a>
 </body>
