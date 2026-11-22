@@ -112,17 +112,21 @@ def main():
                 parser.errors.append("VK target=_blank link missing safe rel attributes")
 
     required = [
-        "TAINA STUDIO / AI PROCESS CONSULTING",
+        "TAINA STUDIO / РАЗБОР БИЗНЕС-ПРОЦЕССОВ",
         "5 000 ₽",
         "60 минут онлайн",
-        "Записаться на консультацию в VK",
+        "Обсудить задачу",
         "УЧЕБНЫЙ ПРИМЕР · ВЫМЫШЛЕННЫЕ ДАННЫЕ",
+        'id="example"',
+        'id="about"',
+        'name="description"',
+        'rel="icon"',
     ]
     for phrase in required:
         if phrase not in source:
             parser.errors.append("missing current offer element: " + phrase)
 
-    obsolete = ["9 900 ₽", "5–7 часов", "Первые два платных пилота", "1 490 ₽"]
+    obsolete = ["9 900 ₽", "5–7 часов", "Первые два платных пилота", "1 490 ₽", "Стартовая цена"]
     for phrase in obsolete:
         if phrase in source:
             parser.errors.append("obsolete offer element remains: " + phrase)
