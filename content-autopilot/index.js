@@ -7,6 +7,13 @@ const { isInternalRequestAuthorized, isTelegramWebhookAuthorized, isTelegramOwne
 const { getPendingDecision } = require('./src/schedule');
 const { getReadiness } = require('./src/preflight');
 const { startApprovedAction } = require('./src/callback');
+const {
+  beginHandoff,
+  completeHandoff,
+  completeDraftDelivery,
+  markNeedsReview,
+  recoverInterruptedOperation,
+} = require('./src/operation-state');
 
 const app = express();
 app.use(express.json({ limit: '64kb' }));
@@ -33,11 +40,7 @@ async function resolveApprove(pending) {
 
     // Persist intent before the Telegram side effect. A restart during dispatch
     // must become manual review, never an automatic second send.
-    const dispatching = {
-      ...current,
-      status: 'handoff_dispatching',
-      handoffStartedAt: new Date().toISOString(),
-    };
+    const dispatching = beginHandoff(current, new Date().toISOString());
     savePending(dispatching);
 
     try {
@@ -49,22 +52,15 @@ async function resolveApprove(pending) {
         throw new Error('Telegram returned no valid handoff message ID');
       }
 
-      savePending({
-        ...dispatching,
-        status: 'approved_for_smmplanner',
-        approvedAt: new Date().toISOString(),
-        handoffMessageId,
-      });
+      savePending(completeHandoff(dispatching, handoffMessageId, new Date().toISOString()));
     } catch (err) {
       const latest = loadPending();
       if (latest && latest.postId === current.postId && latest.status === 'handoff_dispatching') {
-        savePending({
-          ...latest,
-          status: 'needs_review',
-          needsReviewAt: new Date().toISOString(),
-          lastErrorStage: 'smmplanner_handoff',
-          lastErrorCode: err && err.code === 'TELEGRAM_TIMEOUT' ? 'TELEGRAM_TIMEOUT' : 'HANDOFF_OUTCOME_UNKNOWN',
-        });
+        savePending(markNeedsReview(latest, {
+          stage: 'smmplanner_handoff',
+          code: err && err.code === 'TELEGRAM_TIMEOUT' ? 'TELEGRAM_TIMEOUT' : 'HANDOFF_OUTCOME_UNKNOWN',
+          at: new Date().toISOString(),
+        }));
       }
       // Avoid raw error text here: a transport error may contain the bot API URL.
       throw new Error('Передача текста в Telegram имеет неоднозначный результат. Проверьте личный чат вручную; автоматического повтора не будет.');
@@ -170,21 +166,18 @@ async function checkAndSchedule() {
       if (!Number.isSafeInteger(messageId) || messageId <= 0) {
         throw new Error('Telegram returned no valid draft message ID');
       }
-      pending.telegramMessageId = messageId;
-      pending.status = 'pending';
-      savePending(pending);
+      const awaitingApproval = completeDraftDelivery(pending, messageId);
+      savePending(awaitingApproval);
       console.log('[content-autopilot] Draft ' + post.date + ' sent for owner approval');
       return { status: 'draft_sent', postId: post.date };
     } catch (err) {
       const latest = loadPending();
       if (latest && latest.postId === post.date && latest.status === 'creating_draft') {
-        savePending({
-          ...latest,
-          status: 'needs_review',
-          needsReviewAt: new Date().toISOString(),
-          lastErrorStage: 'draft_delivery',
-          lastErrorCode: err && err.code === 'TELEGRAM_TIMEOUT' ? 'TELEGRAM_TIMEOUT' : 'DRAFT_OUTCOME_UNKNOWN',
-        });
+        savePending(markNeedsReview(latest, {
+          stage: 'draft_delivery',
+          code: err && err.code === 'TELEGRAM_TIMEOUT' ? 'TELEGRAM_TIMEOUT' : 'DRAFT_OUTCOME_UNKNOWN',
+          at: new Date().toISOString(),
+        }));
       }
       await telegram.sendPlainMessage(
         '⚠️ TAINA: отправка черновика ' + post.date +
@@ -289,23 +282,13 @@ cron.schedule(
 );
 
 (function inspectPendingOnStartup() {
-  let pending = loadPending();
-  if (!pending) return;
+  const current = loadPending();
+  if (!current) return;
 
-  const interruptedOperation =
-    pending.status === 'handoff_dispatching' ||
-    pending.status === 'creating_draft' ||
-    (pending.status === 'pending' && !pending.telegramMessageId);
+  const recovery = recoverInterruptedOperation(current, new Date().toISOString());
+  let pending = recovery.record;
 
-  if (interruptedOperation) {
-    const stage = pending.status === 'handoff_dispatching' ? 'smmplanner_handoff' : 'draft_delivery';
-    pending = {
-      ...pending,
-      status: 'needs_review',
-      needsReviewAt: new Date().toISOString(),
-      lastErrorStage: stage,
-      lastErrorCode: 'PROCESS_RESTART_DURING_EXTERNAL_OPERATION',
-    };
+  if (recovery.interrupted) {
     savePending(pending);
     console.error('[content-autopilot] An external Telegram operation was interrupted. Manual review is required; automatic retry is disabled.');
     telegram.sendPlainMessage(
