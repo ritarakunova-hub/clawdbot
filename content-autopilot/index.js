@@ -186,6 +186,12 @@ async function checkAndSchedule() {
           lastErrorCode: err && err.code === 'TELEGRAM_TIMEOUT' ? 'TELEGRAM_TIMEOUT' : 'DRAFT_OUTCOME_UNKNOWN',
         });
       }
+      await telegram.sendPlainMessage(
+        '⚠️ TAINA: отправка черновика ' + post.date +
+        ' не подтверждена. Проверьте личный чат вручную; автоматическая повторная отправка заблокирована.'
+      ).catch(() => {
+        console.error('[content-autopilot] Could not send the manual-review notice; inspect pending state on the persistent volume.');
+      });
       throw new Error('Отправка черновика в Telegram не подтверждена. Проверьте личный чат вручную; повторная отправка заблокирована.');
     }
   } finally {
