@@ -147,13 +147,14 @@ async function checkAndSchedule() {
         status: 'topic_reminder_pending',
         createdAt: new Date().toISOString(),
       };
-      savePending(reminder);
+      const dispatching = beginTopicReminder(reminder, new Date().toISOString());
+      savePending(dispatching);
 
       try {
         const response = await telegram.sendTopicReminder(post);
         const messageId = response && response.result && response.result.message_id;
         const completed = completeTopicReminder(
-          beginTopicReminder(reminder, new Date().toISOString()),
+          dispatching,
           messageId,
           new Date().toISOString()
         );
@@ -161,12 +162,8 @@ async function checkAndSchedule() {
         return { status: 'topic_reminder', postId: post.date };
       } catch (err) {
         const latest = loadPending();
-        if (latest && latest.postId === post.date &&
-            ['topic_reminder_pending', 'topic_reminder_dispatching'].includes(latest.status)) {
-          const dispatching = latest.status === 'topic_reminder_pending'
-            ? beginTopicReminder(latest, new Date().toISOString())
-            : latest;
-          savePending(markNeedsReview(dispatching, {
+        if (latest && latest.postId === post.date && latest.status === 'topic_reminder_dispatching') {
+          savePending(markNeedsReview(latest, {
             stage: 'topic_reminder',
             code: err && err.code === 'TELEGRAM_TIMEOUT' ? 'TELEGRAM_TIMEOUT' : 'REMINDER_OUTCOME_UNKNOWN',
             at: new Date().toISOString(),
