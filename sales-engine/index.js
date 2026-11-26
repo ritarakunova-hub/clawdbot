@@ -5,7 +5,7 @@ const { runPipeline } = require('./src/pipeline');
 const { runFollowUpCheck } = require('./src/followup');
 const sheets = require('./src/sheets');
 const telegram = require('./src/telegram');
-const { deliverLeadCard, STATUS_NEEDS_REVIEW, STATUS_DISPATCHING } = require('./src/notification');
+const { deliverLeadCard, canRetryLeadNotification } = require('./src/notification');
 const {
   safeEqual,
   verifyBasicAuth,
@@ -206,9 +206,9 @@ app.post('/notifications/retry', requireAuth, requireCsrf, async (req, res) => {
     releaseOperation('notification-retry');
     return res.status(404).send('Лид не найден.');
   }
-  if (![STATUS_NEEDS_REVIEW, STATUS_DISPATCHING].includes(lead.status)) {
+  if (!canRetryLeadNotification(lead)) {
     releaseOperation('notification-retry');
-    return res.status(409).send('Повторная отправка разрешена только для уведомлений, требующих проверки.');
+    return res.status(409).send('Повторная отправка доступна для уведомлений, требующих проверки, и старых карточек без сохранённого message_id.');
   }
 
   res.status(202).send('Повторная отправка карточки запущена. Проверьте Telegram.');
