@@ -119,6 +119,7 @@ async function main() {
     assert.equal(getPendingDecision({ postId: '2026-11-20', status: 'pending' }, '2026-11-20'), 'keep_pending');
     assert.equal(getPendingDecision({ postId: '2026-11-20', status: 'creating_draft' }, '2026-11-20'), 'keep_pending');
     assert.equal(getPendingDecision({ postId: '2026-11-20', status: 'handoff_dispatching' }, '2026-11-20'), 'keep_pending');
+    assert.equal(getPendingDecision({ postId: '2026-11-20', status: 'topic_reminder_dispatching' }, '2026-11-20'), 'keep_pending');
     assert.equal(getPendingDecision({ postId: '2026-11-20', status: 'needs_review' }, '2026-11-20'), 'keep_pending');
     assert.equal(getPendingDecision({ postId: '2026-11-20', status: 'approved_for_smmplanner' }, '2026-11-20'), 'already_processed');
     assert.equal(getPendingDecision({ postId: '2026-11-20', status: 'cancelled' }, '2026-11-20'), 'already_processed');
