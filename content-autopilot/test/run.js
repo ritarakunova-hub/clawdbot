@@ -70,7 +70,7 @@ async function main() {
     assert.equal(ready.directPublishing, false);
     assert.ok(!JSON.stringify(ready).includes('fake-telegram-token'));
 
-    const invalid = getReadiness({ ...env, TELEGRAM_BOT_TOKEN: '', PENDING_FILE: '' });
+    const invalid = getReadiness({ ...env, TELEGRAM_BOT_TOKEN: '', TELEGRAM_APPROVER_ID: '', PENDING_FILE: '' });
     assert.equal(invalid.ready, false);
     assert.ok(invalid.missing.includes('TELEGRAM_BOT_TOKEN'));
     assert.ok(invalid.missing.includes('PENDING_FILE'));
