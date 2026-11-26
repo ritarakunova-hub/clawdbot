@@ -61,16 +61,28 @@ function draftKeyboard(postId) {
   };
 }
 
+const TELEGRAM_API_TIMEOUT_MS = 15000;
+
 async function apiCall(method, payload) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) throw new Error('TELEGRAM_BOT_TOKEN is not configured');
 
   const url = 'https://api.telegram.org/bot' + token + '/' + method;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(TELEGRAM_API_TIMEOUT_MS),
+    });
+  } catch (err) {
+    // Do not include the request URL or raw fetch error: Telegram URLs contain the bot token.
+    const reason = err && err.name === 'TimeoutError'
+      ? 'timed out after ' + TELEGRAM_API_TIMEOUT_MS + 'ms'
+      : 'request failed (' + (err && err.name ? err.name : 'network error') + ')';
+    throw new Error('Telegram API (' + method + ') ' + reason + '; external outcome may be unknown');
+  }
 
   const body = await response.json().catch(() => null);
   if (!response.ok || !body || body.ok !== true) {
@@ -166,4 +178,5 @@ module.exports = {
   removeDraftButtons,
   markDraftDecided,
   answerCallbackQuery,
+  TELEGRAM_API_TIMEOUT_MS,
 };
