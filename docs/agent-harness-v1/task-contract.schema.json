@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:taina:agent-task:1.0",
+  "title": "TAINA Agent Harness Task Contract V1",
+  "description": "Versioned request and result envelope for TAINA AI and automation workflows.",
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/$defs/taskRequest" },
+    { "$ref": "#/$defs/taskResult" }
+  ],
+  "$defs": {
+    "taskRequest": {
+      "type": "object",
+      "required": ["schema_version", "task_id", "task_type", "source", "input", "permissions", "created_at"],
+      "properties": {
+        "schema_version": { "const": "1.0" },
+        "task_id": { "type": "string", "format": "uuid" },
+        "task_type": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)+$",
+          "examples": ["messages.prepare_draft", "knowledge.answer_question"]
+        },
+        "source": {
+          "type": "object",
+          "required": ["system", "channel"],
+          "properties": {
+            "system": { "type": "string", "minLength": 1, "maxLength": 100 },
+            "channel": { "type": "string", "minLength": 1, "maxLength": 100 },
+            "event_id": { "type": "string", "maxLength": 256 },
+            "actor_id": { "type": "string", "maxLength": 256 }
+          },
+          "additionalProperties": false
+        },
+        "input": { "type": "object", "description": "Task-specific input. Validate against the task_type handler schema." },
+        "context": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["kind", "source"],
+                "properties": {
+                  "kind": { "type": "string", "minLength": 1, "maxLength": 80 },
+                  "source": { "type": "string", "minLength": 1, "maxLength": 2048 },
+                  "retrieved_at": { "type": "string", "format": "date-time" },
+                  "content": {},
+                  "trust": { "enum": ["untrusted", "verified", "system"] }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "permissions": {
+          "type": "object",
+          "required": ["allowed_tools", "auto_execute", "approval_required"],
+          "properties": {
+            "allowed_tools": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]+$" }
+            },
+            "auto_execute": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]+$" }
+            },
+            "approval_required": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]+$" }
+            }
+          },
+          "additionalProperties": false
+        },
+        "idempotency_key": { "type": "string", "minLength": 8, "maxLength": 200 },
+        "metadata": { "type": "object" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false,
+      "$comment": "The handler MUST additionally enforce auto_execute and approval_required are subsets of allowed_tools."
+    },
+    "taskResult": {
+      "type": "object",
+      "required": ["schema_version", "task_id", "status", "result", "error", "requires_approval", "execution_metadata"],
+      "properties": {
+        "schema_version": { "const": "1.0" },
+        "task_id": { "type": "string", "format": "uuid" },
+        "status": {
+          "enum": ["received", "running", "waiting_approval", "completed", "failed", "cancelled"]
+        },
+        "result": { "type": ["object", "array", "string", "number", "boolean", "null"] },
+        "error": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["code", "message", "stage", "retryable"],
+              "properties": {
+                "code": { "type": "string", "minLength": 1, "maxLength": 100 },
+                "message": { "type": "string", "maxLength": 2000 },
+                "stage": { "type": "string", "maxLength": 100 },
+                "retryable": { "type": "boolean" },
+                "details": { "type": "object" }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "requires_approval": { "type": "boolean" },
+        "approval": {
+          "type": "object",
+          "required": ["approval_id", "action", "summary"],
+          "properties": {
+            "approval_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+            "action": { "type": "string", "minLength": 1, "maxLength": 120 },
+            "summary": { "type": "string", "minLength": 1, "maxLength": 2000 },
+            "expires_at": { "type": "string", "format": "date-time" }
+          },
+          "additionalProperties": false
+        },
+        "execution_metadata": {
+          "type": "object",
+          "required": ["attempt"],
+          "properties": {
+            "workflow_id": { "type": "string", "maxLength": 200 },
+            "started_at": { "type": "string", "format": "date-time" },
+            "finished_at": { "type": "string", "format": "date-time" },
+            "attempt": { "type": "integer", "minimum": 1 },
+            "model": { "type": "string", "maxLength": 200 },
+            "duration_ms": { "type": "integer", "minimum": 0 },
+            "idempotency_key": { "type": "string", "maxLength": 200 },
+            "correlation_id": { "type": "string", "maxLength": 200 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "waiting_approval" } }, "required": ["status"] },
+          "then": {
+            "properties": { "requires_approval": { "const": true } },
+            "required": ["approval"]
+          }
+        },
+        {
+          "if": { "properties": { "status": { "const": "failed" } }, "required": ["status"] },
+          "then": { "properties": { "error": { "type": "object" } } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "completed" } }, "required": ["status"] },
+          "then": { "properties": { "error": { "type": "null" } } }
+        }
+      ],
+      "additionalProperties": false
+    }
+  }
+}
