@@ -11,6 +11,12 @@ const STATUS_NEEDS_REVIEW = 'Уведомление требует провер�
  * Ambiguous network/storage outcomes fail closed. No automatic resend is
  * attempted because Telegram may already have accepted the first request.
  */
+function canRetryLeadNotification(lead) {
+  if (!lead || typeof lead !== 'object') return false;
+  if ([STATUS_NEEDS_REVIEW, STATUS_DISPATCHING].includes(lead.status)) return true;
+  return lead.status === STATUS_READY && !String(lead.telegram_message_id || '').trim();
+}
+
 async function deliverLeadCard(lead, { sheets, telegram }) {
   if (!lead || !lead.id || !sheets || !telegram) {
     throw new TypeError('notification_dependencies_missing');
@@ -67,5 +73,6 @@ module.exports = {
   STATUS_READY,
   STATUS_DISPATCHING,
   STATUS_NEEDS_REVIEW,
+  canRetryLeadNotification,
   deliverLeadCard,
 };
