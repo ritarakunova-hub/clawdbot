@@ -20,6 +20,13 @@ const { isInternalRequestAuthorized, isTelegramWebhookAuthorized, isTelegramOwne
 const { getPendingDecision } = require('../src/schedule');
 const { getReadiness } = require('../src/preflight');
 const { startApprovedAction } = require('../src/callback');
+const {
+  beginHandoff,
+  completeHandoff,
+  completeDraftDelivery,
+  markNeedsReview,
+  recoverInterruptedOperation,
+} = require('../src/operation-state');
 
 async function main() {
   // 1. Webhook and owner authorization.
@@ -121,7 +128,65 @@ async function main() {
     console.log('OK: approved handoffs, cancellations and topic reminders are not recreated');
   }
 
-  // 6. Date lookup and invalid calendar entries.
+  // 6. External operation state transitions fail closed and are independently testable.
+  {
+    const creating = {
+      postId: '2026-11-20',
+      text: 'Approved content',
+      status: 'creating_draft',
+    };
+    const pending = completeDraftDelivery(creating, 101);
+    assert.equal(pending.status, 'pending');
+    assert.equal(pending.telegramMessageId, 101);
+
+    const dispatching = beginHandoff(pending, '2026-11-20T10:00:00.000Z');
+    assert.equal(dispatching.status, 'handoff_dispatching');
+    assert.equal(dispatching.handoffStartedAt, '2026-11-20T10:00:00.000Z');
+
+    const completed = completeHandoff(dispatching, 202, '2026-11-20T10:00:05.000Z');
+    assert.equal(completed.status, 'approved_for_smmplanner');
+    assert.equal(completed.handoffMessageId, 202);
+
+    const uncertainHandoff = markNeedsReview(dispatching, {
+      stage: 'smmplanner_handoff',
+      code: 'TELEGRAM_TIMEOUT',
+      at: '2026-11-20T10:00:15.000Z',
+    });
+    assert.equal(uncertainHandoff.status, 'needs_review');
+    assert.equal(uncertainHandoff.lastErrorCode, 'TELEGRAM_TIMEOUT');
+
+    const recoveredDispatch = recoverInterruptedOperation(dispatching, '2026-11-20T10:01:00.000Z');
+    assert.equal(recoveredDispatch.interrupted, true);
+    assert.equal(recoveredDispatch.record.status, 'needs_review');
+    assert.equal(recoveredDispatch.record.lastErrorStage, 'smmplanner_handoff');
+
+    const recoveredDraft = recoverInterruptedOperation(creating, '2026-11-20T10:01:00.000Z');
+    assert.equal(recoveredDraft.interrupted, true);
+    assert.equal(recoveredDraft.record.status, 'needs_review');
+    assert.equal(recoveredDraft.record.lastErrorStage, 'draft_delivery');
+
+    const orphanPending = recoverInterruptedOperation({
+      postId: '2026-11-20',
+      text: 'Ambiguous old draft',
+      status: 'pending',
+      telegramMessageId: null,
+    }, '2026-11-20T10:01:00.000Z');
+    assert.equal(orphanPending.interrupted, true);
+    assert.equal(orphanPending.record.status, 'needs_review');
+
+    const safePending = recoverInterruptedOperation(pending, '2026-11-20T10:01:00.000Z');
+    assert.equal(safePending.interrupted, false);
+    assert.equal(safePending.record, pending);
+
+    assert.throws(() => beginHandoff(creating, 'now'), /pending draft/);
+    assert.throws(() => beginHandoff({ ...pending, telegramMessageId: null }, 'now'), /telegramMessageId/);
+    assert.throws(() => completeHandoff(pending, 202, 'now'), /dispatching handoff/);
+    assert.throws(() => completeDraftDelivery(pending, 303), /creating_draft/);
+    assert.throws(() => markNeedsReview(pending, { stage: 'x', code: 'y', at: 'now' }), /cannot be moved/);
+    console.log('OK: draft, handoff, completion and recovery transitions are fail-closed');
+  }
+
+  // 7. Date lookup and invalid calendar entries.
   {
     const post = getPostForDate('2026-11-20');
     assert.ok(post && post.type === 'full');
@@ -136,7 +201,7 @@ async function main() {
     console.log('OK: date lookup and calendar validation work');
   }
 
-  // 7. Approval preview clearly separates review from actual publishing.
+  // 8. Approval preview clearly separates review from actual publishing.
   {
     const post = { date: '2026-11-20', rubric: 'Практика', title: 'Тест <b>', text: 'A & B' };
     const preview = formatDraftPreview(post);
@@ -151,7 +216,7 @@ async function main() {
     console.log('OK: previews and topic reminders do not promise direct publishing');
   }
 
-  // 8. Telegram callbacks support approval for SMMplanner and cancellation only.
+  // 9. Telegram callbacks support approval for SMMplanner and cancellation only.
   {
     const data = buildCallbackData('approve', '2026-11-20');
     assert.equal(data, 'approve:2026-11-20');
@@ -164,7 +229,7 @@ async function main() {
     console.log('OK: callback payloads allow only approve/cancel with real dates');
   }
 
-  // 9. Approved copy is sent to the owner's private chat with an SMMplanner link.
+  // 10. Approved copy is sent to the owner's private chat with an SMMplanner link.
   {
     const originalFetch = global.fetch;
     let captured;
@@ -198,7 +263,7 @@ async function main() {
     }
   }
 
-  // 10. Telegram transport timeout is bounded and error text never leaks the bot token.
+  // 11. Telegram transport timeout is bounded and error text never leaks the bot token.
   {
     const originalFetch = global.fetch;
     try {
@@ -226,7 +291,7 @@ async function main() {
     }
   }
 
-  // 11. Telegram callback is acknowledged before a slow action starts.
+  // 12. Telegram callback is acknowledged before a slow action starts.
   {
     const events = [];
     let finishAction;
@@ -251,7 +316,7 @@ async function main() {
     console.log('OK: Telegram button acknowledgement does not block the handoff action');
   }
 
-  // 12. Pending state is written atomically and read back.
+  // 13. Pending state is written atomically and read back.
   {
     clearPending();
     const pending = {
@@ -266,7 +331,7 @@ async function main() {
     console.log('OK: pending state is persisted and cleared');
   }
 
-  // 13. Timezone helper returns an ISO date.
+  // 14. Timezone helper returns an ISO date.
   {
     assert.match(todayInTimezone('Europe/Moscow'), /^\d{4}-\d{2}-\d{2}$/);
     console.log('OK: timezone helper returns YYYY-MM-DD');
