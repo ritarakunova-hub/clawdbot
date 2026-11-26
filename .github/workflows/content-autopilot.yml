@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - "feat/taina-smm-manual-publishing"
+      - "fix/taina-smm-handoff-safety-v1"
     paths:
       - "content-autopilot/**"
       - ".github/workflows/content-autopilot.yml"
