@@ -5,6 +5,7 @@ const path = require('node:path');
 process.env.PENDING_FILE = path.join(os.tmpdir(), 'taina-pending-test-' + process.pid + '.json');
 process.env.TELEGRAM_BOT_TOKEN = 'test-bot-token';
 process.env.TELEGRAM_CHAT_ID = '123456789';
+process.env.TELEGRAM_APPROVER_ID = '987654321';
 
 const { getPostForDate, loadPosts, todayInTimezone, validatePosts } = require('../src/posts');
 const {
@@ -29,10 +30,16 @@ async function main() {
     assert.equal(isTelegramWebhookAuthorized('secret', ''), false);
     assert.equal(isTelegramWebhookAuthorized('wrong', 'secret'), false);
     assert.equal(isTelegramWebhookAuthorized('secret', 'secret'), true);
-    assert.equal(isTelegramOwnerCallback({ message: { chat: { id: 123 } }, from: { id: 123 } }, '123'), true);
-    assert.equal(isTelegramOwnerCallback({ message: { chat: { id: 123 } }, from: { id: 456 } }, '123'), false);
-    assert.equal(isTelegramOwnerCallback({ message: { chat: { id: -100 } }, from: { id: 123 } }, '123'), false);
-    assert.equal(isTelegramOwnerCallback({ from: { id: 123 } }, '123'), false);
+    const ownerCallback = {
+      message: { message_id: 77, chat: { id: 123 } },
+      from: { id: 456 },
+    };
+    assert.equal(isTelegramOwnerCallback(ownerCallback, '123', '456', 77), true);
+    assert.equal(isTelegramOwnerCallback(ownerCallback, '123', '999', 77), false);
+    assert.equal(isTelegramOwnerCallback(ownerCallback, '-100', '456', 77), false);
+    assert.equal(isTelegramOwnerCallback(ownerCallback, '123', '456', 78), false);
+    assert.equal(isTelegramOwnerCallback(ownerCallback, '123', '456', null), false);
+    assert.equal(isTelegramOwnerCallback({ from: { id: 456 } }, '123', '456', 77), false);
     console.log('OK: internal endpoint, webhook and owner callbacks are authenticated');
   }
 
@@ -41,6 +48,7 @@ async function main() {
     const env = {
       TELEGRAM_BOT_TOKEN: 'fake-telegram-token',
       TELEGRAM_CHAT_ID: '123456789',
+      TELEGRAM_APPROVER_ID: '987654321',
       TELEGRAM_WEBHOOK_SECRET: 'fake-webhook-secret',
       INTERNAL_API_SECRET: 'fake-internal-secret',
       PENDING_FILE: path.join(os.tmpdir(), 'taina-ready-test-' + process.pid, 'pending.json'),
@@ -57,6 +65,11 @@ async function main() {
     assert.equal(invalid.ready, false);
     assert.ok(invalid.missing.includes('TELEGRAM_BOT_TOKEN'));
     assert.ok(invalid.missing.includes('PENDING_FILE'));
+    assert.ok(invalid.missing.includes('TELEGRAM_APPROVER_ID'));
+
+    const invalidApprover = getReadiness({ ...env, TELEGRAM_APPROVER_ID: 'not-a-number' });
+    assert.equal(invalidApprover.ready, false);
+    assert.ok(invalidApprover.invalid.includes('TELEGRAM_APPROVER_ID'));
     console.log('OK: readiness validates only the handoff service configuration and writable storage');
   }
 
@@ -95,6 +108,9 @@ async function main() {
   {
     assert.equal(getPendingDecision(null, '2026-11-20'), 'create');
     assert.equal(getPendingDecision({ postId: '2026-11-20', status: 'pending' }, '2026-11-20'), 'keep_pending');
+    assert.equal(getPendingDecision({ postId: '2026-11-20', status: 'creating_draft' }, '2026-11-20'), 'keep_pending');
+    assert.equal(getPendingDecision({ postId: '2026-11-20', status: 'handoff_dispatching' }, '2026-11-20'), 'keep_pending');
+    assert.equal(getPendingDecision({ postId: '2026-11-20', status: 'needs_review' }, '2026-11-20'), 'keep_pending');
     assert.equal(getPendingDecision({ postId: '2026-11-20', status: 'approved_for_smmplanner' }, '2026-11-20'), 'already_processed');
     assert.equal(getPendingDecision({ postId: '2026-11-20', status: 'cancelled' }, '2026-11-20'), 'already_processed');
     assert.equal(getPendingDecision({ postId: '2026-11-20', status: 'topic_reminder' }, '2026-11-20'), 'already_processed');
@@ -167,6 +183,8 @@ async function main() {
       });
       assert.equal(result.result.message_id, 42);
       assert.equal(captured.url, 'https://api.telegram.org/bottest-bot-token/sendMessage');
+      assert.equal(captured.options.signal instanceof AbortSignal, true);
+      assert.equal(captured.options.signal.aborted, false);
       const payload = JSON.parse(captured.options.body);
       assert.equal(payload.chat_id, '123456789');
       assert.ok(payload.text.includes('Готовый текст поста'));
@@ -180,7 +198,35 @@ async function main() {
     }
   }
 
-  // 10. Telegram callback is acknowledged before a slow action starts.
+  // 10. Telegram transport timeout is bounded and error text never leaks the bot token.
+  {
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        assert.ok(options.signal instanceof AbortSignal);
+        assert.equal(options.signal.aborted, false);
+        const error = new Error('request failed for ' + url);
+        error.name = 'TimeoutError';
+        throw error;
+      };
+
+      await assert.rejects(
+        sendSmmplannerReadyMessage({ postId: '2026-11-20', text: 'Timeout test' }),
+        (error) => {
+          assert.match(error.message, /timed out after 15000ms/);
+          assert.match(error.message, /external outcome may be unknown/);
+          assert.ok(!error.message.includes('test-bot-token'));
+          assert.equal(error.code, 'TELEGRAM_TIMEOUT');
+          return true;
+        }
+      );
+      console.log('OK: Telegram timeout is bounded, classified and does not leak the bot token');
+    } finally {
+      global.fetch = originalFetch;
+    }
+  }
+
+  // 11. Telegram callback is acknowledged before a slow action starts.
   {
     const events = [];
     let finishAction;
@@ -205,7 +251,7 @@ async function main() {
     console.log('OK: Telegram button acknowledgement does not block the handoff action');
   }
 
-  // 11. Pending state is written atomically and read back.
+  // 12. Pending state is written atomically and read back.
   {
     clearPending();
     const pending = {
@@ -220,7 +266,7 @@ async function main() {
     console.log('OK: pending state is persisted and cleared');
   }
 
-  // 12. Timezone helper returns an ISO date.
+  // 13. Timezone helper returns an ISO date.
   {
     assert.match(todayInTimezone('Europe/Moscow'), /^\d{4}-\d{2}-\d{2}$/);
     console.log('OK: timezone helper returns YYYY-MM-DD');
