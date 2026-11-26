@@ -55,12 +55,18 @@ function verifyCsrf(req, expectedHost) {
   return true;
 }
 
-function verifyTelegramCallback(callback, adminUserId, chatId) {
+function verifyTelegramCallback(callback, adminUserId, chatId, expectedMessageId) {
   if (!callback || !adminUserId || !chatId) return false;
   const message = callback.message;
   if (!message || !message.chat || message.message_id === undefined) return false;
-  return String(callback.from && callback.from.id) === String(adminUserId) &&
+  const identityMatches = String(callback.from && callback.from.id) === String(adminUserId) &&
     String(message.chat.id) === String(chatId);
+  if (!identityMatches) return false;
+  if (arguments.length >= 4) {
+    return expectedMessageId !== undefined && expectedMessageId !== null &&
+      String(message.message_id) === String(expectedMessageId);
+  }
+  return true;
 }
 
 function escapeHtml(value) {
