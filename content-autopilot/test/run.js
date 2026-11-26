@@ -24,6 +24,8 @@ const {
   beginHandoff,
   completeHandoff,
   completeDraftDelivery,
+  beginTopicReminder,
+  completeTopicReminder,
   markNeedsReview,
   recoverInterruptedOperation,
 } = require('../src/operation-state');
@@ -174,11 +176,28 @@ async function main() {
     assert.equal(orphanPending.interrupted, true);
     assert.equal(orphanPending.record.status, 'needs_review');
 
+    const topicDispatching = beginTopicReminder({
+      postId: '2026-11-20',
+      title: 'Topic reminder',
+      text: '',
+      status: 'topic_reminder_pending',
+    }, '2026-11-20T10:00:00.000Z');
+    assert.equal(topicDispatching.status, 'topic_reminder_dispatching');
+    const topicComplete = completeTopicReminder(topicDispatching, 404, '2026-11-20T10:00:01.000Z');
+    assert.equal(topicComplete.status, 'topic_reminder');
+    assert.equal(topicComplete.telegramMessageId, 404);
+
+    const recoveredTopic = recoverInterruptedOperation(topicDispatching, '2026-11-20T10:01:00.000Z');
+    assert.equal(recoveredTopic.interrupted, true);
+    assert.equal(recoveredTopic.record.status, 'needs_review');
+    assert.equal(recoveredTopic.record.lastErrorStage, 'topic_reminder');
+
     const safePending = recoverInterruptedOperation(pending, '2026-11-20T10:01:00.000Z');
     assert.equal(safePending.interrupted, false);
     assert.equal(safePending.record, pending);
 
     assert.throws(() => beginHandoff(creating, 'now'), /pending draft/);
+    assert.throws(() => beginTopicReminder(topicDispatching, 'now'), /topic_reminder_pending/);
     assert.throws(() => beginHandoff({ ...pending, telegramMessageId: null }, 'now'), /telegramMessageId/);
     assert.throws(() => completeHandoff(pending, 202, 'now'), /dispatching handoff/);
     assert.throws(() => completeDraftDelivery(pending, 303), /creating_draft/);
