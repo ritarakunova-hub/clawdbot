@@ -1,4 +1,4 @@
-const REVIEWABLE_STATES = new Set(['creating_draft', 'handoff_dispatching']);
+const REVIEWABLE_STATES = new Set(['creating_draft', 'handoff_dispatching', 'topic_reminder_dispatching']);
 
 function requireRecord(record) {
   if (!record || typeof record !== 'object' || Array.isArray(record) ||
@@ -56,6 +56,32 @@ function completeDraftDelivery(record, telegramMessageId) {
   };
 }
 
+function beginTopicReminder(record, at) {
+  requireRecord(record);
+  if (record.status !== 'topic_reminder_pending') {
+    throw new Error('Only a topic_reminder_pending operation can begin delivery');
+  }
+  return {
+    ...record,
+    status: 'topic_reminder_dispatching',
+    reminderStartedAt: at,
+  };
+}
+
+function completeTopicReminder(record, telegramMessageId, at) {
+  requireRecord(record);
+  if (record.status !== 'topic_reminder_dispatching') {
+    throw new Error('Only a dispatching topic reminder can be completed');
+  }
+  requireMessageId(telegramMessageId, 'telegramMessageId');
+  return {
+    ...record,
+    status: 'topic_reminder',
+    notifiedAt: at,
+    telegramMessageId,
+  };
+}
+
 function markNeedsReview(record, { stage, code, at }) {
   requireRecord(record);
   if (!REVIEWABLE_STATES.has(record.status) &&
@@ -85,7 +111,9 @@ function recoverInterruptedOperation(record, at) {
 
   const stage = record.status === 'handoff_dispatching'
     ? 'smmplanner_handoff'
-    : 'draft_delivery';
+    : record.status === 'topic_reminder_dispatching'
+      ? 'topic_reminder'
+      : 'draft_delivery';
 
   return {
     interrupted: true,
@@ -101,6 +129,8 @@ module.exports = {
   beginHandoff,
   completeHandoff,
   completeDraftDelivery,
+  beginTopicReminder,
+  completeTopicReminder,
   markNeedsReview,
   recoverInterruptedOperation,
 };
