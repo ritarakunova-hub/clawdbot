@@ -5,6 +5,7 @@ const { runPipeline } = require('./src/pipeline');
 const { runFollowUpCheck } = require('./src/followup');
 const sheets = require('./src/sheets');
 const telegram = require('./src/telegram');
+const { deliverLeadCard, STATUS_NEEDS_REVIEW, STATUS_DISPATCHING } = require('./src/notification');
 const {
   safeEqual,
   verifyBasicAuth,
@@ -130,6 +131,16 @@ app.get('/', requireAuth, (req, res) => {
     <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
     <button type="submit" style="background:#555;">Проверить follow-up сейчас</button>
   </form>
+  <hr style="margin-top: 28px; border: none; border-top: 1px solid #eee;">
+  <h2 style="font-size:16px;">Восстановить уведомление</h2>
+  <p class="hint">Только для лидов со статусом «Уведомление требует проверки» или «Уведомление готовится». Сначала проверьте, не пришла ли карточка в Telegram.</p>
+  <form method="POST" action="/notifications/retry">
+    <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
+    <label>ID лида
+      <input name="leadId" maxlength="64" pattern="[A-Za-z0-9_-]{1,64}" required>
+    </label>
+    <button type="submit" style="background:#8a4b08;">Повторно отправить карточку</button>
+  </form>
 </body>
 </html>`);
 });
@@ -175,6 +186,43 @@ app.post('/followup/run', requireAuth, requireCsrf, (req, res) => {
     .finally(() => releaseOperation('followup'));
 });
 
+app.post('/notifications/retry', requireAuth, requireCsrf, async (req, res) => {
+  const id = typeof req.body.leadId === 'string' ? req.body.leadId.trim() : '';
+  if (!/^[a-z0-9_-]{1,64}$/i.test(id)) {
+    return res.status(400).send('Проверьте ID лида.');
+  }
+  if (!acquireOperation('notification-retry')) {
+    return res.status(409).send('Другая операция уже выполняется. Повторите позже.');
+  }
+
+  let lead;
+  try {
+    lead = await sheets.getLeadById(id);
+  } catch {
+    releaseOperation('notification-retry');
+    return res.status(503).send('Не удалось проверить лид в таблице.');
+  }
+  if (!lead) {
+    releaseOperation('notification-retry');
+    return res.status(404).send('Лид не найден.');
+  }
+  if (![STATUS_NEEDS_REVIEW, STATUS_DISPATCHING].includes(lead.status)) {
+    releaseOperation('notification-retry');
+    return res.status(409).send('Повторная отправка разрешена только для уведомлений, требующих проверки.');
+  }
+
+  res.status(202).send('Повторная отправка карточки запущена. Проверьте Telegram.');
+  void Promise.resolve()
+    .then(async () => {
+      const delivery = await deliverLeadCard(lead, { sheets, telegram });
+      if (!delivery.ok) {
+        console.error('[sales-engine] notification_retry_needs_review', delivery.stage);
+      }
+    })
+    .catch(() => console.error('[sales-engine] notification_retry_failed'))
+    .finally(() => releaseOperation('notification-retry'));
+});
+
 app.post('/telegram/webhook', async (req, res) => {
   if (!/^[A-Za-z0-9_-]{32,256}$/.test(TELEGRAM_WEBHOOK_SECRET) ||
       !TELEGRAM_ADMIN_USER_ID || !safePositiveInteger(TELEGRAM_ADMIN_USER_ID) || !TELEGRAM_CHAT_ID) {
@@ -210,6 +258,10 @@ app.post('/telegram/webhook', async (req, res) => {
     const lead = await sheets.getLeadById(id);
     if (!lead || lead.status !== 'Готов к проверке') {
       await telegram.answerCallbackQuery(callback.id, 'Карточка уже обработана или не найдена');
+      return;
+    }
+    if (!verifyTelegramCallback(callback, TELEGRAM_ADMIN_USER_ID, TELEGRAM_CHAT_ID, lead.telegram_message_id)) {
+      await telegram.answerCallbackQuery(callback.id, 'Это старая или чужая карточка');
       return;
     }
 
