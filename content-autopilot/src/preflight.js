@@ -4,6 +4,7 @@ const path = require('node:path');
 const REQUIRED_SETTINGS = [
   'TELEGRAM_BOT_TOKEN',
   'TELEGRAM_CHAT_ID',
+  'TELEGRAM_APPROVER_ID',
   'TELEGRAM_WEBHOOK_SECRET',
   'INTERNAL_API_SECRET',
   'PENDING_FILE',
@@ -12,6 +13,10 @@ const REQUIRED_SETTINGS = [
 function getReadiness(env = process.env) {
   const missing = REQUIRED_SETTINGS.filter((name) => !String(env[name] || '').trim());
   const invalid = [];
+  const approverId = String(env.TELEGRAM_APPROVER_ID || '').trim();
+  if (approverId && (!/^[1-9]\\d*$/.test(approverId) || !Number.isSafeInteger(Number(approverId)))) {
+    invalid.push('TELEGRAM_APPROVER_ID');
+  }
 
   let storageWritable = false;
   let storageProbeDirectory = null;
