@@ -8,7 +8,7 @@ const { formatLeadCard } = require('../src/telegram');
 const { buildLeadKey } = require('../src/pipeline');
 const { fetchSiteText, isPublicIPv4, parsePublicHttpUrl } = require('../src/siteFetch');
 const { safeEqual, verifyBasicAuth, verifyCsrf, verifyTelegramCallback, escapeHtml } = require('../src/security');
-const { deliverLeadCard, STATUS_READY, STATUS_NEEDS_REVIEW } = require('../src/notification');
+const { deliverLeadCard, STATUS_READY, STATUS_NEEDS_REVIEW, STATUS_DISPATCHING, canRetryLeadNotification } = require('../src/notification');
 const { runPreflight } = require('../scripts/preflight');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -44,6 +44,12 @@ const { parseAnalysis, daysSince } = require('../src/followup');
     from: { id: 12345 },
     message: { message_id: 8, chat: { id: 555 } }
   }, '12345', '555', '7'), false);
+  assert.strictEqual(canRetryLeadNotification({ status: STATUS_NEEDS_REVIEW }), true);
+  assert.strictEqual(canRetryLeadNotification({ status: STATUS_DISPATCHING }), true);
+  assert.strictEqual(canRetryLeadNotification({ status: STATUS_READY, telegram_message_id: '' }), true);
+  assert.strictEqual(canRetryLeadNotification({ status: STATUS_READY, telegram_message_id: '123' }), false);
+  assert.strictEqual(canRetryLeadNotification({ status: 'Отправлено' }), false);
+  assert.strictEqual(canRetryLeadNotification(null), false);
   assert.strictEqual(verifyTelegramCallback({
     from: { id: 9 },
     message: { message_id: 7, chat: { id: 555 } }
