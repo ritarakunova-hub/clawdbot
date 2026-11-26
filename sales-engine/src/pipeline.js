@@ -4,6 +4,7 @@ const claude = require('./claude');
 const { computeScore, digitalPresenceCriterion } = require('./scoring');
 const sheets = require('./sheets');
 const telegram = require('./telegram');
+const { STATUS_DISPATCHING, deliverLeadCard } = require('./notification');
 
 const SCORE_THRESHOLD = Number(process.env.SCORE_THRESHOLD || 70);
 
@@ -42,6 +43,7 @@ async function runPipeline({ niche, city, limit }) {
 
   let processed = 0;
   let qualified = 0;
+  let reviewRequired = 0;
 
   for (const place of rawResults) {
     if (processed >= limit) break;
@@ -117,7 +119,7 @@ async function runPipeline({ niche, city, limit }) {
       problem,
       solution,
       message,
-      status: score >= SCORE_THRESHOLD ? 'Готов к проверке' : 'Низкий score',
+      status: score >= SCORE_THRESHOLD ? STATUS_DISPATCHING : 'Низкий score',
       first_contact_date: '',
       last_status_update: new Date().toISOString(),
       notes: '',
@@ -131,18 +133,19 @@ async function runPipeline({ niche, city, limit }) {
     }
 
     if (score >= SCORE_THRESHOLD) {
-      try {
-        await telegram.sendLeadCard(lead);
+      const delivery = await deliverLeadCard(lead, { sheets, telegram });
+      if (delivery.ok) {
         qualified++;
-      } catch (err) {
-        log('Ошибка отправки карточки в Telegram');
+      } else {
+        reviewRequired++;
+        log(`Карточка требует ручной проверки доставки: ${lead.id} (${delivery.stage})`);
       }
     }
 
     processed++;
   }
 
-  const summary = `✅ Прогон завершён.\nНовых компаний обработано: ${processed}\nКарточек в Telegram (score ≥ ${SCORE_THRESHOLD}): ${qualified}`;
+  const summary = `✅ Прогон завершён.\nНовых компаний обработано: ${processed}\nКарточек готовы к проверке: ${qualified}\nУведомлений требуют ручной проверки: ${reviewRequired}`;
   log(summary.replace(/\n/g, ' | '));
   try {
     await telegram.sendPlainMessage(summary);
