@@ -63,7 +63,7 @@ async function resolveApprove(pending) {
           status: 'needs_review',
           needsReviewAt: new Date().toISOString(),
           lastErrorStage: 'smmplanner_handoff',
-          lastErrorCode: err && err.name === 'TimeoutError' ? 'TELEGRAM_TIMEOUT' : 'HANDOFF_OUTCOME_UNKNOWN',
+          lastErrorCode: err && err.code === 'TELEGRAM_TIMEOUT' ? 'TELEGRAM_TIMEOUT' : 'HANDOFF_OUTCOME_UNKNOWN',
         });
       }
       // Avoid raw error text here: a transport error may contain the bot API URL.
@@ -183,7 +183,7 @@ async function checkAndSchedule() {
           status: 'needs_review',
           needsReviewAt: new Date().toISOString(),
           lastErrorStage: 'draft_delivery',
-          lastErrorCode: err && err.name === 'TimeoutError' ? 'TELEGRAM_TIMEOUT' : 'DRAFT_OUTCOME_UNKNOWN',
+          lastErrorCode: err && err.code === 'TELEGRAM_TIMEOUT' ? 'TELEGRAM_TIMEOUT' : 'DRAFT_OUTCOME_UNKNOWN',
         });
       }
       throw new Error('Отправка черновика в Telegram не подтверждена. Проверьте личный чат вручную; повторная отправка заблокирована.');
