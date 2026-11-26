@@ -103,7 +103,7 @@ The current handoff is intentionally manual because no official public developer
 
 ## Ambiguous delivery and manual review
 
-The service stores `creating_draft` before sending a review draft and `handoff_dispatching` before sending approved copy. If the process restarts or Telegram times out during either operation, state is changed to `needs_review`. The service does not send again automatically.
+The service stores `creating_draft` before sending a review draft, `handoff_dispatching` before sending approved copy, and `topic_reminder_dispatching` before sending a topic reminder. If the process restarts or Telegram times out during any of these operations, state is changed to `needs_review`. The service does not send again automatically.
 
 Before any operational recovery, inspect the owner's private Telegram chat and confirm whether the message arrived. Do not clear `pending.json` or re-trigger the same operation until its external outcome is known. A `needs_review` item blocks subsequent calendar messages so an uncertain send cannot be silently duplicated.
 
