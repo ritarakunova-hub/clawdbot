@@ -11,6 +11,8 @@ const {
   beginHandoff,
   completeHandoff,
   completeDraftDelivery,
+  beginTopicReminder,
+  completeTopicReminder,
   markNeedsReview,
   recoverInterruptedOperation,
 } = require('./src/operation-state');
@@ -137,16 +139,47 @@ async function checkAndSchedule() {
     }
 
     if (post.type === 'topic') {
-      await telegram.sendTopicReminder(post);
-      savePending({
+      const reminder = {
         postId: post.date,
         title: post.title,
         rubric: post.rubric,
         text: '',
-        status: 'topic_reminder',
-        notifiedAt: new Date().toISOString(),
-      });
-      return { status: 'topic_reminder', postId: post.date };
+        status: 'topic_reminder_pending',
+        createdAt: new Date().toISOString(),
+      };
+      savePending(reminder);
+
+      try {
+        const response = await telegram.sendTopicReminder(post);
+        const messageId = response && response.result && response.result.message_id;
+        const completed = completeTopicReminder(
+          beginTopicReminder(reminder, new Date().toISOString()),
+          messageId,
+          new Date().toISOString()
+        );
+        savePending(completed);
+        return { status: 'topic_reminder', postId: post.date };
+      } catch (err) {
+        const latest = loadPending();
+        if (latest && latest.postId === post.date &&
+            ['topic_reminder_pending', 'topic_reminder_dispatching'].includes(latest.status)) {
+          const dispatching = latest.status === 'topic_reminder_pending'
+            ? beginTopicReminder(latest, new Date().toISOString())
+            : latest;
+          savePending(markNeedsReview(dispatching, {
+            stage: 'topic_reminder',
+            code: err && err.code === 'TELEGRAM_TIMEOUT' ? 'TELEGRAM_TIMEOUT' : 'REMINDER_OUTCOME_UNKNOWN',
+            at: new Date().toISOString(),
+          }));
+        }
+        await telegram.sendPlainMessage(
+          '⚠️ TAINA: отправка напоминания по теме ' + post.date +
+          ' не подтверждена. Проверьте личный чат вручную; повторная отправка заблокирована.'
+        ).catch(() => {
+          console.error('[content-autopilot] Could not send the topic reminder review notice.');
+        });
+        throw new Error('Отправка напоминания не подтверждена; требуется ручная проверка.');
+      }
     }
 
     const pending = {
