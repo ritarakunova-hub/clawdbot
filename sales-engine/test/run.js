@@ -252,17 +252,35 @@ const { parseAnalysis, daysSince } = require('../src/followup');
     assert.strictEqual(blocked, null);
     assert.strictEqual(requestCount, 0);
 
-    let dnsCount = 0;
-    const redirectBlocked = await fetchSiteText('https://example.com', {
+    let literalRedirectDnsCount = 0;
+    const literalRedirectBlocked = await fetchSiteText('https://example.com', {
       lookup: async () => {
-        dnsCount++;
-        return [{ address: dnsCount === 1 ? '93.184.216.34' : '10.0.0.2', family: 4 }];
+        literalRedirectDnsCount++;
+        return [{ address: '93.184.216.34', family: 4 }];
       },
       request: async () => ({ redirect: 'http://127.0.0.1/admin' })
     });
-    assert.strictEqual(redirectBlocked, null);
-    assert.strictEqual(dnsCount, 2);
-    console.log('OK: fetchSiteText — очистка HTML');
+    assert.strictEqual(literalRedirectBlocked, null);
+    // Literal loopback IPs are rejected by URL validation before a second DNS lookup.
+    assert.strictEqual(literalRedirectDnsCount, 1);
+
+    let redirectDnsCount = 0;
+    let redirectRequestCount = 0;
+    const dnsRebindingRedirect = await fetchSiteText('https://example.com', {
+      lookup: async () => {
+        redirectDnsCount++;
+        return [{ address: redirectDnsCount === 1 ? '93.184.216.34' : '10.0.0.2', family: 4 }];
+      },
+      request: async () => {
+        redirectRequestCount++;
+        return { redirect: 'https://example.com/admin' };
+      }
+    });
+    assert.strictEqual(dnsRebindingRedirect, null);
+    // The hostname is resolved again after redirect; its private second address is blocked.
+    assert.strictEqual(redirectDnsCount, 2);
+    assert.strictEqual(redirectRequestCount, 1);
+    console.log('OK: fetchSiteText — очистка HTML и повторная проверка DNS при redirect');
 
     // Telegram cards become actionable only after their exact message_id is persisted.
     {
