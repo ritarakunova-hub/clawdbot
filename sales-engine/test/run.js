@@ -8,6 +8,7 @@ const { formatLeadCard } = require('../src/telegram');
 const { buildLeadKey } = require('../src/pipeline');
 const { fetchSiteText, isPublicIPv4, parsePublicHttpUrl } = require('../src/siteFetch');
 const { safeEqual, verifyBasicAuth, verifyCsrf, verifyTelegramCallback, escapeHtml } = require('../src/security');
+const { deliverLeadCard, STATUS_READY, STATUS_NEEDS_REVIEW } = require('../src/notification');
 const { runPreflight } = require('../scripts/preflight');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -35,6 +36,14 @@ const { parseAnalysis, daysSince } = require('../src/followup');
     from: { id: 12345 },
     message: { message_id: 7, chat: { id: 555 } }
   }, '12345', '555'), true);
+  assert.strictEqual(verifyTelegramCallback({
+    from: { id: 12345 },
+    message: { message_id: 7, chat: { id: 555 } }
+  }, '12345', '555', '7'), true);
+  assert.strictEqual(verifyTelegramCallback({
+    from: { id: 12345 },
+    message: { message_id: 8, chat: { id: 555 } }
+  }, '12345', '555', '7'), false);
   assert.strictEqual(verifyTelegramCallback({
     from: { id: 9 },
     message: { message_id: 7, chat: { id: 555 } }
@@ -254,6 +263,67 @@ const { parseAnalysis, daysSince } = require('../src/followup');
     assert.strictEqual(redirectBlocked, null);
     assert.strictEqual(dnsCount, 2);
     console.log('OK: fetchSiteText — очистка HTML');
+
+    // Telegram cards become actionable only after their exact message_id is persisted.
+    {
+      const events = [];
+      const row = { status: 'Исходный статус', telegram_message_id: 'old-id' };
+      const fakeSheets = {
+        updateFields: async (id, fields) => {
+          events.push(`sheet:${fields.status || ''}:${fields.telegram_message_id === undefined ? '' : fields.telegram_message_id}`);
+          Object.assign(row, fields);
+          return true;
+        },
+      };
+      const fakeTelegram = {
+        sendLeadCard: async () => { events.push('send-card'); return 77; },
+        attachLeadKeyboard: async (messageId, leadId) => {
+          assert.strictEqual(row.telegram_message_id, '77');
+          assert.strictEqual(row.status, STATUS_READY);
+          events.push(`attach:${messageId}:${leadId}`);
+        },
+      };
+      const result = await deliverLeadCard({ id: 'lead-1' }, { sheets: fakeSheets, telegram: fakeTelegram });
+      assert.deepStrictEqual(result, { ok: true, messageId: 77 });
+      assert.strictEqual(row.status, STATUS_READY);
+      assert.deepStrictEqual(events, [
+        'sheet:Уведомление готовится:',
+        'send-card',
+        'sheet:Готов к проверке:77',
+        'attach:77:lead-1',
+      ]);
+      console.log('OK: Telegram delivery persists exact message_id before enabling approval');
+    }
+    {
+      const row = {};
+      const fakeSheets = {
+        updateFields: async (id, fields) => { Object.assign(row, fields); return true; },
+      };
+      const fakeTelegram = {
+        sendLeadCard: async () => 88,
+        attachLeadKeyboard: async () => { throw new Error('ambiguous_network_failure'); },
+      };
+      const result = await deliverLeadCard({ id: 'lead-2' }, { sheets: fakeSheets, telegram: fakeTelegram });
+      assert.deepStrictEqual(result, { ok: false, stage: 'keyboard' });
+      assert.strictEqual(row.status, STATUS_NEEDS_REVIEW);
+      assert.strictEqual(row.telegram_message_id, '88');
+      console.log('OK: ambiguous Telegram keyboard result fails closed for manual review');
+    }
+    {
+      const row = {};
+      const fakeSheets = {
+        updateFields: async (id, fields) => { Object.assign(row, fields); return true; },
+      };
+      const fakeTelegram = {
+        sendLeadCard: async () => { throw new Error('timeout'); },
+        attachLeadKeyboard: async () => { throw new Error('must_not_be_called'); },
+      };
+      const result = await deliverLeadCard({ id: 'lead-3' }, { sheets: fakeSheets, telegram: fakeTelegram });
+      assert.deepStrictEqual(result, { ok: false, stage: 'send' });
+      assert.strictEqual(row.status, STATUS_NEEDS_REVIEW);
+      assert.strictEqual(row.telegram_message_id, '');
+      console.log('OK: ambiguous Telegram send is not automatically retried');
+    }
   })().then(() => {
     console.log('\nВсе проверки пройдены.');
   }).catch((err) => {
