@@ -26,8 +26,11 @@ If SMMplanner provides an official API or a supported import format, a dedicated
 
 - The bot's default workflow is review → explicit approval → copy-ready handoff.
 - No button triggers direct publication to social channels.
-- Only the configured owner in the private Telegram chat can approve or cancel.
+- Approval requires the configured numeric TELEGRAM_APPROVER_ID, the configured private TELEGRAM_CHAT_ID and the exact Telegram message_id saved for the draft. A button copied to another message is rejected.
 - Telegram webhook requests require TELEGRAM_WEBHOOK_SECRET.
+- Every Telegram API request has a 15-second timeout. Transport errors are sanitized so the bot token in the API URL is not copied into application errors.
+- Before sending approved copy to the owner, the service persists handoff_dispatching. If the request times out or the process restarts before confirmation, the operation becomes needs_review and is never retried automatically.
+- Draft creation is also persisted as creating_draft before the send. An ambiguous send result becomes needs_review instead of deleting the state and silently creating another draft.
 - /check/now requires a separate bearer secret (INTERNAL_API_SECRET).
 - Approved, cancelled and topic-reminder entries are marked for their calendar date so repeated checks do not create duplicate handoffs.
 - Pending state is written atomically.
@@ -46,11 +49,18 @@ See DEPLOYMENT.md for Docker and native Node.js setup.
 |---|---:|---|
 | TELEGRAM_BOT_TOKEN | Yes | Bot token for private review messages |
 | TELEGRAM_CHAT_ID | Yes | Owner's private one-to-one chat ID |
+| TELEGRAM_APPROVER_ID | Yes | Numeric Telegram user ID allowed to approve; separate from the chat setting |
 | TELEGRAM_WEBHOOK_SECRET | Yes | Telegram webhook verification secret |
 | INTERNAL_API_SECRET | Yes | Bearer secret for /check/now |
 | TIMEZONE | No | Defaults to Europe/Moscow |
 | CRON_SCHEDULE | No | Defaults to 0 9 * * * |
 | PENDING_FILE | Yes in production | JSON state file on the persistent volume |
 | PORT | Platform-defined | HTTP server port |
+
+## Manual recovery after an ambiguous Telegram result
+
+A record with status `needs_review` is intentionally blocked from approval/retry. Check the private Telegram chat and the SMMplanner handoff manually first. Do not delete the state file or press a stale button to force another send. Record the verified outcome, then resolve the pending record through an explicit, reviewed operational procedure.
+
+The states `creating_draft` and `handoff_dispatching` mean an external send may have started. On process restart they are converted to `needs_review`; no send is replayed.
 
 Do not add SMMplanner login credentials, VK tokens, or Telegram channel credentials to this service. Direct publishing has been removed.
