@@ -31,6 +31,7 @@ If SMMplanner provides an official API or a supported import format, a dedicated
 - Every Telegram API request has a 15-second timeout. Transport errors are sanitized so the bot token in the API URL is not copied into application errors.
 - Before sending approved copy to the owner, the service persists handoff_dispatching. If the request times out or the process restarts before confirmation, the operation becomes needs_review and is never retried automatically.
 - Draft creation is also persisted as creating_draft before the send. An ambiguous send result becomes needs_review instead of deleting the state and silently creating another draft.
+- Topic reminders are persisted as topic_reminder_dispatching before delivery; an ambiguous result also moves to needs_review, preventing duplicate reminders.
 - /check/now requires a separate bearer secret (INTERNAL_API_SECRET).
 - Approved, cancelled and topic-reminder entries are marked for their calendar date so repeated checks do not create duplicate handoffs.
 - Pending state is written atomically.
