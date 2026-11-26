@@ -80,9 +80,19 @@ async function sendLeadCard(lead) {
     chat_id: getChatId(),
     text: formatLeadCard(lead),
     parse_mode: 'HTML',
-    reply_markup: leadKeyboard(lead.id),
   });
   return result.result && result.result.message_id;
+}
+
+async function attachLeadKeyboard(messageId, leadId) {
+  if (!Number.isSafeInteger(Number(messageId)) || Number(messageId) <= 0) {
+    throw new Error('telegram_message_id_invalid');
+  }
+  await callTelegram('editMessageReplyMarkup', {
+    chat_id: getChatId(),
+    message_id: Number(messageId),
+    reply_markup: leadKeyboard(leadId),
+  });
 }
 
 async function sendPlainMessage(text) {
@@ -129,6 +139,7 @@ module.exports = {
   formatLeadCard,
   leadKeyboard,
   sendLeadCard,
+  attachLeadKeyboard,
   sendPlainMessage,
   answerCallbackQuery,
   markCardDecided,
