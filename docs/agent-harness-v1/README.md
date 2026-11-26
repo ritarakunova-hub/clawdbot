@@ -56,6 +56,7 @@ Harness должен отделять **общие механизмы испол
 - [JSON Schema контракта](./task-contract.schema.json)
 - [План реализации](./IMPLEMENTATION-PLAN.md)
 - [План приёмочных тестов](./TEST-PLAN.md)
+- [Предварительный каталог задач и permissions](./TASK-CATALOG.md)
 
 ## Открытые входные данные
 
