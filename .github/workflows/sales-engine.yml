@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - "security/sales-engine-2026-11-15"
+      - "fix/sales-engine-telegram-delivery-v1"
     paths:
       - "sales-engine/**"
       - ".github/workflows/sales-engine.yml"
