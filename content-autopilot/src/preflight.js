@@ -14,7 +14,7 @@ function getReadiness(env = process.env) {
   const missing = REQUIRED_SETTINGS.filter((name) => !String(env[name] || '').trim());
   const invalid = [];
   const approverId = String(env.TELEGRAM_APPROVER_ID || '').trim();
-  if (approverId && (!/^[1-9]\\d*$/.test(approverId) || !Number.isSafeInteger(Number(approverId)))) {
+  if (approverId && (!/^[1-9]\d*$/.test(approverId) || !Number.isSafeInteger(Number(approverId)))) {
     invalid.push('TELEGRAM_APPROVER_ID');
   }
 
