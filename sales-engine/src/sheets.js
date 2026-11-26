@@ -6,7 +6,7 @@ const COLUMNS = [
   'id', 'domain', 'company', 'niche', 'city', 'source', 'contacts',
   'site_summary', 'ai_analysis', 'score', 'score_reason', 'data_confidence',
   'problem', 'solution', 'message', 'status', 'follow_up_count',
-  'first_contact_date', 'last_status_update', 'notes',
+  'first_contact_date', 'last_status_update', 'notes', 'telegram_message_id',
 ];
 
 function colLetter(index) {
