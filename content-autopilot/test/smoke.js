@@ -52,6 +52,7 @@ async function main() {
       INTERNAL_API_SECRET: 'test-internal-secret',
       TELEGRAM_WEBHOOK_SECRET: 'test-webhook-secret',
       TELEGRAM_CHAT_ID: '123456789',
+      TELEGRAM_APPROVER_ID: '987654321',
       TELEGRAM_BOT_TOKEN: 'test-telegram-token',
       PENDING_FILE: pendingFile,
     },
