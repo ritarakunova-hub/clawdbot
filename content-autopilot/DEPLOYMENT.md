@@ -56,6 +56,7 @@ Set these in the platform's secret/environment-variable settings. Never commit r
 |---|---:|---|
 | TELEGRAM_BOT_TOKEN | Yes | Bot token from BotFather |
 | TELEGRAM_CHAT_ID | Yes | Owner's private one-to-one Telegram chat ID |
+| TELEGRAM_APPROVER_ID | Yes | Numeric Telegram user ID allowed to approve drafts |
 | TELEGRAM_WEBHOOK_SECRET | Yes | Generate a random secret |
 | INTERNAL_API_SECRET | Yes | Separate random bearer secret for /check/now |
 | TIMEZONE | No | Defaults to Europe/Moscow |
@@ -91,6 +92,7 @@ The current handoff is intentionally manual because no official public developer
 - [ ] Exactly one active app instance is running.
 - [ ] Persistent volume is mounted at /data and PENDING_FILE=/data/pending.json.
 - [ ] /health returns HTTP 200 over HTTPS.
+- [ ] TELEGRAM_APPROVER_ID is set to the intended numeric Telegram user ID.
 - [ ] All required Telegram secrets are configured in the hosting dashboard.
 - [ ] /ready returns HTTP 200 and confirms writable persistent storage.
 - [ ] Telegram bot can message the owner's private chat.
@@ -98,5 +100,11 @@ The current handoff is intentionally manual because no official public developer
 - [ ] TAINA Telegram and VK pages are connected inside SMMplanner.
 - [ ] One draft is reviewed, approved, copied into SMMplanner, and verified in its schedule.
 - [ ] A cancelled draft is confirmed not to appear in SMMplanner.
+
+## Ambiguous delivery and manual review
+
+The service stores `creating_draft` before sending a review draft and `handoff_dispatching` before sending approved copy. If the process restarts or Telegram times out during either operation, state is changed to `needs_review`. The service does not send again automatically.
+
+Before any operational recovery, inspect the owner's private Telegram chat and confirm whether the message arrived. Do not clear `pending.json` or re-trigger the same operation until its external outcome is known. A `needs_review` item blocks subsequent calendar messages so an uncertain send cannot be silently duplicated.
 
 No social-channel publication, SMMplanner login, or production webhook registration is performed by the repository change itself.
