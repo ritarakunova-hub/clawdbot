@@ -16,6 +16,7 @@ const TIMEZONE = process.env.TIMEZONE || 'Europe/Moscow';
 const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '0 9 * * *';
 const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || '';
 const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET || '';
+const TELEGRAM_APPROVER_ID = process.env.TELEGRAM_APPROVER_ID || '';
 
 const resolving = new Set();
 let checkInProgress = false;
@@ -30,15 +31,44 @@ async function resolveApprove(pending) {
       throw new Error('Draft is stale or has already been processed');
     }
 
-    // SMMplanner owns scheduling and publication. We only deliver approved,
-    // copy-ready text to the owner's private Telegram chat.
-    const handoffMessage = await telegram.sendSmmplannerReadyMessage(current);
-    savePending({
+    // Persist intent before the Telegram side effect. A restart during dispatch
+    // must become manual review, never an automatic second send.
+    const dispatching = {
       ...current,
-      status: 'approved_for_smmplanner',
-      approvedAt: new Date().toISOString(),
-      handoffMessageId: handoffMessage.result.message_id,
-    });
+      status: 'handoff_dispatching',
+      handoffStartedAt: new Date().toISOString(),
+    };
+    savePending(dispatching);
+
+    try {
+      // SMMplanner owns scheduling and publication. We only deliver approved,
+      // copy-ready text to the owner's private Telegram chat.
+      const handoffMessage = await telegram.sendSmmplannerReadyMessage(dispatching);
+      const handoffMessageId = handoffMessage && handoffMessage.result && handoffMessage.result.message_id;
+      if (!Number.isSafeInteger(handoffMessageId) || handoffMessageId <= 0) {
+        throw new Error('Telegram returned no valid handoff message ID');
+      }
+
+      savePending({
+        ...dispatching,
+        status: 'approved_for_smmplanner',
+        approvedAt: new Date().toISOString(),
+        handoffMessageId,
+      });
+    } catch (err) {
+      const latest = loadPending();
+      if (latest && latest.postId === current.postId && latest.status === 'handoff_dispatching') {
+        savePending({
+          ...latest,
+          status: 'needs_review',
+          needsReviewAt: new Date().toISOString(),
+          lastErrorStage: 'smmplanner_handoff',
+          lastErrorCode: err && err.name === 'TimeoutError' ? 'TELEGRAM_TIMEOUT' : 'HANDOFF_OUTCOME_UNKNOWN',
+        });
+      }
+      // Avoid raw error text here: a transport error may contain the bot API URL.
+      throw new Error('Передача текста в Telegram имеет неоднозначный результат. Проверьте личный чат вручную; автоматического повтора не будет.');
+    }
 
     if (current.telegramMessageId && current.telegramChatId) {
       try {
@@ -130,20 +160,33 @@ async function checkAndSchedule() {
       text: post.text,
       telegramMessageId: null,
       telegramChatId: process.env.TELEGRAM_CHAT_ID || null,
-      status: 'pending',
+      status: 'creating_draft',
       createdAt: new Date().toISOString(),
     };
 
     savePending(pending);
     try {
       const messageId = await telegram.sendDraftPreview(post);
+      if (!Number.isSafeInteger(messageId) || messageId <= 0) {
+        throw new Error('Telegram returned no valid draft message ID');
+      }
       pending.telegramMessageId = messageId;
+      pending.status = 'pending';
       savePending(pending);
       console.log('[content-autopilot] Draft ' + post.date + ' sent for owner approval');
       return { status: 'draft_sent', postId: post.date };
     } catch (err) {
-      clearPending();
-      throw err;
+      const latest = loadPending();
+      if (latest && latest.postId === post.date && latest.status === 'creating_draft') {
+        savePending({
+          ...latest,
+          status: 'needs_review',
+          needsReviewAt: new Date().toISOString(),
+          lastErrorStage: 'draft_delivery',
+          lastErrorCode: err && err.name === 'TimeoutError' ? 'TELEGRAM_TIMEOUT' : 'DRAFT_OUTCOME_UNKNOWN',
+        });
+      }
+      throw new Error('Отправка черновика в Telegram не подтверждена. Проверьте личный чат вручную; повторная отправка заблокирована.');
     }
   } finally {
     checkInProgress = false;
@@ -195,14 +238,15 @@ app.post('/telegram/webhook', (req, res) => {
   if (!callback) return;
 
   const parsed = telegram.parseCallbackData(callback.data);
-  if (!parsed.action || !isTelegramOwnerCallback(callback, process.env.TELEGRAM_CHAT_ID)) {
-    telegram.answerCallbackQuery(callback.id, 'Access denied or invalid button').catch(() => {});
-    return;
-  }
-
   const pending = loadPending();
-  if (!pending || pending.postId !== parsed.postId || pending.status !== 'pending') {
-    telegram.answerCallbackQuery(callback.id, 'This draft is stale or already processed').catch(() => {});
+  if (!parsed.action || !pending || pending.postId !== parsed.postId || pending.status !== 'pending' ||
+      !isTelegramOwnerCallback(
+        callback,
+        process.env.TELEGRAM_CHAT_ID,
+        TELEGRAM_APPROVER_ID,
+        pending.telegramMessageId
+      )) {
+    telegram.answerCallbackQuery(callback.id, 'Access denied, stale draft or invalid button').catch(() => {});
     return;
   }
 
@@ -239,11 +283,41 @@ cron.schedule(
 );
 
 (function inspectPendingOnStartup() {
-  const pending = loadPending();
+  let pending = loadPending();
   if (!pending) return;
+
+  const interruptedOperation =
+    pending.status === 'handoff_dispatching' ||
+    pending.status === 'creating_draft' ||
+    (pending.status === 'pending' && !pending.telegramMessageId);
+
+  if (interruptedOperation) {
+    const stage = pending.status === 'handoff_dispatching' ? 'smmplanner_handoff' : 'draft_delivery';
+    pending = {
+      ...pending,
+      status: 'needs_review',
+      needsReviewAt: new Date().toISOString(),
+      lastErrorStage: stage,
+      lastErrorCode: 'PROCESS_RESTART_DURING_EXTERNAL_OPERATION',
+    };
+    savePending(pending);
+    console.error('[content-autopilot] An external Telegram operation was interrupted. Manual review is required; automatic retry is disabled.');
+    telegram.sendPlainMessage(
+      '⚠️ TAINA: операция с черновиком ' + pending.postId +
+      ' прервалась во время отправки. Проверьте личный чат вручную. Повторная отправка заблокирована во избежание дубля.'
+    ).catch(() => {
+      console.error('[content-autopilot] Could not send the manual-review notice; inspect pending state on the persistent volume.');
+    });
+    return;
+  }
 
   if (['published', 'cancelled', 'topic_reminder', 'approved_for_smmplanner'].includes(pending.status)) {
     console.log('[content-autopilot] Latest post is already ' + pending.status + '; no action to resume');
+    return;
+  }
+
+  if (pending.status === 'needs_review') {
+    console.error('[content-autopilot] Draft ' + pending.postId + ' is blocked for manual review; no automatic retry will run.');
     return;
   }
 
