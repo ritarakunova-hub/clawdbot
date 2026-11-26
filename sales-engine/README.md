@@ -229,3 +229,8 @@ npm start     # http://localhost:3000
 Архитектура (отдельные модули `webLeadSearch.js`/`sheets.js`/`telegram.js`)
 специально сделана так, чтобы это можно было добавить позже, не
 переписывая всё с нуля.
+
+
+### Dependency security update
+
+The Sales Engine dependency audit also identified inherited advisories in the existing dependency tree. The delivery branch upgrades `googleapis` and `zod` to patched major versions; the push CI lockfile job applies non-breaking transitive fixes and verifies the complete production dependency tree with `npm audit`. These upgrades are subject to the Node 24/26 test matrix.
