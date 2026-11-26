@@ -78,10 +78,13 @@ async function apiCall(method, payload) {
     });
   } catch (err) {
     // Do not include the request URL or raw fetch error: Telegram URLs contain the bot token.
-    const reason = err && err.name === 'TimeoutError'
+    const timedOut = err && (err.name === 'TimeoutError' || err.name === 'AbortError');
+    const reason = timedOut
       ? 'timed out after ' + TELEGRAM_API_TIMEOUT_MS + 'ms'
       : 'request failed (' + (err && err.name ? err.name : 'network error') + ')';
-    throw new Error('Telegram API (' + method + ') ' + reason + '; external outcome may be unknown');
+    const safeError = new Error('Telegram API (' + method + ') ' + reason + '; external outcome may be unknown');
+    safeError.code = timedOut ? 'TELEGRAM_TIMEOUT' : 'TELEGRAM_REQUEST_FAILED';
+    throw safeError;
   }
 
   const body = await response.json().catch(() => null);
