@@ -73,14 +73,19 @@ Harness должен отделять **общие механизмы испол
   Netlify JWS, consent gate, idempotency, атомарная дедупликация, PII
   minimization, POST-only Apps Script operations, GigaChat output validation.
 
-Latest CI for PR #3: [run #45991719682](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/45991719682)
-— Node 24/26 passed. Both PRs remain Draft and are not deployed.
+Latest CI for PR #3: [push #45993318100](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/45993318100)
+and [PR #45993325185](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/45993325185)
+— Node 24/26 passed, including constant-time token validation,
+prompt-injection guard and timeout checks. Both PRs remain Draft and are not deployed.
 
 **Остаётся проверить live runtime:** версия n8n, фактический список и
 active/inactive state workflow, последние executions, credential names/types,
 Apps Script deployment, Sheet headers, Netlify webhook and Outscraper account
-API. Экспорты в Git имеют `active: false` и placeholders, поэтому
-production-поведение не подтверждено.
+API. Внутренний `WEBHOOK_TOKEN` передаётся в POST body; ограничьте доступ
+к n8n execution history, настройте pruning/retention и не экспортируйте
+execution data с подставленным токеном или реальными заявками. Экспорты в
+Git имеют `active: false` и placeholders, поэтому production-поведение не
+подтверждено.
 
 Ветка `clawdbot1/main` не содержит `automation/`; n8n source находится
 именно в feature-ветке `claude/eager-ptolemy-ktb3lq`. Не путать её с
