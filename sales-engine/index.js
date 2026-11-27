@@ -6,6 +6,7 @@ const { runFollowUpCheck } = require('./src/followup');
 const sheets = require('./src/sheets');
 const telegram = require('./src/telegram');
 const { deliverLeadCard, canRetryLeadNotification } = require('./src/notification');
+const { getLeadActionTransition } = require('./src/lead-status');
 const {
   safeEqual,
   verifyBasicAuth,
@@ -242,7 +243,7 @@ app.post('/telegram/webhook', async (req, res) => {
   const parts = String(callback.data || '').split(':');
   const action = parts[0];
   const id = parts[1];
-  if (parts.length !== 2 || !['approve', 'reject', 'edit'].includes(action) ||
+  if (parts.length !== 2 || !['approve', 'reject', 'edit', 'sent'].includes(action) ||
       typeof id !== 'string' || !/^[a-z0-9_-]{1,64}$/i.test(id)) {
     return res.status(400).json({ ok: false });
   }
@@ -251,37 +252,51 @@ app.post('/telegram/webhook', async (req, res) => {
   }
 
   res.status(200).json({ ok: true });
-  const statusMap = { approve: 'Отправлено', reject: 'Отклонён', edit: 'Нужна правка' };
-  const statusLabel = statusMap[action];
 
   try {
     const lead = await sheets.getLeadById(id);
-    if (!lead || lead.status !== 'Готов к проверке') {
-      await telegram.answerCallbackQuery(callback.id, 'Карточка уже обработана или не найдена');
+    if (!lead) {
+      await telegram.answerCallbackQuery(callback.id, 'Лид не найден');
       return;
     }
+
+    // Approve/reject/edit belong to a review card. "sent" is a separate
+    // explicit confirmation that the owner has sent the copy outside this app.
+    const transition = getLeadActionTransition(action, lead.status);
+    if (!transition) {
+      await telegram.answerCallbackQuery(callback.id, 'Действие недоступно: проверьте текущий статус лида');
+      return;
+    }
+
     if (!verifyTelegramCallback(callback, TELEGRAM_ADMIN_USER_ID, TELEGRAM_CHAT_ID, lead.telegram_message_id)) {
       await telegram.answerCallbackQuery(callback.id, 'Это старая или чужая карточка');
       return;
     }
 
-    const updated = action === 'approve'
-      ? await sheets.markApproved(id)
-      : await sheets.updateStatus(id, statusLabel);
+    let updated = false;
+    if (action === 'approve') {
+      updated = await sheets.markApproved(id);
+    } else if (action === 'sent') {
+      updated = await sheets.markSent(id);
+    } else {
+      updated = await sheets.updateStatus(id, transition.nextStatus);
+    }
     if (!updated) {
-      await telegram.answerCallbackQuery(callback.id, 'Лид не найден');
+      await telegram.answerCallbackQuery(callback.id, 'Статус лида изменился. Обновите карточку.');
       return;
     }
 
-    await telegram.answerCallbackQuery(callback.id, 'Статус: ' + statusLabel);
+    await telegram.answerCallbackQuery(callback.id, transition.callbackText);
     const message = callback.message;
-    await telegram.markCardDecided(message.chat.id, message.message_id, statusLabel);
+    await telegram.markCardDecided(message.chat.id, message.message_id, transition.callbackText);
 
     if (action === 'approve') {
+      // Approval only stages the copy. Follow-up timing starts after "sent".
       const approvedLead = await sheets.getLeadById(id);
       if (approvedLead && approvedLead.message) {
         await telegram.sendPlainMessage('Текст для отправки (' +
           approvedLead.company + '):\n\n' + approvedLead.message);
+        await telegram.attachSentKeyboard(message.message_id, id);
       }
     }
   } catch {
