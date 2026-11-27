@@ -1,58 +1,127 @@
-/**
- * Достаёт данные заявки из payload, который присылает Netlify Forms
- * через Outgoing Webhook. Реальный формат Netlify оборачивает всё
- * в ключ payload:
- * { payload: { form_name, data: { <поля формы> }, ... }, site_url, created_at }
- *
- * Раньше код ждал form_name/data на верхнем уровне body — из-за этого
- * реальные заявки с сайта приходили бы пустыми. Поддерживаем оба варианта
- * (с обёрткой payload и без неё), чтобы не сломать ничего, если формат
- * webhook когда-то отличается.
- *
- * Названия полей формы могут отличаться регистром/языком —
- * поэтому проверяем несколько вариантов написания.
- */
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX = {
+  name: 120,
+  email: 254,
+  phone: 48,
+  message: 2000,
+  form_name: 120,
+  submission_id: 128
+};
+
 function pick(data, names) {
   for (const name of names) {
-    if (data[name] !== undefined && data[name] !== '') {
-      return String(data[name]);
+    const value = data[name];
+    if (value === undefined || value === null || value === '') continue;
+    if (Array.isArray(value)) {
+      return value
+        .filter((item) => ['string', 'number', 'boolean'].includes(typeof item))
+        .map((item) => String(item).trim())
+        .filter(Boolean)
+        .join(', ');
+    }
+    if (['string', 'number', 'boolean'].includes(typeof value)) {
+      return String(value).trim();
     }
   }
   return '';
 }
 
+function validationError(code, message) {
+  const err = new Error(message);
+  err.code = code;
+  return err;
+}
+
+function assertMaxLength(field, value) {
+  if (value.length > MAX[field]) {
+    throw validationError('field_too_long', 'Поле ' + field + ' превышает допустимую длину');
+  }
+}
+
+function hasConsent(data) {
+  const value = pick(data, [
+    'consent',
+    'personal_data_consent',
+    'consent_to_processing',
+    'data_processing_consent',
+    'Согласие на обработку персональных данных',
+    'согласие'
+  ]).toLowerCase();
+
+  return ['1', 'true', 'yes', 'on', 'accepted', 'согласен', 'согласна', 'да'].includes(value);
+}
+
 function parseNetlifyLead(body) {
-  const payload = (body && body.payload) || body || {};
-  const data = payload.data || {};
+  const root = body && typeof body === 'object' && !Array.isArray(body) ? body : {};
+  const payload = root.payload && typeof root.payload === 'object' && !Array.isArray(root.payload)
+    ? root.payload
+    : root;
+  const data = payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
+    ? payload.data
+    : {};
+
+  const submissionId = String(
+    payload.id || payload.submission_id || root.id || ''
+  ).trim();
+
+  if (!submissionId) {
+    throw validationError('missing_submission_id', 'В webhook отсутствует стабильный ID отправки Netlify');
+  }
+  assertMaxLength('submission_id', submissionId);
+
+  if (!hasConsent(data)) {
+    throw validationError('consent_required', 'Нет подтверждённого согласия на обработку данных');
+  }
+
+  const formName = String(payload.form_name || root.form_name || '').trim();
+  if (formName !== 'taina-diagnostic') {
+    throw validationError('unexpected_form', 'Webhook разрешён только для формы taina-diagnostic');
+  }
 
   const lead = {
+    submission_id: submissionId,
     name: pick(data, ['name', 'Name', 'имя', 'Имя']),
     email: pick(data, ['email', 'Email', 'почта', 'Почта']),
     phone: pick(data, ['phone', 'Phone', 'телефон', 'Телефон']),
-    message: pick(data, ['message', 'Message', 'сообщение', 'Сообщение', 'комментарий']),
-    form_name: payload.form_name || '',
+    // Free-form text is intentionally not stored: it can contain sensitive or confidential data.
+    message: '',
+    form_name: formName,
+    consent_status: 'yes',
+    received_at: payload.created_at || root.created_at || new Date().toISOString(),
+    status: 'Новая',
+    last_status_update: new Date().toISOString(),
+    notes: ''
   };
 
-  // Некоторые формы дают одно общее поле "Контакт" (телефон/почта/Telegram
-  // одной строкой), а не раздельные email/phone. Если раздельных полей
-  // не нашлось — раскладываем "Контакт" по простому признаку (есть "@" —
-  // это похоже на почту, иначе кладём в телефон, там же обычно и Telegram).
   const generalContact = pick(data, ['contact', 'Contact', 'контакт', 'Контакт']);
   if (generalContact && !lead.email && !lead.phone) {
-    if (generalContact.includes('@')) {
-      lead.email = generalContact;
-    } else {
-      lead.phone = generalContact;
-    }
+    if (generalContact.includes('@')) lead.email = generalContact;
+    else lead.phone = generalContact;
   }
 
-  const now = new Date().toISOString();
-  lead.received_at = now;
-  lead.last_status_update = now;
-  lead.status = 'Новая';
-  lead.notes = '';
+  for (const field of ['name', 'email', 'phone', 'message', 'form_name']) {
+    assertMaxLength(field, lead[field]);
+  }
+
+  if (lead.email && !EMAIL_PATTERN.test(lead.email)) {
+    throw validationError('invalid_email', 'Указан некорректный email');
+  }
+
+  if (lead.phone && lead.phone.replace(/\D/g, '').length < 7) {
+    throw validationError('invalid_phone', 'Указан некорректный телефон или контакт');
+  }
+
+  if (!lead.email && !lead.phone) {
+    throw validationError('contact_required', 'Нужно указать email или телефон/мессенджер');
+  }
+
+  const createdAt = new Date(lead.received_at);
+  if (Number.isNaN(createdAt.getTime())) {
+    throw validationError('invalid_created_at', 'Дата отправки Netlify имеет неверный формат');
+  }
+  lead.received_at = createdAt.toISOString();
 
   return lead;
 }
 
-module.exports = { parseNetlifyLead };
+module.exports = { parseNetlifyLead, hasConsent };

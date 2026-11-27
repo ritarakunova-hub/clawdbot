@@ -9,7 +9,13 @@
     "test": "node test/run.js"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "googleapis": "^140.0.1"
+    "express": "^4.22.3",
+    "googleapis": "^178.0.0"
+  },
+  "overrides": {
+    "gaxios": "^7.3.1"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }
