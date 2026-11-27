@@ -9,6 +9,7 @@ const { formatLeadMessage } = require('../src/telegram');
 const { verifyNetlifySignature } = require('../src/netlify-signature');
 const { findSubmissionRow } = require('../src/sheets');
 const { createSerialQueue } = require('../src/serial-queue');
+const { decideDuplicateNotification } = require('../src/notification-state');
 
 function makeJws(body, secret, overrides = {}) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
@@ -155,7 +156,13 @@ function makeJws(body, secret, overrides = {}) {
     notificationStatus: 'failed'
   });
   assert.strictEqual(findSubmissionRow(rows, 'missing'), null);
-  console.log('OK: CRM submission deduplication lookup');
+  assert.deepStrictEqual(decideDuplicateNotification('sent'), { action: 'already_sent' });
+  assert.deepStrictEqual(decideDuplicateNotification('pending'), { action: 'process_pending' });
+  assert.deepStrictEqual(decideDuplicateNotification('sending'), { action: 'manual_review' });
+  assert.deepStrictEqual(decideDuplicateNotification('failed'), { action: 'manual_review' });
+  assert.deepStrictEqual(decideDuplicateNotification('unexpected-status'), { action: 'manual_review' });
+  assert.deepStrictEqual(decideDuplicateNotification(''), { action: 'manual_review' });
+  console.log('OK: CRM duplicate notification decisions fail closed');
 }
 
 // 7. In-process queue serializes concurrent requests and continues after a failed task.
