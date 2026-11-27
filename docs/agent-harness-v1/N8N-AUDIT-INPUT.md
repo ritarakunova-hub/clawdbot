@@ -1,59 +1,47 @@
-# TAINA Agent Harness V1 — входные данные для аудита n8n
+# TAINA n8n workflows — входные данные для runtime-сверки
 
-**Цель:** получить достаточно структуры для аудита четырёх существующих message workflows, не передавая секреты и реальные персональные данные.
+**Статус на 2026-11-27:** все четыре JSON-экспорта найдены в `ritarakunova-hub/clawdbot1`, ветка `claude/eager-ptolemy-ktb3lq`. Их статический аудит выполнен. Повторно присылать эти файлы не нужно.
 
-## 1. Что нужно передать
+## Найденные файлы
 
-Четыре JSON-экспорта workflow из n8n, по одному файлу на каждый сценарий. Названия файлов можно сделать нейтральными: `workflow-01.json` … `workflow-04.json`.
+- `automation/mini-crm/workflow-1-new-lead.json`
+- `automation/mini-crm/workflow-2-reminders.json`
+- `automation/sales-engine/workflow-3-lead-finder.json`
+- `automation/sales-engine/workflow-4-approval-handler.json`
+- `automation/apps-script/Code.gs`
+- `automation/README.md`
+- `automation/test/test.md`
 
-Для каждого workflow приложить короткую запись:
-- назначение;
-- чем запускается (schedule, webhook, Telegram event, другой workflow);
-- какие другие workflow вызывает;
-- что сейчас работает;
-- где возникает ошибка или что ещё не закончено;
-- production / test / disabled — фактическое состояние.
+Полный разбор: [N8N-WORKFLOW-AUDIT-2026-11-27.md](./N8N-WORKFLOW-AUDIT-2026-11-27.md).
 
-## 2. Что обязательно удалить или заменить
+## Следующий вход — только runtime status
 
-Перед отправкой проверь JSON на секреты. Удалить/заменить:
-- API keys, tokens и passwords;
-- Telegram bot token, webhook secret и admin secret;
-- Google service account JSON / private key;
-- Authorization / Bearer / Basic headers;
-- значения cookies, session IDs, signed URLs и webhook URLs с секретными параметрами;
-- реальные имена, телефоны, email, тексты клиентских обращений и другие персональные данные.
+Для подтверждения текущей конфигурации нужны безопасные сведения из n8n:
+1. Версия n8n.
+2. Список workflow с именами, active/inactive и последним execution status.
+3. Подтверждение, что эти четыре workflow импортированы из найденной ветки или более новой версии.
+4. Имена и типы credentials без значений credential.
+5. Настроен ли Netlify outgoing webhook и на какой workflow (покажи только hostname/path без токенов).
+6. Версия последнего Apps Script deployment и активен ли URL.
+7. Есть ли тестовая Google Sheet с ожидаемыми заголовками.
+8. Есть ли отдельный тестовый Telegram chat.
 
-Значения можно заменить строками вроде `REDACTED_SECRET`, `TEST_CHAT_ID`, `SYNTHETIC_EMAIL`. Не присылать .env, credential export, реальные execution payloads или скриншоты с секретами.
+Не присылай реальные токены, credential values, контакты или execution payloads. Секреты не нужны для аудита.
 
-## 3. Что нужно сохранить для технического аудита
+## Если workflow менялись после найденной версии
 
-Не удалять:
-- типы nodes и версии node types, если они присутствуют;
-- имена nodes и workflow;
-- connections и порядок выполнения;
-- выражения и mapping между nodes;
-- параметры retries, timeout, error branches и continue-on-fail;
-- настройки execution и error workflow;
-- ссылки на credential types, если сами секретные значения удалены;
-- названия API/сервисов и имена переменных окружения без их значений.
+Передавай только обновлённые sanitized JSON. Удали API keys, tokens, passwords, Telegram bot token, webhook secret, Google service account JSON/private key, Authorization/Bearer/Basic headers, cookies/session IDs/signed URLs и реальные персональные данные.
 
-Если неясно, является ли поле секретом, замени только его значение, сохранив ключ и тип поля.
+Сохрани node types/versions, connections, параметры, expressions, error branches, retries/timeouts, execution settings и credential type/name. Заменяй только чувствительные значения, не удаляй структуру.
 
-## 4. Что я сделаю с экспортами
+## Этап до включения
 
-Для каждого файла подготовлю:
-1. схему входов и выходов;
-2. карту node flow и межworkflow-вызовов;
-3. список API и нужных credentials по типам;
-4. повторяющиеся блоки;
-5. обработку ошибок, повторов и дублирующихся событий;
-6. точки внешних side effects и необходимые approvals;
-7. mapping в Task Contract V1;
-8. безопасный план изменений с rollback.
+Не импортировать и не включать вслепую. Сначала устранить P0/P1 в порядке из аудита:
+1. Авторизация Telegram callback.
+2. Netlify webhook signature verification и idempotency.
+3. Минимизация PII и перенос GET-token операций в POST.
+4. Атомарная запись/дедупликация через Apps Script LockService.
+5. Безопасная доставка Telegram review card с recovery.
+6. Строгая схема GigaChat JSON.
 
-До согласования карты и плана не меняю исходные workflow и production.
-
-## 5. Важное различие
-
-JSON-экспорт workflow не содержит подтверждения фактического production-поведения. Для этого отдельно сверим настройки активного workflow, hosting/runtime, webhooks, persistent storage и последние ошибки — без доступа к значениям секретов.
+После этого — synthetic end-to-end test и только затем решение о контролируемой активации.
