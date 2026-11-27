@@ -130,3 +130,48 @@ The script's token check is fail-closed when the property is absent, which is go
 - `automation/apps-script/Code.gs`
 - `automation/README.md`
 - `automation/test/test.md`
+
+
+## 8. Remediation status as of 2026-11-27
+
+The following implementation work exists in separate Draft PRs in
+`ritarakunova-hub/clawdbot1`:
+
+- **PR #2 — approval authority and message binding:** validates Telegram owner,
+  private chat, action and exact originating `message_id`; persists card ID
+  before adding buttons; restricts status transitions. Automated tests cover
+  unauthorized owner, group chat, stale message and contradictory decision.
+- **PR #3 — signed intake and duplicate safety:** verifies Netlify JWS before
+  parsing raw body; enforces consent and field limits; rejects legacy unsigned
+  intake; stores stable submission ID; uses LockService around duplicate
+  lookup + append; moves Apps Script internal calls from GET to POST; removes
+  contact details from Telegram reminders; validates Sales Engine score and
+  GigaChat output before appending; uses server-side atomic company/site
+  deduplication.
+- Latest tests for PR #3 head
+  `a62394cdf1d60c296e48d6039cff53e24a6fe8a7` passed on Node 24 and 26:
+  [CI run #45991719682](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/45991719682).
+
+### Remaining blockers
+
+1. Live n8n version, imported workflow IDs/active flags, execution state and
+   credential names/types are not yet confirmed.
+2. Apps Script Web App deployment and Sheet schema must be checked against the
+   new headers in a test copy.
+3. Current site HTML has no explicit consent checkbox/policy link. Real form
+   submissions must remain disconnected until reviewed consent text and
+   policy are approved and the required unchecked checkbox is added.
+4. Outscraper endpoint/response shape still requires one low-cost test against
+   the owner's account documentation.
+5. Telegram card failure after successful send but before message-ID
+   persistence still requires manual operator reconciliation. Do not blindly
+   retry.
+6. GigaChat uses a validated text template rather than a formal JSON Schema /
+   provider-enforced JSON mode. Missing/invalid fields now fail closed, but
+   structured JSON output remains a future robustness improvement.
+
+All four workflows in the source export remain inactive/placeholders. No
+workflow import, activation, webhook registration, Apps Script deployment,
+live Sheet mutation, production credential change or outbound message was
+performed. The PRs are Draft and must be reviewed and tested in a disposable
+environment before any production decision.
