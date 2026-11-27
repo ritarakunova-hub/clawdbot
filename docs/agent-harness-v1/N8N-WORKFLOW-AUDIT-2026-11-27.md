@@ -153,13 +153,15 @@ The following implementation work exists in separate Draft PRs in
   GigaChat output before appending; uses server-side atomic company/site
   deduplication; bounds untrusted Outscraper fields; excludes phone/contact
   from GigaChat; rejects prompt-injection instructions embedded in source data;
-  and adds 30s/45s timeouts for Outscraper/GigaChat.
-- Latest PR #3 head `ec4300940d353e115dd02bc8c2b0e01917b53589` passed
-  Node 24 and Node 26, including Apps Script/workflow regressions, prompt-
-  injection and timeout checks, sample sender syntax, and JSON parsing for all
-  four exports:
-  [push CI #45992800953](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/45992800953)
-  and [PR CI #45992810123](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/45992810123).
+  and adds 30s/45s timeouts for Outscraper/GigaChat; Apps Script also compares
+  the internal bearer token using a constant-time helper and rejects malformed
+  or overlong values.
+- Latest PR #3 head `2112feed753f0f86df44c21bad9eb19d530183be` passed
+  Node 24 and Node 26, including Apps Script auth/approval regression tests,
+  signed intake, deduplication, GigaChat validation/prompt-injection/timeouts,
+  sample sender syntax, and JSON parsing for all four exports:
+  [push CI #45993318100](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/45993318100)
+  and [PR CI #45993325185](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/45993325185).
 
 ### Remaining blockers
 
