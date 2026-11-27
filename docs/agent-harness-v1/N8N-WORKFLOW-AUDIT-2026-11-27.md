@@ -72,11 +72,13 @@ Workflow 3 writes a lead to the sheet before sending its Telegram card. The Tele
 
 **Required fix:** use a delivery state machine and store the exact Telegram `message_id`. Send a card without inline buttons, persist the message ID and ready state, then attach buttons. An ambiguous send outcome must transition to manual review rather than trigger a blind resend. Add a protected operator recovery action.
 
-### P1 — GigaChat response parsing is not schema-safe
+### P1 — GigaChat response parsing was not schema-safe in the source baseline
 
-The workflow asks GigaChat for a text template and extracts fields with regular expressions. The score parser strips every non-digit; e.g. malformed content can become a value outside 0–100. Required fields can be empty and are still sent to the sheet/card. The prompt requests a strict format, but that is not runtime validation.
+В исходном экспорте GigaChat возвращал текстовый шаблон, а workflow извлекал поля регулярными выражениями без полной проверки обязательных значений и границ score. Просьба к модели соблюдать формат сама по себе не являлась runtime-валидацией.
 
-**Required fix:** request/parse structured JSON, validate with explicit schema (score integer 0–100; bounded text lengths; required company and reason; source facts separated from hypotheses). If parsing or validation fails, quarantine the company and notify the owner rather than append a malformed record. Treat Outscraper-supplied fields as untrusted input, not instructions.
+**Подготовленное исправление в Draft PR #3:** перед записью теперь проверяются целый score 0–100, обязательные факты/объяснение/гипотеза/решение/зацепка и лимиты длины. Неполный или некорректный ответ отклоняется, лид не создаётся, владельцу уходит уведомление. Внешние поля Outscraper ограничиваются по длине; телефон не передаётся в GigaChat; prompt запрещает исполнять инструкции, спрятанные во внешних данных. Timeout: Outscraper 30 секунд, GigaChat 45 секунд.
+
+**Что ещё не идеально:** ответ остаётся валидируемым текстовым шаблоном, а не формальным JSON Schema / provider-enforced JSON mode. Это последующее улучшение после runtime-проверки.
 
 ### P1 — Apps Script update endpoint accepts arbitrary status values
 
@@ -90,9 +92,9 @@ The README itself warns that the Outscraper endpoint/parameters and response sha
 
 **Required fix:** run one low-cost Outscraper request using the current account docs, validate the actual result shape and loop behavior in a test workflow, and only then enable a limited schedule. No recurring search should be activated by default.
 
-## 4. Apps Script observations
+## 4. Apps Script observations — initial source baseline
 
-The shared `Code.gs` currently:
+The following observations describe the original source export before PR #2/#3 changes:
 - stores its shared token in Script Properties and compares exact values;
 - supports POST for lead creation, but GET for overdue lookup, duplicate checks and status updates;
 - uses the first sheet in the spreadsheet;
@@ -102,7 +104,9 @@ The shared `Code.gs` currently:
 - has no submission ID field for Netlify deduplication;
 - writes arbitrary status values.
 
-The script's token check is fail-closed when the property is absent, which is good. It does not, however, replace per-user approval authorization or server-side input/state validation.
+The original token check was fail-closed when the property was absent. It did not, however, replace per-user approval authorization or server-side input/state validation.
+
+**Mitigations in Draft PR #2/#3:** GET is disabled; internal operations use POST bodies; Telegram actor/chat/card identity and state transitions are enforced server-side; Netlify JWS and consent are checked before parsing/storing; Netlify and Sales Engine dedupe are protected with LockService; external text/score are validated before write; overdue lookup omits contact fields.
 
 ## 5. Suggested remediation order
 
@@ -147,10 +151,15 @@ The following implementation work exists in separate Draft PRs in
   lookup + append; moves Apps Script internal calls from GET to POST; removes
   contact details from Telegram reminders; validates Sales Engine score and
   GigaChat output before appending; uses server-side atomic company/site
-  deduplication.
-- Latest tests for PR #3 head
-  `a62394cdf1d60c296e48d6039cff53e24a6fe8a7` passed on Node 24 and 26:
-  [CI run #45991719682](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/45991719682).
+  deduplication; bounds untrusted Outscraper fields; excludes phone/contact
+  from GigaChat; rejects prompt-injection instructions embedded in source data;
+  and adds 30s/45s timeouts for Outscraper/GigaChat.
+- Latest PR #3 head `ec4300940d353e115dd02bc8c2b0e01917b53589` passed
+  Node 24 and Node 26, including Apps Script/workflow regressions, prompt-
+  injection and timeout checks, sample sender syntax, and JSON parsing for all
+  four exports:
+  [push CI #45992800953](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/45992800953)
+  and [PR CI #45992810123](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/45992810123).
 
 ### Remaining blockers
 
@@ -167,8 +176,12 @@ The following implementation work exists in separate Draft PRs in
    persistence still requires manual operator reconciliation. Do not blindly
    retry.
 6. GigaChat uses a validated text template rather than a formal JSON Schema /
-   provider-enforced JSON mode. Missing/invalid fields now fail closed, but
-   structured JSON output remains a future robustness improvement.
+   provider-enforced JSON mode. Missing/invalid fields now fail closed; a
+   structured JSON response schema remains a future robustness improvement.
+7. The shared `WEBHOOK_TOKEN` is sent in internal POST bodies because Apps
+   Script Web Apps do not expose arbitrary request headers. Review n8n execution
+   data retention/pruning and restrict execution-history access; never export
+   actual executions with resolved tokens or real lead data.
 
 All four workflows in the source export remain inactive/placeholders. No
 workflow import, activation, webhook registration, Apps Script deployment,
