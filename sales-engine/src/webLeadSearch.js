@@ -61,7 +61,7 @@ async function searchCompanies(niche, city, limit) {
     model: MODEL,
     max_tokens: 4000,
     system: SEARCH_SYSTEM,
-    tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 6 }],
+    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6 }],
     messages: [
       {
         role: 'user',
