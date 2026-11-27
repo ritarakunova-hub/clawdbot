@@ -89,6 +89,7 @@ jobs:
           NODE_ENV: production
           PORT: "3000"
           ANTHROPIC_API_KEY: test-key
+          ANTHROPIC_MODEL: claude-sonnet-5-5
           GOOGLE_SHEET_ID: test-sheet
           GOOGLE_SERVICE_ACCOUNT_KEY_BASE64: e30=
           TELEGRAM_BOT_TOKEN: "123:test-token"
