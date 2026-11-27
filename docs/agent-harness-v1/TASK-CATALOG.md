@@ -5,6 +5,8 @@
 
 Каталог отделяет бизнес-задачу, необходимость LLM, инструменты и внешние эффекты, capabilities, требуемое подтверждение и источник события.
 
+Четыре n8n workflow найдены в `clawdbot1/automation`; подробности и риски — в [аудите от 27.11.2026](./N8N-WORKFLOW-AUDIT-2026-11-27.md). Таблица ниже сопоставляет задачи с обнаруженной n8n-реализацией.
+
 Наличие строки в каталоге не означает, что task handler уже зарегистрирован или что production workflow использует Harness.
 
 ## 1. Message Automation
@@ -22,22 +24,19 @@ PR #6 и PR #7 — разные действия. Не объединять их
 
 | task_type (candidate) | Источник / сервис | LLM | Capabilities | Approval / policy |
 |---|---|---:|---|---|
-| crm.receive_signed_lead | Подписанный Netlify webhook, mini-CRM | Нет | netlify.signature.verify, crm.lead.validate, sheets.lead.append | Проверять согласие и правила обработки; до privacy review использовать только синтетические данные |
-| crm.notify_owner | mini-CRM | Нет | telegram.owner_notification.send | Только минимальное уведомление; не передавать PII и свободный текст заявки в Telegram |
-
-Для CRM важны не только permissions, но и policy constraints: минимизация персональных данных, consent, условия хранения, сроки, доступ и удаление.
+| crm.receive_lead | n8n workflow-1: Netlify webhook → Apps Script | Нет | netlify.signature.verify (MISSING), crm.lead.validate, sheets.lead.append | Подпись сейчас не проверяется; добавить stable submission ID и идемпотентность |
+| crm.notify_owner | n8n workflow-1 | Нет | telegram.owner_notification.send | Сейчас сообщение содержит контакт и свободный текст; заменить на минимальное уведомление без PII |
+| crm.remind_overdue | n8n workflow-2, daily 10:00 Europe/Moscow | Нет | sheets.lead.read, telegram.owner_notification.send | Проверить GET-token, ограничить поля ответа, добавить обработку ошибок |
 
 ## 3. Sales Engine
 
-| task_type (candidate) | Источник / сервис | LLM | Capabilities | Approval |
+| task_type (candidate) | Источник / сервис | LLM | Capabilities | Approval / policy |
 |---|---|---:|---|---|
-| sales.search_companies | Защищённая web-форма / Sales Engine | Да, в текущей реализации поиск строится на Claude | web.company_search | Не отправляет сообщения потенциальным клиентам |
-| sales.analyze_company | Sales Engine | Да, Claude | web.site_read, llm.company_analyze | Проверять факты и гипотезы |
-| sales.score_lead | Sales Engine | Смешанный: критерии от LLM, итоговая формула в коде | sales.score.calculate | Проверяемая детерминированная формула |
-| sales.prepare_outreach | Sales Engine | Да, Claude | llm.outreach_draft, sheets.lead.update, telegram.owner_draft.send | Обязательное одобрение; фактическую отправку адресату выполняет человек |
-| sales.prepare_followup | Sales Engine cron | Да, Claude | sheets.lead.read, llm.followup_draft, sheets.lead.update, telegram.owner_draft.send | Обязательное одобрение до внешнего контакта |
-
-В исходном Sales Engine README зафиксировано, что этот сервис использует Node.js и Claude/Anthropic и не является n8n/GigaChat-пайплайном. Это характеристика просмотренной ветки, не доказательство отсутствия других production-интеграций.
+| sales.search_companies | n8n workflow-3, manual + daily 09:00; Outscraper Google Maps | Нет на этапе поиска | web.company_search | Endpoint требует проверки по аккаунту; расписание оставить выключенным до проверки |
+| sales.analyze_company | n8n workflow-3, GigaChat | Да, GigaChat | llm.company_analyze | Парсинг свободного текста regex; добавить strict JSON schema и fail-closed validation |
+| sales.score_lead | n8n workflow-3 | Смешанный: GigaChat score, Apps Script хранит значение | sales.score.calculate | Диапазон 0–100 пока не валидируется сервером |
+| sales.prepare_outreach | n8n workflow-3 → Telegram card | Да, GigaChat draft fields | llm.outreach_draft, sheets.lead.append, telegram.owner_draft.send | Карточка для владельца; отправка компании вручную. Delivery recovery отсутствует |
+| sales.approve_lead | n8n workflow-4 callback_query | Нет | telegram.approval_callback.consume, sheets.lead.update, telegram.card.edit | P0: нет проверки approver ID, private chat, message_id и допустимого перехода статуса |
 
 ## 4. Capabilities — базовый реестр
 
