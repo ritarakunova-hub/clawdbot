@@ -4,7 +4,7 @@ const assert = require('node:assert');
 process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || 'test-key';
 const { normalizeDomain, extractJsonArray } = require('../src/webLeadSearch');
 const { computeScore, digitalPresenceCriterion } = require('../src/scoring');
-const { formatLeadCard } = require('../src/telegram');
+const { formatLeadCard, sentKeyboard } = require('../src/telegram');
 const { buildLeadKey } = require('../src/pipeline');
 const { fetchSiteText, isPublicIPv4, parsePublicHttpUrl } = require('../src/siteFetch');
 const { safeEqual, verifyBasicAuth, verifyCsrf, verifyTelegramCallback, escapeHtml } = require('../src/security');
@@ -106,6 +106,10 @@ const { getLeadActionTransition, STATUS_APPROVED, STATUS_SENT } = require('../sr
   assert.strictEqual(getLeadActionTransition('sent', STATUS_SENT), null);
   assert.strictEqual(getLeadActionTransition('reject', STATUS_APPROVED), null);
   console.log('OK: follow-up starts only after explicit confirmation that the message was sent');
+  assert.deepStrictEqual(sentKeyboard('lead-123'), {
+    inline_keyboard: [[{ text: '✅ Уже отправил', callback_data: 'sent:lead-123' }]],
+  });
+  console.log('OK: sent confirmation callback is bound to the lead ID');
 }
 
 // 2. computeScore — детерминированная формула, а не выдумка LLM
