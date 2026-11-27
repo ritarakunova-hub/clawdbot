@@ -80,3 +80,13 @@ Capability определяется по фактическому эффекту
 8. unit/smoke tests и инструкция ручного восстановления.
 
 Первый runtime pilot следует выбирать после получения четырёх n8n exports и подтверждения фактически активной message automation.
+
+
+## 5. Статус безопасных уведомлений (2026-11-27)
+
+Предварительные task types остаются кандидатами, а не зарегистрированными handlers.
+
+- Content Autopilot PR #10 добавляет fail-closed состояния и точную привязку owner approval к Telegram card.
+- Sales Engine [PR #11](https://github.com/ritarakunova-hub/clawdbot/pull/11) использует двухфазную доставку review card: сохранить Telegram `message_id`, затем включить кнопки. Нужна ручная сверка неоднозначных результатов.
+- mini-CRM [PR #12](https://github.com/ritarakunova-hub/clawdbot/pull/12) разрешает автоматическое продолжение дубля только в состоянии `pending`; `sending`, `failed` и неизвестные статусы закрыты для слепого повтора.
+- Ни один из этих сервисов пока не подключён к Harness runtime. До интеграции нужно получить n8n exports и подтвердить production-конфигурацию.
