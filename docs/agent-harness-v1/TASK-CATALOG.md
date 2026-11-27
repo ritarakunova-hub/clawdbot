@@ -24,19 +24,19 @@ PR #6 и PR #7 — разные действия. Не объединять их
 
 | task_type (candidate) | Источник / сервис | LLM | Capabilities | Approval / policy |
 |---|---|---:|---|---|
-| crm.receive_lead | n8n workflow-1: Netlify webhook → Apps Script | Нет | netlify.signature.verify (MISSING), crm.lead.validate, sheets.lead.append | Подпись сейчас не проверяется; добавить stable submission ID и идемпотентность |
-| crm.notify_owner | n8n workflow-1 | Нет | telegram.owner_notification.send | Сейчас сообщение содержит контакт и свободный текст; заменить на минимальное уведомление без PII |
-| crm.remind_overdue | n8n workflow-2, daily 10:00 Europe/Moscow | Нет | sheets.lead.read, telegram.owner_notification.send | Проверить GET-token, ограничить поля ответа, добавить обработку ошибок |
+| crm.receive_lead | n8n workflow-1 → Apps Script | Нет | netlify.signature.verify, crm.lead.validate, sheets.lead.append | Draft PR #3 добавляет JWS verification, consent gate, stable submission ID и lock-protected deduplication; live intake disabled |
+| crm.notify_owner | n8n workflow-1 | Нет | telegram.owner_notification.send | Draft PR #3 удаляет name/contact/free text из Telegram; уведомление только ID/form/time |
+| crm.remind_overdue | n8n workflow-2, daily 10:00 Europe/Moscow | Нет | sheets.lead.read, telegram.owner_notification.send | Draft PR #3 переносит вызов на POST и убирает контакт из response; runtime/error handling требует сверки |
 
 ## 3. Sales Engine
 
 | task_type (candidate) | Источник / сервис | LLM | Capabilities | Approval / policy |
 |---|---|---:|---|---|
-| sales.search_companies | n8n workflow-3, manual + daily 09:00; Outscraper Google Maps | Нет на этапе поиска | web.company_search | Endpoint требует проверки по аккаунту; расписание оставить выключенным до проверки |
-| sales.analyze_company | n8n workflow-3, GigaChat | Да, GigaChat | llm.company_analyze | Парсинг свободного текста regex; добавить strict JSON schema и fail-closed validation |
-| sales.score_lead | n8n workflow-3 | Смешанный: GigaChat score, Apps Script хранит значение | sales.score.calculate | Диапазон 0–100 пока не валидируется сервером |
-| sales.prepare_outreach | n8n workflow-3 → Telegram card | Да, GigaChat draft fields | llm.outreach_draft, sheets.lead.append, telegram.owner_draft.send | Карточка для владельца; отправка компании вручную. Delivery recovery отсутствует |
-| sales.approve_lead | n8n workflow-4 callback_query | Нет | telegram.approval_callback.consume, sheets.lead.update, telegram.card.edit | P0: нет проверки approver ID, private chat, message_id и допустимого перехода статуса |
+| sales.search_companies | n8n workflow-3, manual + daily 09:00; Outscraper Google Maps | Нет на этапе поиска | web.company_search | Endpoint/schema требуют проверки по account docs; schedule остаётся выключенным до live verification; HTTP timeout 30s |
+| sales.analyze_company | n8n workflow-3, GigaChat | Да, GigaChat | llm.company_analyze | Draft PR #3 валидирует обязательные поля и score; untrusted Outscraper data не считается инструкциями; телефон не передаётся модели; timeout 45s |
+| sales.score_lead | n8n workflow-3 + Apps Script | Да | sales.score.calculate | Apps Script принимает только целое 0–100; malformed/missing score не создаёт лид |
+| sales.prepare_outreach | n8n workflow-3 → Telegram card | Да, GigaChat draft fields | llm.outreach_draft, sheets.lead.append, telegram.owner_draft.send | Draft PR #2/#3 сохраняют message_id до появления кнопок, атомарно дедуплицируют компанию/сайт; внешнее сообщение отправляет человек |
+| sales.approve_lead | n8n workflow-4 callback_query | Нет | telegram.approval_callback.consume, sheets.lead.update, telegram.card.edit | Draft PR #2 проверяет owner ID, private chat, exact message_id и допустимый переход статуса |
 
 ## 4. Capabilities — базовый реестр
 
@@ -94,15 +94,16 @@ GigaChat можно оставить отдельным Model Adapter candidate;
 Все изменения ниже остаются в Draft PR и не означают production rollout.
 
 - [clawdbot1 PR #2](https://github.com/ritarakunova-hub/clawdbot1/pull/2):
-  owner ID + private chat + exact Telegram message_id; only allowlisted status
-  transitions; message buttons attach only after message ID persistence.
+  owner ID + private chat + exact Telegram message_id; allowlisted status
+  transitions; card ID persistence before attaching buttons.
 - [clawdbot1 PR #3](https://github.com/ritarakunova-hub/clawdbot1/pull/3),
-  stacked on #2: Netlify JWS, consent validation, stable submission ID,
-  lock-protected idempotency, PII minimization, POST-only internal API,
-  atomic Sales Engine deduplication, score validation 0–100 and fail-closed
-  GigaChat response validation.
-- CI for PR #3 head `a62394cdf1d60c296e48d6039cff53e24a6fe8a7` passed on
-  Node 24 and Node 26: [run #45991719682](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/45991719682).
-- Node.js PR #11/#12 in `clawdbot` are old alternatives/reference patterns,
-  not the selected n8n implementation; do not merge/deploy as substitutes.
+  stacked on #2: Netlify JWS and consent gate; stable submission ID;
+  LockService idempotency; PII minimization; POST-only API; atomic Sales Engine
+  dedupe; score validation; bounded external fields; GigaChat prompt-injection
+  guard; 30s/45s timeouts; constant-time internal token comparison.
+- Latest verified PR #3 CI head is tracked in the PR description; current
+  Node 24/26 checks include Apps Script auth, workflow regressions, GigaChat
+  injection/timeout and sample-sender syntax tests.
+- Node.js PR #11/#12 in `clawdbot` are legacy/reference variants, not the
+  selected n8n implementation; do not merge/deploy as substitutes.
 - Harness Task Router/handlers are not implemented or registered yet.
