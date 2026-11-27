@@ -62,15 +62,38 @@ Harness должен отделять **общие механизмы испол
 
 ## Статус аудита n8n на 2026-11-27
 
-Найдены все четыре JSON-экспорта в `ritarakunova-hub/clawdbot1`, ветка `claude/eager-ptolemy-ktb3lq`, вместе с Apps Script и инструкцией. Проведён статический аудит потоков и рисков: [N8N-WORKFLOW-AUDIT-2026-11-27.md](./N8N-WORKFLOW-AUDIT-2026-11-27.md).
+Все четыре JSON-экспорта найдены в `ritarakunova-hub/clawdbot1`,
+ветка `claude/eager-ptolemy-ktb3lq`, вместе с Apps Script, README и
+тестовым payload. Статический аудит: [N8N-WORKFLOW-AUDIT-2026-11-27.md](./N8N-WORKFLOW-AUDIT-2026-11-27.md).
 
-Остаётся проверить live runtime: какие workflow действительно импортированы/активны, какие credentials привязаны, какой Apps Script deployment и Google Sheet используются, работает ли Netlify webhook и актуален ли Outscraper endpoint. Экспорты в репозитории имеют `active: false` и плейсхолдеры, поэтому production-поведение не подтверждено. До устранения P0/P1 рисков не включать автоматизации.
+**Текущая реализация находится в Draft PR в исходном репозитории:**
+- [clawdbot1 PR #2](https://github.com/ritarakunova-hub/clawdbot1/pull/2) —
+  owner-only Telegram approvals, привязка к точной карточке, state validation.
+- [clawdbot1 PR #3](https://github.com/ritarakunova-hub/clawdbot1/pull/3) —
+  Netlify JWS, consent gate, idempotency, атомарная дедупликация, PII
+  minimization, POST-only Apps Script operations, GigaChat output validation.
 
+Latest CI for PR #3: [run #45991719682](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/45991719682)
+— Node 24/26 passed. Both PRs remain Draft and are not deployed.
 
-## Актуальный статус подключений на 2026-11-27
+**Остаётся проверить live runtime:** версия n8n, фактический список и
+active/inactive state workflow, последние executions, credential names/types,
+Apps Script deployment, Sheet headers, Netlify webhook and Outscraper account
+API. Экспорты в Git имеют `active: false` и placeholders, поэтому
+production-поведение не подтверждено.
 
-- [PR #10](https://github.com/ritarakunova-hub/clawdbot/pull/10) — защита SMMplanner handoff; Draft, зависит от PR #7.
-- [PR #11](https://github.com/ritarakunova-hub/clawdbot/pull/11) — единый Sales Engine security baseline и надёжные Telegram approvals; Draft, направлен в default branch.
-- [PR #12](https://github.com/ritarakunova-hub/clawdbot/pull/12) — безопасный mini-CRM intake backend и fail-closed notification retry; Draft, направлен в default branch.
+Ветка `clawdbot1/main` не содержит `automation/`; n8n source находится
+именно в feature-ветке `claude/eager-ptolemy-ktb3lq`. Не путать её с
+default branch.
 
-Ни один из этих PR не означает production rollout. Для mini-CRM отдельно требуется privacy/legal review. Для TAINA Agent Harness окончательная интеграция четырёх n8n-сценариев остаётся заблокированной до получения их безопасных JSON-экспортов и подтверждения production-состояния.
+Отдельные Node.js PR #11/#12 в репозитории `clawdbot` — legacy/reference
+варианты и не должны сливаться или развёртываться как замена выбранным n8n
+workflow. PR #10 относится к отдельной Node.js Content Autopilot/SMMplanner
+ветке и также требует отдельного решения. Ни один PR не является
+production rollout.
+
+**Блокер реальных заявок:** проверенная форма
+`clawdbot/taina-site/index.html` пока не содержит явного consent checkbox
+и ссылки на утверждённую privacy policy. Пока юридические условия и текст
+согласия не утверждены и checkbox не добавлен, workflow-1 отклонит реальные
+заявки без `consent=yes`. Это намеренный fail-closed режим.
