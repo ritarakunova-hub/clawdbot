@@ -1,7 +1,7 @@
 const Anthropic = require('@anthropic-ai/sdk');
 
 const client = new Anthropic(); // берёт ANTHROPIC_API_KEY из окружения
-const MODEL = 'claude-opus-5';
+const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
 
 /**
  * Поиск компаний через встроенный веб-поиск Claude — НЕ через
