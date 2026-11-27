@@ -16,12 +16,14 @@ async function callTelegram(method, payload) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(10000),
   });
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Telegram API (${method}) вернул ${res.status}: ${body}`);
+    throw new Error('telegram_api_http_error');
   }
-  return res.json();
+  const result = await res.json().catch(() => null);
+  if (!result || result.ok !== true) throw new Error('telegram_api_rejected_request');
+  return result;
 }
 
 function getChatId() {
@@ -69,6 +71,14 @@ function leadKeyboard(id) {
   };
 }
 
+function sentKeyboard(id) {
+  return {
+    inline_keyboard: [
+      [{ text: '✅ Уже отправил', callback_data: `sent:${id}` }],
+    ],
+  };
+}
+
 /**
  * Отправляет карточку лида с кнопками решения. Возвращает message_id
  * (пригодится, если захотите потом редактировать это же сообщение).
@@ -78,16 +88,36 @@ async function sendLeadCard(lead) {
     chat_id: getChatId(),
     text: formatLeadCard(lead),
     parse_mode: 'HTML',
-    reply_markup: leadKeyboard(lead.id),
   });
   return result.result && result.result.message_id;
+}
+
+async function attachLeadKeyboard(messageId, leadId) {
+  if (!Number.isSafeInteger(Number(messageId)) || Number(messageId) <= 0) {
+    throw new Error('telegram_message_id_invalid');
+  }
+  await callTelegram('editMessageReplyMarkup', {
+    chat_id: getChatId(),
+    message_id: Number(messageId),
+    reply_markup: leadKeyboard(leadId),
+  });
+}
+
+async function attachSentKeyboard(messageId, leadId) {
+  if (!Number.isSafeInteger(Number(messageId)) || Number(messageId) <= 0) {
+    throw new Error('telegram_message_id_invalid');
+  }
+  await callTelegram('editMessageReplyMarkup', {
+    chat_id: getChatId(),
+    message_id: Number(messageId),
+    reply_markup: sentKeyboard(leadId),
+  });
 }
 
 async function sendPlainMessage(text) {
   await callTelegram('sendMessage', {
     chat_id: getChatId(),
-    text,
-    parse_mode: 'HTML',
+    text: String(text || ''),
   });
 }
 
@@ -127,7 +157,10 @@ async function markCardDecided(chatId, messageId, statusLabel) {
 module.exports = {
   formatLeadCard,
   leadKeyboard,
+  sentKeyboard,
   sendLeadCard,
+  attachLeadKeyboard,
+  attachSentKeyboard,
   sendPlainMessage,
   answerCallbackQuery,
   markCardDecided,

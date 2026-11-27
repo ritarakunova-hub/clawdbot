@@ -1,45 +1,103 @@
+const crypto = require('node:crypto');
 const express = require('express');
 const cron = require('node-cron');
 const { runPipeline } = require('./src/pipeline');
 const { runFollowUpCheck } = require('./src/followup');
 const sheets = require('./src/sheets');
 const telegram = require('./src/telegram');
+const { deliverLeadCard, canRetryLeadNotification } = require('./src/notification');
+const { getLeadActionTransition } = require('./src/lead-status');
+const {
+  safeEqual,
+  verifyBasicAuth,
+  verifyCsrf,
+  verifyTelegramCallback,
+  escapeHtml,
+  safePositiveInteger
+} = require('./src/security');
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
+  next();
+});
+app.use(express.json({ limit: '16kb', inflate: false }));
+app.use(express.urlencoded({ extended: false, limit: '16kb', inflate: false }));
 
 const PORT = process.env.PORT || 3000;
 const APP_USERNAME = process.env.APP_USERNAME || '';
 const APP_PASSWORD = process.env.APP_PASSWORD || '';
 const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || '';
-// По умолчанию — каждый день в 10:00 по времени сервера (Amvera — обычно МСК).
+const TELEGRAM_ADMIN_USER_ID = process.env.TELEGRAM_ADMIN_USER_ID || '';
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
 const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '0 10 * * *';
+let activeOperation = null;
 
-app.get('/health', (req, res) => res.status(200).json({ ok: true }));
-
-// Простая защита формы паролем через стандартное окно браузера (Basic Auth) —
-// чтобы случайный человек в интернете не мог жать "Найти лидов" за ваш счёт.
-// Если APP_USERNAME/APP_PASSWORD не заданы — защита выключена (только для локальных тестов).
 function requireAuth(req, res, next) {
-  if (!APP_USERNAME || !APP_PASSWORD) return next();
-
-  const header = req.headers.authorization || '';
-  const [, encoded] = header.split(' ');
-  const decoded = encoded ? Buffer.from(encoded, 'base64').toString('utf-8') : '';
-  const [user, pass] = decoded.split(':');
-
-  if (user === APP_USERNAME && pass === APP_PASSWORD) return next();
-
-  res.set('WWW-Authenticate', 'Basic realm="TAINA Sales Engine"');
+  if (!APP_USERNAME || APP_PASSWORD.length < 16) {
+    return res.status(503).send('Сервис закрыт: авторизация не настроена.');
+  }
+  if (verifyBasicAuth(req.headers.authorization, APP_USERNAME, APP_PASSWORD)) return next();
+  res.set('WWW-Authenticate', 'Basic realm="TAINA Sales Engine", charset="UTF-8"');
   return res.status(401).send('Требуется авторизация');
 }
 
+function requireCsrf(req, res, next) {
+  if (!verifyCsrf(req, req.headers.host || '')) {
+    return res.status(403).send('Проверка запроса не пройдена. Обновите страницу и повторите действие.');
+  }
+  return next();
+}
+
+function acquireOperation(name) {
+  if (activeOperation) return false;
+  activeOperation = name;
+  return true;
+}
+
+function releaseOperation(name) {
+  if (activeOperation === name) activeOperation = null;
+}
+
+function runExclusive(name, task) {
+  if (!acquireOperation(name)) {
+    console.log('[sales-engine] operation_skipped_busy');
+    return Promise.resolve(false);
+  }
+  return Promise.resolve()
+    .then(task)
+    .catch(() => {
+      console.error('[sales-engine] operation_failed');
+      return false;
+    })
+    .finally(() => releaseOperation(name));
+}
+
+function makeCsrfCookie(token) {
+  return {
+    name: '__Host-taina-csrf',
+    value: token + '; Path=/; Max-Age=3600; Secure; HttpOnly; SameSite=Strict'
+  };
+}
+
+app.get('/health', (req, res) => res.status(200).json({ ok: true }));
+
 app.get('/', requireAuth, (req, res) => {
+  const csrfToken = crypto.randomBytes(32).toString('base64url');
+  const cookie = makeCsrfCookie(csrfToken);
+  res.setHeader('Set-Cookie', cookie.name + '=' + cookie.value);
+
   res.status(200).send(`<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TAINA Sales Engine</title>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 480px; margin: 60px auto; padding: 0 16px; }
@@ -52,145 +110,223 @@ app.get('/', requireAuth, (req, res) => {
 </style>
 </head>
 <body>
-  <h1>🎯 TAINA Sales Engine</h1>
-  <p class="hint">Найдёт компании через Google Maps, проанализирует и пришлёт хорошие лиды в Telegram.</p>
+  <h1>TAINA Sales Engine</h1>
+  <p class="hint">Поиск и подготовка лидов. Перед отправкой сообщения требуется ручное подтверждение.</p>
   <form method="POST" action="/run">
+    <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
     <label>Ниша
-      <input name="niche" placeholder="например: медицинские центры" required>
+      <input name="niche" maxlength="120" placeholder="например: сервисные компании" required>
     </label>
     <label>Город
-      <input name="city" placeholder="например: Москва" required>
+      <input name="city" maxlength="120" placeholder="например: Санкт-Петербург" required>
     </label>
-    <label>Сколько компаний искать (10-30)
+    <label>Сколько компаний искать (1–30)
       <input name="limit" type="number" min="1" max="30" value="10" required>
     </label>
     <button type="submit">Найти лидов</button>
   </form>
 
   <hr style="margin-top: 40px; border: none; border-top: 1px solid #eee;">
-  <p class="hint">Follow-up лидам без ответа обычно проверяется само раз в день.
-  Кнопка ниже — чтобы проверить прямо сейчас, не дожидаясь расписания (удобно для теста).</p>
+  <p class="hint">Проверка follow-up только готовит черновики и не отправляет сообщения автоматически.</p>
   <form method="POST" action="/followup/run">
-    <button type="submit" style="background:#555;">🔁 Проверить follow-up сейчас</button>
+    <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
+    <button type="submit" style="background:#555;">Проверить follow-up сейчас</button>
+  </form>
+  <hr style="margin-top: 28px; border: none; border-top: 1px solid #eee;">
+  <h2 style="font-size:16px;">Восстановить уведомление</h2>
+  <p class="hint">Только для лидов со статусом «Уведомление требует проверки» или «Уведомление готовится». Сначала проверьте, не пришла ли карточка в Telegram.</p>
+  <form method="POST" action="/notifications/retry">
+    <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}">
+    <label>ID лида
+      <input name="leadId" maxlength="64" pattern="[A-Za-z0-9_-]{1,64}" required>
+    </label>
+    <button type="submit" style="background:#8a4b08;">Повторно отправить карточку</button>
   </form>
 </body>
 </html>`);
 });
 
-app.post('/run', requireAuth, (req, res) => {
-  const niche = String(req.body.niche || '').trim();
-  const city = String(req.body.city || '').trim();
-  const limit = Math.min(30, Math.max(1, Number(req.body.limit) || 10));
+app.post('/run', requireAuth, requireCsrf, (req, res) => {
+  const rawNiche = typeof req.body.niche === 'string' ? req.body.niche : '';
+  const rawCity = typeof req.body.city === 'string' ? req.body.city : '';
+  const niche = rawNiche.trim();
+  const city = rawCity.trim();
+  const rawLimit = typeof req.body.limit === 'string' ? req.body.limit : '';
 
-  if (!niche || !city) {
-    return res.status(400).send('Нужно указать нишу и город.');
+  if (!niche || niche.length > 120 || !city || city.length > 120 ||
+      !/^[1-9]\d?$/.test(rawLimit) || Number(rawLimit) > 30) {
+    return res.status(400).send('Проверьте нишу, город и лимит (1–30).');
+  }
+  if (!acquireOperation('pipeline')) {
+    return res.status(409).send('Другая операция уже выполняется. Повторите позже.');
   }
 
-  // Прогон может занять несколько минут (сайты + несколько вызовов Claude
-  // на компанию) — не держим браузер/Amvera в ожидании, отвечаем сразу,
-  // а результаты придут в Telegram по мере готовности.
-  res.status(200).send(`<!doctype html>
+  res.status(202).send(`<!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><title>Запущено</title></head>
 <body style="font-family: system-ui, sans-serif; max-width: 480px; margin: 60px auto; padding: 0 16px;">
-<h2>Запущено ✅</h2>
-<p>Ищу компании: «${niche}», ${city}, до ${limit} шт.</p>
-<p>Хорошие лиды придут карточками в Telegram. Когда прогон закончится — там же будет итоговое сообщение.</p>
-<p><a href="/">← Запустить ещё раз</a></p>
+<h2>Поиск запущен</h2>
+<p>Ищу компании: «${escapeHtml(niche)}», ${escapeHtml(city)}, до ${Number(rawLimit)} шт.</p>
+<p>Подготовленные карточки придут в Telegram. Отправка сообщений требует вашего подтверждения.</p>
+<p><a href="/">Назад</a></p>
 </body></html>`);
 
-  runPipeline({ niche, city, limit }).catch((err) => {
-    console.error('[sales-engine] Необработанная ошибка прогона:', err);
-  });
+  void Promise.resolve()
+    .then(() => runPipeline({ niche, city, limit: Number(rawLimit) }))
+    .catch(() => console.error('[sales-engine] pipeline_failed'))
+    .finally(() => releaseOperation('pipeline'));
 });
 
-app.post('/followup/run', requireAuth, (req, res) => {
-  res.status(200).send(`<!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><title>Запущено</title></head>
-<body style="font-family: system-ui, sans-serif; max-width: 480px; margin: 60px auto; padding: 0 16px;">
-<h2>Проверка follow-up запущена ✅</h2>
-<p>Если есть лиды без ответа дольше положенного срока — их черновики придут в Telegram.</p>
-<p><a href="/">← Назад</a></p>
-</body></html>`);
-
-  runFollowUpCheck().catch((err) => {
-    console.error('[sales-engine] Необработанная ошибка проверки follow-up:', err);
-  });
+app.post('/followup/run', requireAuth, requireCsrf, (req, res) => {
+  if (!acquireOperation('followup')) {
+    return res.status(409).send('Другая операция уже выполняется. Повторите позже.');
+  }
+  res.status(202).send('Проверка follow-up запущена. Черновики, если они есть, придут в Telegram.');
+  void Promise.resolve()
+    .then(() => runFollowUpCheck())
+    .catch(() => console.error('[sales-engine] followup_failed'))
+    .finally(() => releaseOperation('followup'));
 });
 
-// Вебхук Telegram — сюда прилетают нажатия кнопок на карточках лидов.
+app.post('/notifications/retry', requireAuth, requireCsrf, async (req, res) => {
+  const id = typeof req.body.leadId === 'string' ? req.body.leadId.trim() : '';
+  if (!/^[a-z0-9_-]{1,64}$/i.test(id)) {
+    return res.status(400).send('Проверьте ID лида.');
+  }
+  if (!acquireOperation('notification-retry')) {
+    return res.status(409).send('Другая операция уже выполняется. Повторите позже.');
+  }
+
+  let lead;
+  try {
+    lead = await sheets.getLeadById(id);
+  } catch {
+    releaseOperation('notification-retry');
+    return res.status(503).send('Не удалось проверить лид в таблице.');
+  }
+  if (!lead) {
+    releaseOperation('notification-retry');
+    return res.status(404).send('Лид не найден.');
+  }
+  if (!canRetryLeadNotification(lead)) {
+    releaseOperation('notification-retry');
+    return res.status(409).send('Повторная отправка доступна для уведомлений, требующих проверки, и старых карточек без сохранённого message_id.');
+  }
+
+  res.status(202).send('Повторная отправка карточки запущена. Проверьте Telegram.');
+  void Promise.resolve()
+    .then(async () => {
+      const delivery = await deliverLeadCard(lead, { sheets, telegram });
+      if (!delivery.ok) {
+        console.error('[sales-engine] notification_retry_needs_review', delivery.stage);
+      }
+    })
+    .catch(() => console.error('[sales-engine] notification_retry_failed'))
+    .finally(() => releaseOperation('notification-retry'));
+});
+
 app.post('/telegram/webhook', async (req, res) => {
-  if (TELEGRAM_WEBHOOK_SECRET) {
-    const header = req.headers['x-telegram-bot-api-secret-token'];
-    if (header !== TELEGRAM_WEBHOOK_SECRET) {
-      return res.status(401).json({ ok: false });
-    }
+  if (!/^[A-Za-z0-9_-]{32,256}$/.test(TELEGRAM_WEBHOOK_SECRET) ||
+      !TELEGRAM_ADMIN_USER_ID || !safePositiveInteger(TELEGRAM_ADMIN_USER_ID) || !TELEGRAM_CHAT_ID) {
+    return res.status(503).json({ ok: false, error: 'webhook_not_configured' });
+  }
+  const suppliedSecret = req.get('x-telegram-bot-api-secret-token') || '';
+  if (!safeEqual(suppliedSecret, TELEGRAM_WEBHOOK_SECRET)) {
+    return res.status(401).json({ ok: false });
   }
 
-  // Отвечаем Telegram сразу 200 — дальше обрабатываем асинхронно,
-  // чтобы вебхук не считался "зависшим" при медленной записи в таблицу.
+  const callback = req.body && req.body.callback_query;
+  if (!callback) return res.status(200).json({ ok: true });
+  if (!verifyTelegramCallback(callback, TELEGRAM_ADMIN_USER_ID, TELEGRAM_CHAT_ID)) {
+    return res.status(403).json({ ok: false });
+  }
+
+  const parts = String(callback.data || '').split(':');
+  const action = parts[0];
+  const id = parts[1];
+  if (parts.length !== 2 || !['approve', 'reject', 'edit', 'sent'].includes(action) ||
+      typeof id !== 'string' || !/^[a-z0-9_-]{1,64}$/i.test(id)) {
+    return res.status(400).json({ ok: false });
+  }
+  if (!acquireOperation('telegram-callback')) {
+    return res.status(409).json({ ok: false, error: 'busy' });
+  }
+
   res.status(200).json({ ok: true });
 
-  const update = req.body;
-  const callback = update && update.callback_query;
-  if (!callback) return;
-
-  const [action, id] = String(callback.data || '').split(':');
-  if (!id) return;
-
-  // "Одобрить" сразу переводит лида в "Отправлено" — это старт отсчёта
-  // до follow-up. Предполагается, что вы копируете текст и отправляете
-  // его в ближайшее время после нажатия (см. README, раздел "Воронка").
-  const statusMap = {
-    approve: 'Отправлено',
-    reject: 'Отклонён',
-    edit: 'Нужна правка',
-  };
-  const statusLabel = statusMap[action];
-  if (!statusLabel) return;
-
   try {
-    const updated = action === 'approve'
-      ? await sheets.markApproved(id)
-      : await sheets.updateStatus(id, statusLabel);
-    if (!updated) {
-      await telegram.answerCallbackQuery(callback.id, 'Лид не найден в таблице — возможно, удалён');
+    const lead = await sheets.getLeadById(id);
+    if (!lead) {
+      await telegram.answerCallbackQuery(callback.id, 'Лид не найден');
       return;
     }
 
-    await telegram.answerCallbackQuery(callback.id, `Статус: ${statusLabel}`);
-
-    const chatId = callback.message && callback.message.chat && callback.message.chat.id;
-    const messageId = callback.message && callback.message.message_id;
-    if (chatId && messageId) {
-      await telegram.markCardDecided(chatId, messageId, statusLabel);
+    // Approve/reject/edit belong to a review card. "sent" is a separate
+    // explicit confirmation that the owner has sent the copy outside this app.
+    const transition = getLeadActionTransition(action, lead.status);
+    if (!transition) {
+      await telegram.answerCallbackQuery(callback.id, 'Действие недоступно: проверьте текущий статус лида');
+      return;
     }
+
+    if (!verifyTelegramCallback(callback, TELEGRAM_ADMIN_USER_ID, TELEGRAM_CHAT_ID, lead.telegram_message_id)) {
+      await telegram.answerCallbackQuery(callback.id, 'Это старая или чужая карточка');
+      return;
+    }
+
+    let updated = false;
+    if (action === 'approve') {
+      updated = await sheets.markApproved(id);
+    } else if (action === 'sent') {
+      updated = await sheets.markSent(id);
+    } else {
+      updated = await sheets.updateStatus(id, transition.nextStatus);
+    }
+    if (!updated) {
+      await telegram.answerCallbackQuery(callback.id, 'Статус лида изменился. Обновите карточку.');
+      return;
+    }
+
+    await telegram.answerCallbackQuery(callback.id, transition.callbackText);
+    const message = callback.message;
+    await telegram.markCardDecided(message.chat.id, message.message_id, transition.callbackText);
 
     if (action === 'approve') {
-      const lead = await sheets.getLeadById(id);
-      if (lead && lead.message) {
-        await telegram.sendPlainMessage(`📋 Текст для отправки (${lead.company}):\n\n${lead.message}`);
+      // Approval only stages the copy. Follow-up timing starts after "sent".
+      const approvedLead = await sheets.getLeadById(id);
+      if (approvedLead && approvedLead.message) {
+        await telegram.sendPlainMessage('Текст для отправки (' +
+          approvedLead.company + '):\n\n' + approvedLead.message);
+        await telegram.attachSentKeyboard(message.message_id, id);
       }
     }
-  } catch (err) {
-    console.error('[sales-engine] Ошибка обработки решения из Telegram:', err.message);
+  } catch {
+    console.error('[sales-engine] telegram_callback_failed');
     try {
-      await telegram.answerCallbackQuery(callback.id, 'Ошибка, попробуйте ещё раз');
-    } catch {
-      // не критично
-    }
+      await telegram.answerCallbackQuery(callback.id, 'Ошибка обработки. Проверьте таблицу.');
+    } catch {}
+  } finally {
+    releaseOperation('telegram-callback');
   }
 });
 
-// "Воронка, по которой сервис сам идёт": раз в день без вашего участия
-// проверяет лидов без ответа и готовит follow-up-черновики (не отправляет).
+if (!cron.validate(CRON_SCHEDULE)) {
+  throw new Error('CRON_SCHEDULE имеет неверный формат');
+}
 cron.schedule(CRON_SCHEDULE, () => {
-  console.log('[sales-engine] Запуск плановой проверки follow-up по расписанию');
-  runFollowUpCheck().catch((err) => {
-    console.error('[sales-engine] Ошибка плановой проверки follow-up:', err);
-  });
+  void runExclusive('followup', runFollowUpCheck);
+});
+
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  const status = err && (err.type === 'entity.too.large' || err.status === 413) ? 413 : 400;
+  res.status(status).json({ ok: false, error: status === 413 ? 'payload_too_large' : 'invalid_request' });
 });
 
 app.listen(PORT, () => {
-  console.log(`TAINA Sales Engine запущен, слушаю порт ${PORT}`);
-  console.log(`Follow-up по расписанию: "${CRON_SCHEDULE}"`);
+  console.log('[sales-engine] service_started');
+  if (!APP_USERNAME || APP_PASSWORD.length < 16 ||
+      !/^[A-Za-z0-9_-]{32,256}$/.test(TELEGRAM_WEBHOOK_SECRET) ||
+      !safePositiveInteger(TELEGRAM_ADMIN_USER_ID) || !TELEGRAM_CHAT_ID) {
+    console.error('[sales-engine] security_configuration_incomplete; privileged routes remain closed');
+  }
 });

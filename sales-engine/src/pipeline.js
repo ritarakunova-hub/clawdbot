@@ -4,11 +4,12 @@ const claude = require('./claude');
 const { computeScore, digitalPresenceCriterion } = require('./scoring');
 const sheets = require('./sheets');
 const telegram = require('./telegram');
+const { STATUS_DISPATCHING, deliverLeadCard } = require('./notification');
 
 const SCORE_THRESHOLD = Number(process.env.SCORE_THRESHOLD || 70);
 
 function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  return require('node:crypto').randomUUID();
 }
 
 function buildLeadKey(domain, company, city) {
@@ -31,8 +32,8 @@ async function runPipeline({ niche, city, limit }) {
   try {
     rawResults = await leadSource.searchCompanies(niche, city, limit);
   } catch (err) {
-    log(`Ошибка поиска лидов: ${err.message}`);
-    await telegram.sendPlainMessage(`⚠️ Прогон остановлен: ошибка веб-поиска лидов.\n${err.message}`);
+    log('Ошибка поиска лидов');
+    await telegram.sendPlainMessage('Прогон остановлен: ошибка веб-поиска лидов. Подробности доступны в защищённых логах сервера.');
     return;
   }
 
@@ -42,6 +43,7 @@ async function runPipeline({ niche, city, limit }) {
 
   let processed = 0;
   let qualified = 0;
+  let reviewRequired = 0;
 
   for (const place of rawResults) {
     if (processed >= limit) break;
@@ -70,7 +72,7 @@ async function runPipeline({ niche, city, limit }) {
         contacts: place.phone,
       });
     } catch (err) {
-      log(`Ошибка анализа "${place.name}": ${err.message}`);
+      log('Ошибка анализа компании');
       continue;
     }
 
@@ -97,7 +99,7 @@ async function runPipeline({ niche, city, limit }) {
         solution = draft.solution;
         message = draft.message;
       } catch (err) {
-        log(`Ошибка генерации сообщения "${place.name}": ${err.message}`);
+        log('Ошибка генерации сообщения');
       }
     }
 
@@ -117,7 +119,7 @@ async function runPipeline({ niche, city, limit }) {
       problem,
       solution,
       message,
-      status: score >= SCORE_THRESHOLD ? 'Готов к проверке' : 'Низкий score',
+      status: score >= SCORE_THRESHOLD ? STATUS_DISPATCHING : 'Низкий score',
       first_contact_date: '',
       last_status_update: new Date().toISOString(),
       notes: '',
@@ -126,28 +128,29 @@ async function runPipeline({ niche, city, limit }) {
     try {
       await sheets.appendLead(lead);
     } catch (err) {
-      log(`Ошибка записи в таблицу "${place.name}": ${err.message}`);
+      log('Ошибка записи в таблицу');
       continue;
     }
 
     if (score >= SCORE_THRESHOLD) {
-      try {
-        await telegram.sendLeadCard(lead);
+      const delivery = await deliverLeadCard(lead, { sheets, telegram });
+      if (delivery.ok) {
         qualified++;
-      } catch (err) {
-        log(`Ошибка отправки карточки в Telegram "${place.name}": ${err.message}`);
+      } else {
+        reviewRequired++;
+        log(`Карточка требует ручной проверки доставки: ${lead.id} (${delivery.stage})`);
       }
     }
 
     processed++;
   }
 
-  const summary = `✅ Прогон завершён.\nНовых компаний обработано: ${processed}\nКарточек в Telegram (score ≥ ${SCORE_THRESHOLD}): ${qualified}`;
+  const summary = `✅ Прогон завершён.\nНовых компаний обработано: ${processed}\nКарточек готовы к проверке: ${qualified}\nУведомлений требуют ручной проверки: ${reviewRequired}`;
   log(summary.replace(/\n/g, ' | '));
   try {
     await telegram.sendPlainMessage(summary);
   } catch (err) {
-    log(`Не удалось отправить итоговое сообщение в Telegram: ${err.message}`);
+    log('Не удалось отправить итоговое сообщение в Telegram');
   }
 }
 

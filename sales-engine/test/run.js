@@ -4,10 +4,16 @@ const assert = require('node:assert');
 process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || 'test-key';
 const { normalizeDomain, extractJsonArray } = require('../src/webLeadSearch');
 const { computeScore, digitalPresenceCriterion } = require('../src/scoring');
-const { formatLeadCard } = require('../src/telegram');
+const { formatLeadCard, sentKeyboard } = require('../src/telegram');
 const { buildLeadKey } = require('../src/pipeline');
-const { fetchSiteText } = require('../src/siteFetch');
+const { fetchSiteText, isPublicIPv4, parsePublicHttpUrl } = require('../src/siteFetch');
+const { safeEqual, verifyBasicAuth, verifyCsrf, verifyTelegramCallback, escapeHtml } = require('../src/security');
+const { deliverLeadCard, STATUS_READY, STATUS_NEEDS_REVIEW, STATUS_DISPATCHING, canRetryLeadNotification } = require('../src/notification');
+const { runPreflight } = require('../scripts/preflight');
+const fs = require('node:fs');
+const path = require('node:path');
 const { parseAnalysis, daysSince } = require('../src/followup');
+const { getLeadActionTransition, STATUS_APPROVED, STATUS_SENT } = require('../src/lead-status');
 
 // 1. normalizeDomain — убирает протокол и www, приводит к нижнему регистру
 {
@@ -16,6 +22,94 @@ const { parseAnalysis, daysSince } = require('../src/followup');
   assert.strictEqual(normalizeDomain(''), '');
   assert.strictEqual(normalizeDomain(null), '');
   console.log('OK: normalizeDomain');
+
+// 1a. Authentication and request authorization fail closed.
+{
+  assert.strictEqual(safeEqual('secret', 'secret'), true);
+  assert.strictEqual(safeEqual('secret', 'wrong'), false);
+  assert.strictEqual(safeEqual('', ''), false);
+  const valid = 'Basic ' + Buffer.from('operator:correct-horse').toString('base64');
+  assert.strictEqual(verifyBasicAuth(valid, 'operator', 'correct-horse'), true);
+  assert.strictEqual(verifyBasicAuth(valid, 'operator', 'wrong'), false);
+  assert.strictEqual(verifyBasicAuth(valid, '', 'correct-horse'), false);
+  assert.strictEqual(verifyBasicAuth('Basic !!!', 'operator', 'correct-horse'), false);
+  assert.strictEqual(verifyTelegramCallback({
+    from: { id: 12345 },
+    message: { message_id: 7, chat: { id: 555 } }
+  }, '12345', '555'), true);
+  assert.strictEqual(verifyTelegramCallback({
+    from: { id: 12345 },
+    message: { message_id: 7, chat: { id: 555 } }
+  }, '12345', '555', '7'), true);
+  assert.strictEqual(verifyTelegramCallback({
+    from: { id: 12345 },
+    message: { message_id: 8, chat: { id: 555 } }
+  }, '12345', '555', '7'), false);
+  assert.strictEqual(canRetryLeadNotification({ status: STATUS_NEEDS_REVIEW }), true);
+  assert.strictEqual(canRetryLeadNotification({ status: STATUS_DISPATCHING }), true);
+  assert.strictEqual(canRetryLeadNotification({ status: STATUS_READY, telegram_message_id: '' }), true);
+  assert.strictEqual(canRetryLeadNotification({ status: STATUS_READY, telegram_message_id: '123' }), false);
+  assert.strictEqual(canRetryLeadNotification({ status: 'Отправлено' }), false);
+  assert.strictEqual(canRetryLeadNotification(null), false);
+  assert.strictEqual(verifyTelegramCallback({
+    from: { id: 9 },
+    message: { message_id: 7, chat: { id: 555 } }
+  }, '12345', '555'), false);
+  assert.strictEqual(verifyTelegramCallback(null, '12345', '555'), false);
+  assert.strictEqual(escapeHtml('<x a="b">'), '&lt;x a=&quot;b&quot;&gt;');
+  const csrfReq = {
+    body: { _csrf: 'token-123' },
+    headers: { cookie: '__Host-taina-csrf=token-123', host: 'example.com', origin: 'https://example.com', 'sec-fetch-site': 'same-origin' }
+  };
+  assert.strictEqual(verifyCsrf(csrfReq, 'example.com'), true);
+  assert.strictEqual(verifyCsrf({ ...csrfReq, headers: { ...csrfReq.headers, origin: 'https://evil.example' } }, 'example.com'), false);
+  assert.strictEqual(verifyCsrf({ ...csrfReq, body: { _csrf: 'wrong' } }, 'example.com'), false);
+  console.log('OK: authentication, Telegram authorization and CSRF');
+
+  const validEnv = {
+    ANTHROPIC_API_KEY: 'test',
+    GOOGLE_SHEET_ID: 'sheet-id',
+    GOOGLE_SERVICE_ACCOUNT_KEY_BASE64: 'e30=',
+    TELEGRAM_BOT_TOKEN: '123:token',
+    TELEGRAM_CHAT_ID: '12345',
+    TELEGRAM_WEBHOOK_SECRET: 'x'.repeat(40),
+    TELEGRAM_ADMIN_USER_ID: '12345',
+    APP_USERNAME: 'operator',
+    APP_PASSWORD: 'a-very-long-password',
+    PUBLIC_BASE_URL: 'https://sales.example.com/'
+  };
+  assert.deepStrictEqual(runPreflight(validEnv), { ok: true, errors: [] });
+  assert.ok(runPreflight({ ...validEnv, TELEGRAM_ADMIN_USER_ID: '0' }).errors.some(x => x.includes('TELEGRAM_ADMIN_USER_ID')));
+  assert.ok(runPreflight({ ...validEnv, TELEGRAM_WEBHOOK_SECRET: 'short' }).errors.some(x => x.includes('TELEGRAM_WEBHOOK_SECRET')));
+  assert.ok(runPreflight({ ...validEnv, APP_PASSWORD: 'tiny' }).errors.some(x => x.includes('APP_PASSWORD')));
+  assert.ok(runPreflight({ ...validEnv, PUBLIC_BASE_URL: 'http://sales.example.com/' }).errors.some(x => x.includes('PUBLIC_BASE_URL')));
+  const sheetsSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'sheets.js'), 'utf8');
+  assert.ok(sheetsSource.includes("valueInputOption: 'RAW'"));
+  assert.ok(!sheetsSource.includes("valueInputOption: 'USER_ENTERED'"));
+  console.log('OK: deployment preflight and spreadsheet formula-injection regression checks');
+}
+}
+
+
+ // A human approval is not proof that an outbound message was sent.
+{
+  assert.deepStrictEqual(getLeadActionTransition('approve', STATUS_READY), {
+    nextStatus: STATUS_APPROVED,
+    callbackText: 'Одобрено к отправке',
+  });
+  assert.deepStrictEqual(getLeadActionTransition('sent', STATUS_APPROVED), {
+    nextStatus: STATUS_SENT,
+    callbackText: 'Отправлено — follow-up отсчёт начат',
+  });
+  assert.strictEqual(getLeadActionTransition('sent', STATUS_READY), null);
+  assert.strictEqual(getLeadActionTransition('approve', STATUS_APPROVED), null);
+  assert.strictEqual(getLeadActionTransition('sent', STATUS_SENT), null);
+  assert.strictEqual(getLeadActionTransition('reject', STATUS_APPROVED), null);
+  console.log('OK: follow-up starts only after explicit confirmation that the message was sent');
+  assert.deepStrictEqual(sentKeyboard('lead-123'), {
+    inline_keyboard: [[{ text: '✅ Уже отправил', callback_data: 'sent:lead-123' }]],
+  });
+  console.log('OK: sent confirmation callback is bound to the lead ID');
 }
 
 // 2. computeScore — детерминированная формула, а не выдумка LLM
@@ -113,6 +207,7 @@ const { parseAnalysis, daysSince } = require('../src/followup');
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
   assert.ok(Math.abs(daysSince(threeDaysAgo) - 3) < 0.01);
   assert.strictEqual(daysSince(''), Infinity);
+  assert.ok(!Number.isFinite(daysSince('not-a-date')));
   console.log('OK: daysSince');
 }
 
@@ -157,21 +252,125 @@ const { parseAnalysis, daysSince } = require('../src/followup');
 // 10. fetchSiteText — парсинг HTML в текст (сеть подменяем)
 {
   (async () => {
-    const originalFetch = global.fetch;
-    global.fetch = async () => ({
-      ok: true,
-      headers: { get: () => 'text/html; charset=utf-8' },
-      text: async () => '<html><head><style>.a{}</style></head><body><h1>О нас</h1><p>Мы делаем классные вещи &amp; помогаем клиентам.</p><script>evil()</script></body></html>',
+    const text = await fetchSiteText('example.com', {
+      lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+      request: async () => ({
+        body: '<html><head><style>.a{}</style></head><body><h1>О нас</h1><p>Мы делаем классные вещи &amp; помогаем клиентам.</p><script>evil()</script></body></html>'
+      })
     });
-
-    const text = await fetchSiteText('example.com');
     assert.ok(text.includes('О нас'));
     assert.ok(text.includes('Мы делаем классные вещи & помогаем клиентам'));
     assert.ok(!text.includes('evil()'));
     assert.ok(!text.includes('<h1>'));
 
-    global.fetch = originalFetch;
-    console.log('OK: fetchSiteText — очистка HTML');
+    assert.strictEqual(parsePublicHttpUrl('http://127.0.0.1'), null);
+    assert.strictEqual(parsePublicHttpUrl('http://169.254.169.254/latest/meta-data'), null);
+    assert.strictEqual(parsePublicHttpUrl('http://localhost'), null);
+    assert.strictEqual(parsePublicHttpUrl('file:///etc/passwd'), null);
+    assert.strictEqual(parsePublicHttpUrl('https://user:pass@example.com'), null);
+    assert.strictEqual(parsePublicHttpUrl('https://example.com:8443'), null);
+    assert.strictEqual(isPublicIPv4('93.184.216.34'), true);
+    assert.strictEqual(isPublicIPv4('10.0.0.1'), false);
+    assert.strictEqual(isPublicIPv4('169.254.169.254'), false);
+
+    let requestCount = 0;
+    const blocked = await fetchSiteText('https://example.com', {
+      lookup: async () => [{ address: '127.0.0.1', family: 4 }],
+      request: async () => { requestCount++; return { body: '' }; }
+    });
+    assert.strictEqual(blocked, null);
+    assert.strictEqual(requestCount, 0);
+
+    let literalRedirectDnsCount = 0;
+    const literalRedirectBlocked = await fetchSiteText('https://example.com', {
+      lookup: async () => {
+        literalRedirectDnsCount++;
+        return [{ address: '93.184.216.34', family: 4 }];
+      },
+      request: async () => ({ redirect: 'http://127.0.0.1/admin' })
+    });
+    assert.strictEqual(literalRedirectBlocked, null);
+    // Literal loopback IPs are rejected by URL validation before a second DNS lookup.
+    assert.strictEqual(literalRedirectDnsCount, 1);
+
+    let redirectDnsCount = 0;
+    let redirectRequestCount = 0;
+    const dnsRebindingRedirect = await fetchSiteText('https://example.com', {
+      lookup: async () => {
+        redirectDnsCount++;
+        return [{ address: redirectDnsCount === 1 ? '93.184.216.34' : '10.0.0.2', family: 4 }];
+      },
+      request: async () => {
+        redirectRequestCount++;
+        return { redirect: 'https://example.com/admin' };
+      }
+    });
+    assert.strictEqual(dnsRebindingRedirect, null);
+    // The hostname is resolved again after redirect; its private second address is blocked.
+    assert.strictEqual(redirectDnsCount, 2);
+    assert.strictEqual(redirectRequestCount, 1);
+    console.log('OK: fetchSiteText — очистка HTML и повторная проверка DNS при redirect');
+
+    // Telegram cards become actionable only after their exact message_id is persisted.
+    {
+      const events = [];
+      const row = { status: 'Исходный статус', telegram_message_id: 'old-id' };
+      const fakeSheets = {
+        updateFields: async (id, fields) => {
+          events.push(`sheet:${fields.status || ''}:${fields.telegram_message_id === undefined ? '' : fields.telegram_message_id}`);
+          Object.assign(row, fields);
+          return true;
+        },
+      };
+      const fakeTelegram = {
+        sendLeadCard: async () => { events.push('send-card'); return 77; },
+        attachLeadKeyboard: async (messageId, leadId) => {
+          assert.strictEqual(row.telegram_message_id, '77');
+          assert.strictEqual(row.status, STATUS_READY);
+          events.push(`attach:${messageId}:${leadId}`);
+        },
+      };
+      const result = await deliverLeadCard({ id: 'lead-1' }, { sheets: fakeSheets, telegram: fakeTelegram });
+      assert.deepStrictEqual(result, { ok: true, messageId: 77 });
+      assert.strictEqual(row.status, STATUS_READY);
+      assert.deepStrictEqual(events, [
+        'sheet:Уведомление готовится:',
+        'send-card',
+        'sheet:Готов к проверке:77',
+        'attach:77:lead-1',
+      ]);
+      console.log('OK: Telegram delivery persists exact message_id before enabling approval');
+    }
+    {
+      const row = {};
+      const fakeSheets = {
+        updateFields: async (id, fields) => { Object.assign(row, fields); return true; },
+      };
+      const fakeTelegram = {
+        sendLeadCard: async () => 88,
+        attachLeadKeyboard: async () => { throw new Error('ambiguous_network_failure'); },
+      };
+      const result = await deliverLeadCard({ id: 'lead-2' }, { sheets: fakeSheets, telegram: fakeTelegram });
+      assert.deepStrictEqual(result, { ok: false, stage: 'keyboard' });
+      assert.strictEqual(row.status, STATUS_NEEDS_REVIEW);
+      assert.strictEqual(row.telegram_message_id, '88');
+      console.log('OK: ambiguous Telegram keyboard result fails closed for manual review');
+    }
+    {
+      const row = {};
+      const fakeSheets = {
+        updateFields: async (id, fields) => { Object.assign(row, fields); return true; },
+      };
+      const fakeTelegram = {
+        sendLeadCard: async () => { throw new Error('timeout'); },
+        attachLeadKeyboard: async () => { throw new Error('must_not_be_called'); },
+      };
+      const result = await deliverLeadCard({ id: 'lead-3' }, { sheets: fakeSheets, telegram: fakeTelegram });
+      assert.deepStrictEqual(result, { ok: false, stage: 'send' });
+      assert.strictEqual(row.status, STATUS_NEEDS_REVIEW);
+      assert.strictEqual(row.telegram_message_id, '');
+      console.log('OK: ambiguous Telegram send is not automatically retried');
+    }
   })().then(() => {
     console.log('\nВсе проверки пройдены.');
   }).catch((err) => {

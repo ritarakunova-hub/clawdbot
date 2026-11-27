@@ -6,7 +6,7 @@ const COLUMNS = [
   'id', 'domain', 'company', 'niche', 'city', 'source', 'contacts',
   'site_summary', 'ai_analysis', 'score', 'score_reason', 'data_confidence',
   'problem', 'solution', 'message', 'status', 'follow_up_count',
-  'first_contact_date', 'last_status_update', 'notes',
+  'first_contact_date', 'last_status_update', 'notes', 'telegram_message_id',
 ];
 
 function colLetter(index) {
@@ -100,7 +100,7 @@ async function appendLead(lead) {
   await sheets.spreadsheets.values.append({
     spreadsheetId: getSheetId(),
     range: `${SHEET_NAME}!A:${colLetter(COLUMNS.length - 1)}`,
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: 'RAW',
     insertDataOption: 'INSERT_ROWS',
     requestBody: { values: [row] },
   });
@@ -159,7 +159,7 @@ async function updateFields(id, fields) {
   const sheets = await getSheetsClient();
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: getSheetId(),
-    requestBody: { valueInputOption: 'USER_ENTERED', data },
+    requestBody: { valueInputOption: 'RAW', data },
   });
   return true;
 }
@@ -171,15 +171,27 @@ async function updateStatus(id, status) {
   return updateFields(id, { status });
 }
 
+const { STATUS_READY, STATUS_APPROVED, STATUS_SENT } = require('./lead-status');
+
 /**
- * Отмечает, что вы одобрили и отправили сообщение: статус "Отправлено",
- * с этого момента начинается отсчёт до follow-up. first_contact_date
- * проставляется только один раз — при самом первом одобрении.
+ * First approval only stages the copy for the owner. It does not mean an
+ * outbound contact has happened, so it must not start the follow-up clock.
  */
 async function markApproved(id) {
   const lead = await getLeadById(id);
-  if (!lead) return false;
-  const fields = { status: 'Отправлено' };
+  if (!lead || lead.status !== STATUS_READY) return false;
+  return updateFields(id, { status: STATUS_APPROVED });
+}
+
+/**
+ * The owner presses the separate "I sent it" button only after sending the
+ * prepared copy outside the app. Only this explicit confirmation starts
+ * follow-up timing.
+ */
+async function markSent(id) {
+  const lead = await getLeadById(id);
+  if (!lead || lead.status !== STATUS_APPROVED) return false;
+  const fields = { status: STATUS_SENT };
   if (!lead.first_contact_date) {
     fields.first_contact_date = new Date().toISOString();
   }
@@ -196,5 +208,6 @@ module.exports = {
   updateStatus,
   updateFields,
   markApproved,
+  markSent,
   normalizeKey,
 };
