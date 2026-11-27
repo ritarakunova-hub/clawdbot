@@ -58,13 +58,20 @@ Capability определяется по фактическому эффекту
 
 Реестр capability должен храниться в коде/конфигурации Harness и проверяться перед каждым вызовом инструмента. Пользовательский input и ответы LLM не могут расширять список разрешений.
 
-## 5. Что не регистрировать до получения подтверждений
+## 5. Что не регистрировать до runtime-подтверждения
 
-Не создавать runtime handlers для:
-- четырёх заявленных n8n workflow, пока нет их экспортов;
-- GigaChat, пока не подтверждены реальный API контракт, используемая модель и фактическая точка вызова;
-- Sales Engine и mini-CRM, пока не подтверждены их production status, privacy policy и владелец внешних таблиц/ботов;
-- direct social publishing без отдельного разрешения и тестового контура.
+Четыре n8n workflow exports уже найдены и статически проверены. Однако не
+создавать production runtime handlers и не активировать workflow, пока:
+- live n8n version, workflow state and last execution не подтверждены;
+- credential names/types не сверены с экспортами;
+- Apps Script deployment и Sheet headers не проверены;
+- Netlify consent field и policy не утверждены;
+- Outscraper API contract не проверен по account docs;
+- все P0/P1 checks не пройдены в synthetic test environment.
+
+GigaChat можно оставить отдельным Model Adapter candidate; фактический API
+контракт и production credential не подтверждены. Direct social publishing
+запрещено по умолчанию без отдельного owner permission и тестового контура.
 
 ## 6. Порядок регистрации
 
@@ -78,14 +85,24 @@ Capability определяется по фактическому эффекту
 7. idempotency key и поведение при unknown outcome;
 8. unit/smoke tests и инструкция ручного восстановления.
 
-Первый runtime pilot следует выбирать после получения четырёх n8n exports и подтверждения фактически активной message automation.
+Первый runtime pilot следует выбирать после проверки live n8n runtime и
+разрешения P0 approval/authentication issues. Не нужно повторно запрашивать
+у пользователя уже найденные workflow JSON.
 
+## 7. Статус безопасных уведомлений и Intake (2026-11-27)
 
-## 5. Статус безопасных уведомлений (2026-11-27)
+Все изменения ниже остаются в Draft PR и не означают production rollout.
 
-Предварительные task types остаются кандидатами, а не зарегистрированными handlers.
-
-- Content Autopilot PR #10 добавляет fail-closed состояния и точную привязку owner approval к Telegram card.
-- Sales Engine [PR #11](https://github.com/ritarakunova-hub/clawdbot/pull/11) использует двухфазную доставку review card: сохранить Telegram `message_id`, затем включить кнопки. Нужна ручная сверка неоднозначных результатов.
-- mini-CRM [PR #12](https://github.com/ritarakunova-hub/clawdbot/pull/12) разрешает автоматическое продолжение дубля только в состоянии `pending`; `sending`, `failed` и неизвестные статусы закрыты для слепого повтора.
-- Ни один из этих сервисов пока не подключён к Harness runtime. До интеграции нужно получить n8n exports и подтвердить production-конфигурацию.
+- [clawdbot1 PR #2](https://github.com/ritarakunova-hub/clawdbot1/pull/2):
+  owner ID + private chat + exact Telegram message_id; only allowlisted status
+  transitions; message buttons attach only after message ID persistence.
+- [clawdbot1 PR #3](https://github.com/ritarakunova-hub/clawdbot1/pull/3),
+  stacked on #2: Netlify JWS, consent validation, stable submission ID,
+  lock-protected idempotency, PII minimization, POST-only internal API,
+  atomic Sales Engine deduplication, score validation 0–100 and fail-closed
+  GigaChat response validation.
+- CI for PR #3 head `a62394cdf1d60c296e48d6039cff53e24a6fe8a7` passed on
+  Node 24 and Node 26: [run #45991719682](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/45991719682).
+- Node.js PR #11/#12 in `clawdbot` are old alternatives/reference patterns,
+  not the selected n8n implementation; do not merge/deploy as substitutes.
+- Harness Task Router/handlers are not implemented or registered yet.
