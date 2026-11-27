@@ -13,6 +13,7 @@ const { runPreflight } = require('../scripts/preflight');
 const fs = require('node:fs');
 const path = require('node:path');
 const { parseAnalysis, daysSince } = require('../src/followup');
+const { getLeadActionTransition, STATUS_READY, STATUS_APPROVED, STATUS_SENT } = require('../src/lead-status');
 
 // 1. normalizeDomain — убирает протокол и www, приводит к нижнему регистру
 {
@@ -87,6 +88,24 @@ const { parseAnalysis, daysSince } = require('../src/followup');
   assert.ok(!sheetsSource.includes("valueInputOption: 'USER_ENTERED'"));
   console.log('OK: deployment preflight and spreadsheet formula-injection regression checks');
 }
+}
+
+
+ // A human approval is not proof that an outbound message was sent.
+{
+  assert.deepStrictEqual(getLeadActionTransition('approve', STATUS_READY), {
+    nextStatus: STATUS_APPROVED,
+    callbackText: 'Одобрено к отправке',
+  });
+  assert.deepStrictEqual(getLeadActionTransition('sent', STATUS_APPROVED), {
+    nextStatus: STATUS_SENT,
+    callbackText: 'Отправлено — follow-up отсчёт начат',
+  });
+  assert.strictEqual(getLeadActionTransition('sent', STATUS_READY), null);
+  assert.strictEqual(getLeadActionTransition('approve', STATUS_APPROVED), null);
+  assert.strictEqual(getLeadActionTransition('sent', STATUS_SENT), null);
+  assert.strictEqual(getLeadActionTransition('reject', STATUS_APPROVED), null);
+  console.log('OK: follow-up starts only after explicit confirmation that the message was sent');
 }
 
 // 2. computeScore — детерминированная формула, а не выдумка LLM
