@@ -4,6 +4,7 @@ const { verifyNetlifySignature } = require('./src/netlify-signature');
 const { appendLead, setNotificationStatus } = require('./src/sheets');
 const { notifyNewLead } = require('./src/telegram');
 const { createSerialQueue } = require('./src/serial-queue');
+const { decideDuplicateNotification } = require('./src/notification-state');
 
 const app = express();
 app.disable('x-powered-by');
@@ -54,20 +55,23 @@ app.post('/webhook/netlify-lead', async (req, res) => {
     const result = await enqueue(async () => {
       const stored = await appendLead(lead);
 
-      if (stored.duplicate && stored.notificationStatus === 'sent') {
-        return {
-          status: 200,
-          body: { ok: true, duplicate: true, notification: 'sent' }
-        };
-      }
+      if (stored.duplicate) {
+        const decision = decideDuplicateNotification(stored.notificationStatus);
+        if (decision.action === 'already_sent') {
+          return {
+            status: 200,
+            body: { ok: true, duplicate: true, notification: 'sent' }
+          };
+        }
 
-      if (stored.duplicate && ['sending', 'failed'].includes(stored.notificationStatus)) {
-        // A prior request may have reached Telegram before the process stopped.
-        // Do not blindly send a second notification.
-        return {
-          status: 202,
-          body: { ok: true, duplicate: true, notification: 'manual_review_required' }
-        };
+        if (decision.action === 'manual_review') {
+          // "sending", "failed" and unknown states may represent an ambiguous
+          // Telegram outcome. Never retry them automatically.
+          return {
+            status: 202,
+            body: { ok: true, duplicate: true, notification: 'manual_review_required' }
+          };
+        }
       }
 
       await setNotificationStatus(lead.submission_id, 'sending');
