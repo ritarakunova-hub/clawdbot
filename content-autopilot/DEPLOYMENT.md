@@ -1,110 +1,91 @@
-# TAINA Content Review → SMMplanner deployment
+# TAINA Content Review → SMMplanner — deployment
 
-This service prepares and approves content, then hands the approved copy to the owner in Telegram. SMMplanner is responsible for scheduling and publishing to Telegram and VK.
+This service prepares and approves TAINA posts, then hands approved copy to the owner in Telegram. SMMplanner is responsible for scheduling and publishing to Telegram and VK.
 
-The app is provider-neutral and includes a Dockerfile. It can also run as a native Node.js service.
+## Amvera deployment (repository-root configuration)
 
-## Host requirements
+The repository is a monorepo. Amvera reads `amvera.yml` from the **repository root**, so deploy this branch/repository from its root; do not point Amvera at `content-autopilot/` as if its nested files were the repository configuration.
 
-- A continuously running web process (the built-in cron scheduler runs inside it).
-- A public HTTPS URL so Telegram can call the webhook.
-- A persistent writable disk/volume mounted into the service.
-- An environment variable for the service port (PORT).
-- Node.js 22 or later, or Docker with the supplied Dockerfile.
+The root files are intentionally scoped to this service:
+- `amvera.yml` selects the root `Dockerfile`, mounts persistent storage at `/data`, and exposes port `3000`.
+- The root `Dockerfile` installs only `content-autopilot` production dependencies and copies only that service.
+- The root `.dockerignore` excludes the other projects, local secrets, test files and pending state from the build context.
 
-Do not run more than one replica: the current JSON pending-state store has no distributed lock.
+Amvera's official configuration documentation requires its `amvera.yml` at repository root and supports `build.dockerfile`, `run.persistenceMount` and `run.containerPort`. See:
+- https://docs.amvera.ru/applications/configuration/config-file.html
+- https://docs.amvera.ru/applications/configuration/docker.html
 
-## Option A — deploy the supplied Dockerfile
-
-Use content-autopilot as the build context and content-autopilot/Dockerfile as the Dockerfile.
-
-Set:
-- Container port: 3000 (or the value supplied in PORT).
-- Liveness health check: GET /health.
-- Readiness check after configuration: GET /ready.
-- Persistent volume mount: /data.
-- Environment variable: PENDING_FILE=/data/pending.json.
-- Replicas/instances: 1.
-
-The image uses Node 22, installs production dependencies with npm ci, runs as the unprivileged node user, and stores pending state outside the image.
-
-## Option B — native Node.js deployment
-
-Set the service root/working directory to content-autopilot.
-
-Build/install command:
-
-    npm ci --omit=dev
-
-Start command:
-
-    npm start
-
-Runtime:
-- Node.js 22 or newer.
-- PORT supplied by the platform.
-- PENDING_FILE set to a path on the platform's persistent disk, for example /data/pending.json.
-- The persistent directory must be mounted and writable by the app process.
-
-Do not use the repository's local data directory as production persistence on an ephemeral filesystem.
+After connecting the repository/branch in Amvera, verify the build log, then configure the required environment variables below. The application must run as exactly one instance: its JSON pending-state file has no distributed lock.
 
 ## Required secrets and settings
 
-Set these in the platform's secret/environment-variable settings. Never commit real values.
+Set these only in the Amvera secret/environment-variable settings. Never commit real values.
 
 | Variable | Required | Notes |
 |---|---:|---|
 | TELEGRAM_BOT_TOKEN | Yes | Bot token from BotFather |
 | TELEGRAM_CHAT_ID | Yes | Owner's private one-to-one Telegram chat ID |
 | TELEGRAM_APPROVER_ID | Yes | Numeric Telegram user ID allowed to approve drafts |
-| TELEGRAM_WEBHOOK_SECRET | Yes | Generate a random secret |
+| TELEGRAM_WEBHOOK_SECRET | Yes | Random secret; Telegram sends it in the webhook header |
 | INTERNAL_API_SECRET | Yes | Separate random bearer secret for /check/now |
 | TIMEZONE | No | Defaults to Europe/Moscow |
 | CRON_SCHEDULE | No | Defaults to 0 9 * * * |
-| PENDING_FILE | Yes in production | Must be on the mounted persistent volume |
-| PORT | Platform-defined | The app listens on this value |
+| PENDING_FILE | Set by image | Defaults to /data/pending.json |
+| PORT | Set by image | Defaults to 3000 |
 
 No VK or Telegram channel token is needed here. SMMplanner owns the social-channel connections and publication schedule.
 
-## Configure Telegram webhook after deployment
+## Preflight before webhook registration
 
-The application needs a public HTTPS address. After the service is healthy, set the webhook:
+1. Build and start the application in Amvera.
+2. Confirm `GET /health` returns HTTP 200 over HTTPS.
+3. Confirm `GET /ready` returns HTTP 200 with `ready: true` and `storageWritable: true`.
+4. Check that the service has exactly one running instance and the `/data` persistent mount is active.
+5. Write the public HTTPS application URL down privately. Do not send it together with secrets.
 
-    curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
-      -d "url=https://YOUR-PUBLIC-APP-URL/telegram/webhook" \
-      -d "secret_token=$TELEGRAM_WEBHOOK_SECRET"
+The Docker image sets `PENDING_FILE=/data/pending.json`. Never point production pending state at the container's ephemeral filesystem.
 
-Check that the Telegram response contains "ok": true. Then inspect webhook information using Telegram's getWebhookInfo method. Do not share a URL containing the bot token.
+## Configure Telegram webhook
 
-## SMMplanner operating flow
+Only after /health and /ready pass, set the Telegram webhook from a trusted terminal. Keep the bot token out of shell history where possible; never share a URL containing it.
+
+```bash
+curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
+  -d "url=https://YOUR-PUBLIC-APP-URL/telegram/webhook" \
+  -d "secret_token=$TELEGRAM_WEBHOOK_SECRET"
+```
+
+Check that the response contains `"ok": true`, then inspect Telegram's `getWebhookInfo` method. Do not put the bot token in screenshots, logs, tickets or chat.
+
+## Safe pilot sequence
 
 1. Connect the TAINA Telegram channel and VK community to SMMplanner in its own account.
-2. The content-review service sends a draft to the owner's private Telegram chat.
-3. After owner approval, copy the separate ready message into SMMplanner.
-4. Select the Telegram and VK destinations and set the publication date/time.
-5. Confirm the scheduled item in SMMplanner's calendar.
+2. Let the service send one calendar draft to the owner's private Telegram chat.
+3. Confirm the displayed text and date.
+4. Approve the draft and confirm that a separate copy-ready message arrives in the owner's private chat.
+5. Copy the approved text into SMMplanner, select the Telegram and VK destinations, set the publication time, and verify the scheduled item in its calendar.
+6. Run a separate cancellation test and confirm that nothing is handed off to SMMplanner.
 
-The current handoff is intentionally manual because no official public developer API for creating scheduled SMMplanner posts was found during implementation. Do not reverse-engineer private endpoints or automate login/session cookies. If SMMplanner later supplies a supported API/import contract, integrate only against that documented interface.
-
-## Pre-launch checklist
-
-- [ ] Node 22 runtime or supplied Docker image is selected.
-- [ ] Exactly one active app instance is running.
-- [ ] Persistent volume is mounted at /data and PENDING_FILE=/data/pending.json.
-- [ ] /health returns HTTP 200 over HTTPS.
-- [ ] TELEGRAM_APPROVER_ID is set to the intended numeric Telegram user ID.
-- [ ] All required Telegram secrets are configured in the hosting dashboard.
-- [ ] /ready returns HTTP 200 and confirms writable persistent storage.
-- [ ] Telegram bot can message the owner's private chat.
-- [ ] Telegram webhook is configured and getWebhookInfo reports no pending delivery errors.
-- [ ] TAINA Telegram and VK pages are connected inside SMMplanner.
-- [ ] One draft is reviewed, approved, copied into SMMplanner, and verified in its schedule.
-- [ ] A cancelled draft is confirmed not to appear in SMMplanner.
+**SMMplanner is the only publishing scheduler.** This service does not publish directly to VK or Telegram channels, does not store channel credentials and does not automate SMMplanner login/session cookies. The handoff is intentionally manual until SMMplanner provides an official supported API or import contract.
 
 ## Ambiguous delivery and manual review
 
-The service stores `creating_draft` before sending a review draft, `handoff_dispatching` before sending approved copy, and `topic_reminder_dispatching` before sending a topic reminder. If the process restarts or Telegram times out during any of these operations, state is changed to `needs_review`. The service does not send again automatically.
+Before each Telegram side effect, the service persists an intent state such as `creating_draft` or `handoff_dispatching`. If the process restarts or Telegram times out during a send, the state becomes `needs_review`; the service does not automatically resend. Inspect the private Telegram chat before any manual recovery. Do not clear `/data/pending.json` or retry an uncertain send until its outcome is known.
 
-Before any operational recovery, inspect the owner's private Telegram chat and confirm whether the message arrived. Do not clear `pending.json` or re-trigger the same operation until its external outcome is known. A `needs_review` item blocks subsequent calendar messages so an uncertain send cannot be silently duplicated.
+## Local checks
 
-No social-channel publication, SMMplanner login, or production webhook registration is performed by the repository change itself.
+From the repository root:
+
+```bash
+docker build -t taina-content-autopilot -f Dockerfile .
+```
+
+For unit tests:
+
+```bash
+cd content-autopilot
+npm ci
+npm test
+```
+
+No social-channel publication, production webhook registration, or real external integration test is performed by a code merge alone.
