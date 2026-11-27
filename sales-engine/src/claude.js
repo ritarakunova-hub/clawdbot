@@ -3,7 +3,7 @@ const { z } = require('zod');
 const { zodOutputFormat } = require('@anthropic-ai/sdk/helpers/zod');
 
 const client = new Anthropic(); // берёт ANTHROPIC_API_KEY из окружения
-const MODEL = 'claude-opus-5';
+const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
 
 const CriterionSchema = z.object({
   present: z.boolean().describe('Есть ли этот сигнал у компании — да/нет'),
