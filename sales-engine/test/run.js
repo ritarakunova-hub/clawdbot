@@ -13,7 +13,7 @@ const { runPreflight } = require('../scripts/preflight');
 const fs = require('node:fs');
 const path = require('node:path');
 const { parseAnalysis, daysSince } = require('../src/followup');
-const { getLeadActionTransition, STATUS_READY, STATUS_APPROVED, STATUS_SENT } = require('../src/lead-status');
+const { getLeadActionTransition, STATUS_APPROVED, STATUS_SENT } = require('../src/lead-status');
 
 // 1. normalizeDomain — убирает протокол и www, приводит к нижнему регистру
 {
