@@ -23,7 +23,7 @@ Set these only in the Amvera secret/environment-variable settings. Never commit 
 
 | Variable | Required | Notes |
 |---|---:|---|
-| TELEGRAM_BOT_TOKEN | Yes | Bot token from BotFather |
+| TELEGRAM_BOT_TOKEN | Yes | Dedicated bot for Content Autopilot; do not reuse the Sales Engine bot token because each bot has one active webhook URL |
 | TELEGRAM_CHAT_ID | Yes | Owner's private one-to-one Telegram chat ID |
 | TELEGRAM_APPROVER_ID | Yes | Numeric Telegram user ID allowed to approve drafts |
 | TELEGRAM_WEBHOOK_SECRET | Yes | Random secret; Telegram sends it in the webhook header |
