@@ -62,3 +62,12 @@ Harness должен отделять **общие механизмы испол
 ## Открытые входные данные
 
 Этот пакет не утверждает, что аудит четырёх n8n workflow завершён. Их экспорты, взаимосвязи и фактические production-настройки пока не были проверены. До получения этих данных нельзя окончательно выбрать точку интеграции Harness и оценить полный объём работ.
+
+
+## Актуальный статус подключений на 2026-11-27
+
+- [PR #10](https://github.com/ritarakunova-hub/clawdbot/pull/10) — защита SMMplanner handoff; Draft, зависит от PR #7.
+- [PR #11](https://github.com/ritarakunova-hub/clawdbot/pull/11) — единый Sales Engine security baseline и надёжные Telegram approvals; Draft, направлен в default branch.
+- [PR #12](https://github.com/ritarakunova-hub/clawdbot/pull/12) — безопасный mini-CRM intake backend и fail-closed notification retry; Draft, направлен в default branch.
+
+Ни один из этих PR не означает production rollout. Для mini-CRM отдельно требуется privacy/legal review. Для TAINA Agent Harness окончательная интеграция четырёх n8n-сценариев остаётся заблокированной до получения их безопасных JSON-экспортов и подтверждения production-состояния.
