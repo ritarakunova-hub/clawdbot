@@ -1,0 +1,75 @@
+name: TAINA Content Autopilot Checks
+
+on:
+  pull_request:
+    paths:
+      - "content-autopilot/**"
+      - ".github/workflows/content-autopilot.yml"
+      - "Dockerfile"
+      - "amvera.yml"
+      - ".dockerignore"
+  push:
+    branches:
+      - "feat/taina-smm-manual-publishing"
+      - "fix/taina-smm-handoff-safety-v1"
+    paths:
+      - "content-autopilot/**"
+      - ".github/workflows/content-autopilot.yml"
+      - "Dockerfile"
+      - "amvera.yml"
+      - ".dockerignore"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: content-autopilot/package-lock.json
+      - name: Install dependencies
+        working-directory: content-autopilot
+        run: npm ci
+      - name: Run unit and safety tests
+        working-directory: content-autopilot
+        run: npm test
+      - name: Audit dependencies
+        working-directory: content-autopilot
+        run: npm audit --audit-level=moderate
+      - name: Build Docker image from repository root
+        run: docker build -t taina-content-autopilot:ci -f Dockerfile .
+      - name: Smoke-test Docker container
+        run: |
+          docker run -d --name taina-content-autopilot-ci \
+            -p 127.0.0.1:31888:3000 \
+            -e PORT=3000 \
+            -e CRON_SCHEDULE="0 0 1 1 *" \
+            -e TELEGRAM_BOT_TOKEN="ci-not-a-real-token" \
+            -e TELEGRAM_CHAT_ID="123456789" \
+            -e TELEGRAM_APPROVER_ID="123456789" \
+            -e TELEGRAM_WEBHOOK_SECRET="ci-webhook-secret-not-a-real-secret" \
+            -e INTERNAL_API_SECRET="ci-internal-secret-not-a-real-secret" \
+            -e PENDING_FILE="/data/pending.json" \
+            taina-content-autopilot:ci
+          trap 'docker rm -f taina-content-autopilot-ci >/dev/null 2>&1 || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:31888/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:31888/ready | grep -q '"ready":true'
+          docker logs taina-content-autopilot-ci
+          exit 1
+      - name: Check JavaScript syntax
+        working-directory: content-autopilot
+        run: |
+          node --check index.js
+          find src test -name "*.js" -print0 | xargs -0 -n1 node --check

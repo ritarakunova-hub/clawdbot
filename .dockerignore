@@ -1,0 +1,14 @@
+# Build only the content-autopilot service; never send secrets or unrelated
+# repository projects to the Docker builder.
+**
+!content-autopilot/
+!content-autopilot/**
+
+content-autopilot/node_modules
+content-autopilot/.env
+content-autopilot/.env.*
+!content-autopilot/.env.example
+content-autopilot/.git
+content-autopilot/test
+content-autopilot/data/pending.json
+content-autopilot/data/pending.json.tmp
