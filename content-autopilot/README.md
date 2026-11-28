@@ -26,7 +26,7 @@ If SMMplanner provides an official API or a supported import format, a dedicated
 
 - The bot's default workflow is review → explicit approval → copy-ready handoff.
 - No button triggers direct publication to social channels.
-- Approval requires the configured numeric TELEGRAM_APPROVER_ID, the configured private TELEGRAM_CHAT_ID and the exact Telegram message_id saved for the draft. A button copied to another message is rejected.
+- Approval requires the configured numeric TELEGRAM_APPROVER_ID, a positive numeric TELEGRAM_CHAT_ID, Telegram's `chat.type === private`, and the exact Telegram message_id saved for the draft. Group/supergroup callbacks and callbacks without an explicit private chat type are rejected.
 - Telegram webhook requests require TELEGRAM_WEBHOOK_SECRET.
 - Every Telegram API request has a 15-second timeout. Transport errors are sanitized so the bot token in the API URL is not copied into application errors.
 - Before sending approved copy to the owner, the service persists handoff_dispatching. If the request times out or the process restarts before confirmation, the operation becomes needs_review and is never retried automatically.
@@ -49,7 +49,7 @@ See DEPLOYMENT.md for Docker and native Node.js setup.
 | Variable | Required | Purpose |
 |---|---:|---|
 | TELEGRAM_BOT_TOKEN | Yes | Bot token for private review messages |
-| TELEGRAM_CHAT_ID | Yes | Owner's private one-to-one chat ID |
+| TELEGRAM_CHAT_ID | Yes | Positive numeric ID of the owner's private one-to-one chat; group/supergroup IDs are rejected by preflight |
 | TELEGRAM_APPROVER_ID | Yes | Numeric Telegram user ID allowed to approve; separate from the chat setting |
 | TELEGRAM_WEBHOOK_SECRET | Yes | Telegram webhook verification secret |
 | INTERNAL_API_SECRET | Yes | Bearer secret for /check/now |
