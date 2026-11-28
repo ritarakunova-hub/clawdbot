@@ -102,9 +102,10 @@ default branch.
 варианты mini-CRM/Sales Engine и не должны развёртываться как замена выбранным
 n8n workflow. PR #10 — отдельная self-contained Content Autopilot/SMMplanner
 handoff-автоматизация, открытая для code review: unit/safety, HTTP smoke,
-npm audit и Docker CI прошли на head `29290b39f55d5759b5fb99c7558fa4d502d92de0`
-([push](https://github.com/ritarakunova-hub/clawdbot/actions/runs/45986601342),
-[PR](https://github.com/ritarakunova-hub/clawdbot/actions/runs/45986608650)).
+npm audit и Docker CI прошли на head `0449e985c4cae3fbecf9a0ecec8620e7556c06be`
+([push](https://github.com/ritarakunova-hub/clawdbot/actions/runs/46105157324),
+[PR](https://github.com/ritarakunova-hub/clawdbot/actions/runs/46105161563)).
+Approvals reject non-private Telegram chats and non-positive/group chat IDs.
 Netlify checks for `exquisite-genie-ec7145` failed without a reason in GitHub
 metadata; deploy log review is required. PR #10 does not perform direct social
 publishing and is not an Amvera production rollout.
