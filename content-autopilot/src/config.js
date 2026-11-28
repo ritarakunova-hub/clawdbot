@@ -18,11 +18,12 @@ function isTelegramWebhookAuthorized(header, secret) {
 
 function isTelegramOwnerCallback(callback, ownerChatId, approverId, expectedMessageId) {
   if (!callback || !callback.message || !callback.message.chat || !callback.from ||
+      callback.message.chat.type !== 'private' ||
       !ownerChatId || !approverId || expectedMessageId === undefined || expectedMessageId === null) {
     return false;
   }
 
-  // Bind approval to all three identities: private chat, human approver and exact draft message.
+  // Bind approval to all three identities and require a real private chat.
   return safeEqual(callback.message.chat.id, ownerChatId)
     && safeEqual(callback.from.id, approverId)
     && safeEqual(callback.message.message_id, expectedMessageId);
