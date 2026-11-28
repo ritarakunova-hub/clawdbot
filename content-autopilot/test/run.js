@@ -88,6 +88,10 @@ async function main() {
     const invalidApprover = getReadiness({ ...env, TELEGRAM_APPROVER_ID: 'not-a-number' });
     assert.equal(invalidApprover.ready, false);
     assert.ok(invalidApprover.invalid.includes('TELEGRAM_APPROVER_ID'));
+
+    const groupChatId = getReadiness({ ...env, TELEGRAM_CHAT_ID: '-1001234567890' });
+    assert.equal(groupChatId.ready, false);
+    assert.ok(groupChatId.invalid.includes('TELEGRAM_CHAT_ID'));
     console.log('OK: readiness validates only the handoff service configuration and writable storage');
   }
 
