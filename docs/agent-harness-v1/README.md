@@ -81,6 +81,7 @@ validation, malformed Outscraper filtering, prompt-injection checks, HTTP
 timeouts across four workflows (30s Outscraper / 45s GigaChat), workflow graph
 integrity (unique nodes, valid edges, inactive exports), sender syntax and
 workflow JSON parsing, formula-safe Netlify ID fallback with retry deduplication, required Sheet-header checks, workflow-2 and Sales Engine response validation/error routing, bounded Telegram review-card formatting and runbook consistency. Both PRs remain Draft and are not deployed.
+Current PR #3 head is `928651e0c7cc1d560dc560749787e1f66308f356`; its only change after the tested source/test head is `automation/README.md` documentation.
 
 **Остаётся проверить live runtime:** версия n8n, фактический список и
 active/inactive state workflow, последние executions, credential names/types,
