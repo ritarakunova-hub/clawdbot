@@ -73,14 +73,14 @@ Harness должен отделять **общие механизмы испол
   Netlify JWS, consent gate, idempotency, атомарная дедупликация, PII
   minimization, POST-only Apps Script operations, GigaChat output validation.
 
-Latest CI for the latest PR #3 code/test head `cde248dfcebaf767d3810e3fb6684c20a699f7fd` passed:
-[push #46106188475](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46106188475)
-and [PR #46106193083](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46106193083).
+Latest CI for PR #3 code/test head `89514f5fecc7633f51cf42a66dbaf9e9dcc71c27` passed:
+[push #46106766664](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46106766664)
+and [PR #46106771446](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46106771446).
 Node 24/26 passed Apps Script security/regressions, strict numeric score
 validation, malformed Outscraper filtering, prompt-injection checks, HTTP
 timeouts across four workflows (30s Outscraper / 45s GigaChat), workflow graph
 integrity (unique nodes, valid edges, inactive exports), sender syntax and
-workflow JSON parsing, formula-safe Netlify ID fallback with retry deduplication, workflow-2 response validation/error routing and runbook consistency. Both PRs remain Draft and are not deployed.
+workflow JSON parsing, formula-safe Netlify ID fallback with retry deduplication, required Sheet-header checks, workflow-2 and Sales Engine response validation/error routing, bounded Telegram review-card formatting and runbook consistency. Both PRs remain Draft and are not deployed.
 
 **Остаётся проверить live runtime:** версия n8n, фактический список и
 active/inactive state workflow, последние executions, credential names/types,
