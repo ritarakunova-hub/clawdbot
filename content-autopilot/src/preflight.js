@@ -18,6 +18,11 @@ function getReadiness(env = process.env) {
     invalid.push('TELEGRAM_APPROVER_ID');
   }
 
+  const chatId = String(env.TELEGRAM_CHAT_ID || '').trim();
+  if (chatId && (!/^[1-9]\d*$/.test(chatId) || !Number.isSafeInteger(Number(chatId)))) {
+    invalid.push('TELEGRAM_CHAT_ID');
+  }
+
   let storageWritable = false;
   let storageProbeDirectory = null;
   try {
