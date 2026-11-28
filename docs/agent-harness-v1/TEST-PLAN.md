@@ -68,4 +68,14 @@ V1 можно принять после:
 - документации по подключению нового workflow;
 - отдельного подтверждения владельца перед production.
 
-Пока не проверены четыре n8n exports и фактический runtime, итоговая приёмка невозможна.
+Четыре source exports уже найдены и прошли статические проверки JSON, node IDs/names, connection endpoints и inactive-state в CI. Это не подтверждает совместимость с конкретной live n8n version и не заменяет импорт в отдельную тестовую инстанцию.
+
+Итоговая приёмка остаётся заблокированной, пока не проверены:
+- live n8n version, workflow IDs/status, credentials bindings и последние executions;
+- отдельный test Apps Script deployment и тестовая Google Sheet с ожидаемыми headers;
+- тестовые Telegram bot/chat и Netlify webhook;
+- Outscraper account-specific endpoint/response shape и фактический GigaChat API/credential contract;
+- privacy/legal basis, approved consent text and required unchecked consent checkbox;
+- ручной synthetic E2E по всем четырём workflow, включая повтор события, отказ авторизации, неоднозначный timeout и recovery без слепого retry.
+
+Production activation не входит в автоматическую приёмку и требует отдельного явного решения владельца.
