@@ -73,9 +73,9 @@ Harness должен отделять **общие механизмы испол
   Netlify JWS, consent gate, idempotency, атомарная дедупликация, PII
   minimization, POST-only Apps Script operations, GigaChat output validation.
 
-Latest CI for the current PR #3 head `651c4c46c9bdf14e77251f120a572284e31d8fd4` passed:
-[push #46105612992](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46105612992)
-and [PR #46105617746](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46105617746).
+Latest CI for the current PR #3 head `c9b56f1939f7be5c4b5dcbb09a53243e4b553030` passed:
+[push #46105743519](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46105743519)
+and [PR #46105750631](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46105750631).
 Node 24/26 passed Apps Script security/regressions, strict numeric score
 validation, malformed Outscraper filtering, prompt-injection checks, HTTP
 timeouts across four workflows (30s Outscraper / 45s GigaChat), workflow graph
