@@ -49,7 +49,9 @@ State + Audit Log
 ### Host Adapter
 Принимает событие от n8n, Node.js или другого поддержанного оркестратора и преобразует его в Task Envelope. Не содержит бизнес-правил продукта.
 
-**V1:** точка интеграции выбирается после аудита четырёх n8n workflow и подтверждения реально работающего message service. Не переносить orchestration из существующей системы до этого.
+**Текущий факт:** четыре n8n source exports и Apps Script найдены и статически проверены; сами exports находятся в состоянии `active: false`. Это подтверждает структуру исходников, но не импорт, deployment или production use.
+
+**V1:** Host Adapter и runtime boundary выбираются после сверки live n8n version/workflow IDs/credentials и фактически работающего message service. До этой проверки не переносить orchestration из существующей системы и не предполагать, что исходные exports совпадают с live runtime.
 
 ### Task Validator + Normalizer
 Проверяет JSON Schema, обязательные поля, ограничения размеров и форматов. Присваивает correlation ID, если он отсутствует; не меняет пользовательский смысл данных.
