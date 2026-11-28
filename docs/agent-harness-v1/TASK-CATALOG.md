@@ -101,9 +101,9 @@ GigaChat можно оставить отдельным Model Adapter candidate;
   LockService idempotency; PII minimization; POST-only API; atomic Sales Engine
   dedupe; score validation; bounded external fields; GigaChat prompt-injection
   guard; 30s/45s timeouts; constant-time internal token comparison.
-- Latest CI for the current PR #3 head `6d8458d549cdbcbe07ed4cac142303a7d95e382d` passed:
-  [push #46104678348](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46104678348)
-  and [PR #46104681298](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46104681298).
+- Latest CI for the current PR #3 head `651c4c46c9bdf14e77251f120a572284e31d8fd4` passed:
+  [push #46105612992](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46105612992)
+  and [PR #46105617746](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46105617746).
   Both Node 24/26 jobs passed Apps Script security/regressions, strict numeric
   score validation, malformed Outscraper filtering, prompt-injection checks,
   all-workflow HTTP timeout checks, graph integrity (unique IDs/names, valid
