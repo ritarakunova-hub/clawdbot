@@ -12,6 +12,8 @@
 - проведён статический аудит графов: уникальные node IDs/names, все connection endpoints существуют; все exports остаются `active: false`;
 - PR #2/#3 содержат security hardening для owner-only approvals, Netlify JWS/consent, idempotency, PII minimization и валидации Sales Engine. Автотесты на Node 24/26 прошли; production runtime этим не подтверждается.
 
+**Следующий инженерный этап Harness пока не начат:** в репозитории есть контракт и архитектура, но нет исполняемого Task Router/Registry/Tool Gateway и runtime-валидации контракта. Не выдавать документационную основу за работающий Harness.
+
 **Остаётся получить / проверить — только безопасные operational facts:**
 - фактическая версия live n8n и импортированы ли в неё эти exports (или более новые версии);
 - workflow IDs, active/inactive state, расписание и статусы последних executions;
