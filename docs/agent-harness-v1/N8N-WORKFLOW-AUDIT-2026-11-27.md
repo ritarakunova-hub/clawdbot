@@ -156,12 +156,12 @@ The following implementation work exists in separate Draft PRs in
   and adds 30s/45s timeouts for Outscraper/GigaChat; Apps Script also compares
   the internal bearer token using a constant-time helper and rejects malformed
   or overlong values.
-- Current PR #3 head `6d8458d549cdbcbe07ed4cac142303a7d95e382d` passed
+- Current PR #3 head `651c4c46c9bdf14e77251f120a572284e31d8fd4` passed
   Node 24 and Node 26, including Apps Script auth/approval regression tests,
   signed intake, deduplication, GigaChat validation/prompt-injection/timeouts,
   graph integrity, sample sender syntax and JSON parsing for all four exports:
-  [push CI #46104678348](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46104678348)
-  and [PR CI #46104681298](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46104681298).
+  [push CI #46105612992](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46105612992)
+  and [PR CI #46105617746](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46105617746).
 
 ### Remaining blockers
 
