@@ -101,15 +101,13 @@ GigaChat можно оставить отдельным Model Adapter candidate;
   LockService idempotency; PII minimization; POST-only API; atomic Sales Engine
   dedupe; score validation; bounded external fields; GigaChat prompt-injection
   guard; 30s/45s timeouts; constant-time internal token comparison.
-- Latest workflow-code CI for PR #3 passed on commit
-  `2814c10ea2142bf9fd65d7043369040125fbe3fd`: [push #46104285001](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46104285001)
-  and [PR #46104289789](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46104289789).
-  Node 24/26 cover Apps Script security/regressions, strict numeric score
-  validation, malformed Outscraper filtering, prompt-injection checks,
-  all-workflow timeouts (30s Outscraper / 45s GigaChat), graph integrity
-  (unique IDs/names, valid edges, inactive exports), sender syntax and
-  all four workflow JSON parses. A later docs-only file-inventory commit
-  did not change workflow source or tests.
+- Latest CI for the current PR #3 head `6d8458d549cdbcbe07ed4cac142303a7d95e382d` passed:
+  [push #46104678348](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46104678348)
+  and [PR #46104681298](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46104681298).
+  Both Node 24/26 jobs passed Apps Script security/regressions, strict numeric
+  score validation, malformed Outscraper filtering, prompt-injection checks,
+  all-workflow HTTP timeout checks, graph integrity (unique IDs/names, valid
+  edges, inactive exports), sample-sender syntax and all four workflow JSON parses.
 - Node.js PR #11/#12 in `clawdbot` are legacy/reference variants, not the
   selected n8n implementation; do not merge/deploy as substitutes.
 - Harness Task Router/handlers are not implemented or registered yet.
