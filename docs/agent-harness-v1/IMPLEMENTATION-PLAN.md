@@ -6,17 +6,25 @@
 
 ## Этап 0 — закрыть аудит (P0)
 
-**Изучено:** две GitHub-реализации Content Autopilot (PR #6 и PR #7) на уровне исходного кода и документов.
+**Изучено и подтверждено по исходникам:**
+- две GitHub-реализации Content Autopilot (PR #6 и PR #7) на уровне исходного кода и документов;
+- найдены все четыре выбранных n8n workflow export в `ritarakunova-hub/clawdbot1/automation`, Apps Script, README и синтетический payload;
+- проведён статический аудит графов: уникальные node IDs/names, все connection endpoints существуют; все exports остаются `active: false`;
+- PR #2/#3 содержат security hardening для owner-only approvals, Netlify JWS/consent, idempotency, PII minimization и валидации Sales Engine. Автотесты на Node 24/26 прошли; production runtime этим не подтверждается.
 
-**Остаётся получить / проверить:**
-- экспорт четырёх текущих n8n workflow;
-- перечень связей между workflow и порядок их запуска;
-- фактически используемые credentials и внешние API (без самих секретных значений);
-- какие ветки/PR соответствуют развернутому сервису;
-- настройки хостинга, persistent storage, число реплик, webhook URLs и расписание;
-- доступные журналы и фактические ошибки последних запусков.
+**Остаётся получить / проверить — только безопасные operational facts:**
+- фактическая версия live n8n и импортированы ли в неё эти exports (или более новые версии);
+- workflow IDs, active/inactive state, расписание и статусы последних executions;
+- имена и типы используемых credentials, без их значений;
+- hosting/runtime topology, число реплик, storage, execution retention/pruning и поведение retries;
+- URL/версия тестового Apps Script deployment и соответствие заголовков отдельной тестовой Google Sheet;
+- наличие отдельного тестового Telegram-бота/чата;
+- реальный Outscraper endpoint/параметры/response shape из аккаунта владельца и GigaChat credential/API contract;
+- privacy/legal decision, утверждённый текст согласия и unchecked checkbox в форме до подключения реального Netlify intake.
 
-**Результат:** подтверждённая карта текущей среды и выбранный пилот.
+Не запрашивать и не передавать в чат секреты, реальные клиентские данные или полные execution payloads.
+
+**Результат:** подтверждённая карта live/test среды и выбранный пилот. Исходные workflow exports повторно искать или запрашивать не нужно.
 
 ## Этап 1 — общий контракт (P0)
 
