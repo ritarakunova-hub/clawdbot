@@ -24,9 +24,9 @@ PR #6 и PR #7 — разные действия. Не объединять их
 
 | task_type (candidate) | Источник / сервис | LLM | Capabilities | Approval / policy |
 |---|---|---:|---|---|
-| crm.receive_lead | n8n workflow-1 → Apps Script | Нет | netlify.signature.verify, crm.lead.validate, sheets.lead.append | Draft PR #3 добавляет JWS verification, consent gate, stable submission ID и lock-protected deduplication; live intake disabled |
+| crm.receive_lead | n8n workflow-1 → Apps Script | Нет | netlify.signature.verify, crm.lead.validate, sheets.lead.append | Draft PR #3 добавляет JWS verification, consent gate, stable/formula-safe submission key (unsafe IDs fall back to verified-body SHA-256) и lock-protected deduplication; live intake disabled |
 | crm.notify_owner | n8n workflow-1 | Нет | telegram.owner_notification.send | Draft PR #3 удаляет name/contact/free text из Telegram; уведомление только ID/form/time |
-| crm.remind_overdue | n8n workflow-2, daily 10:00 Europe/Moscow | Нет | sheets.lead.read, telegram.owner_notification.send | Draft PR #3 переносит вызов на POST и убирает контакт из response; runtime/error handling требует сверки |
+| crm.remind_overdue | n8n workflow-2, daily 10:00 Europe/Moscow | Нет | sheets.lead.read, telegram.owner_notification.send | Draft PR #3 переносит вызов на POST и убирает контакт из response; workflow проверяет `ok/count/items` и отправляет PII-free alert при transport/contract errors; live runtime всё ещё требует сверки |
 
 ## 3. Sales Engine
 
@@ -97,17 +97,18 @@ GigaChat можно оставить отдельным Model Adapter candidate;
   owner ID + private chat + exact Telegram message_id; allowlisted status
   transitions; card ID persistence before attaching buttons.
 - [clawdbot1 PR #3](https://github.com/ritarakunova-hub/clawdbot1/pull/3),
-  stacked on #2: Netlify JWS and consent gate; stable submission ID;
-  LockService idempotency; PII minimization; POST-only API; atomic Sales Engine
-  dedupe; score validation; bounded external fields; GigaChat prompt-injection
-  guard; 30s/45s timeouts; constant-time internal token comparison.
-- Latest CI for the current PR #3 head `c9b56f1939f7be5c4b5dcbb09a53243e4b553030` passed:
-  [push #46105743519](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46105743519)
-  and [PR #46105750631](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46105750631).
+  stacked on #2: Netlify JWS and consent gate; formula-safe submission key with
+  deterministic SHA-256 fallback; LockService idempotency; PII minimization;
+  POST-only API; atomic Sales Engine dedupe; score validation; bounded external
+  fields; GigaChat prompt-injection guard; 30s/45s timeouts; constant-time
+  internal token comparison; validated reminder response + failure alert.
+- Latest CI for the current PR #3 head `cde248dfcebaf767d3810e3fb6684c20a699f7fd` passed:
+  [push #46106188475](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46105743519)
+  and [PR #46106193083](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46105750631).
   Both Node 24/26 jobs passed Apps Script security/regressions, strict numeric
   score validation, malformed Outscraper filtering, prompt-injection checks,
   all-workflow HTTP timeout checks, graph integrity (unique IDs/names, valid
-  edges, inactive exports), sample-sender syntax, all four workflow JSON parses and the manual-runbook check that keeps the documented GET rejection code aligned with Apps Script.
+  edges, inactive exports), sample-sender syntax, all four workflow JSON parses, the manual-runbook check that aligns the documented GET rejection code with Apps Script, unsafe Netlify ID fallback/retry deduplication, and the workflow-2 response validation/error route.
 - Node.js PR #11/#12 in `clawdbot` are legacy/reference variants, not the
   selected n8n implementation; do not merge/deploy as substitutes.
 - Harness Task Router/handlers are not implemented or registered yet.
