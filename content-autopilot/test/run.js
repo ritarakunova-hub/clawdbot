@@ -40,10 +40,19 @@ async function main() {
     assert.equal(isTelegramWebhookAuthorized('wrong', 'secret'), false);
     assert.equal(isTelegramWebhookAuthorized('secret', 'secret'), true);
     const ownerCallback = {
-      message: { message_id: 77, chat: { id: 123 } },
+      message: { message_id: 77, chat: { id: 123, type: 'private' } },
       from: { id: 456 },
     };
     assert.equal(isTelegramOwnerCallback(ownerCallback, '123', '456', 77), true);
+    const groupCallback = {
+      message: { message_id: 77, chat: { id: 123, type: 'group' } },
+      from: { id: 456 },
+    };
+    assert.equal(isTelegramOwnerCallback(groupCallback, '123', '456', 77), false);
+    assert.equal(isTelegramOwnerCallback({
+      message: { message_id: 77, chat: { id: 123 } },
+      from: { id: 456 },
+    }, '123', '456', 77), false);
     assert.equal(isTelegramOwnerCallback(ownerCallback, '123', '999', 77), false);
     assert.equal(isTelegramOwnerCallback(ownerCallback, '-100', '456', 77), false);
     assert.equal(isTelegramOwnerCallback(ownerCallback, '123', '456', 78), false);
