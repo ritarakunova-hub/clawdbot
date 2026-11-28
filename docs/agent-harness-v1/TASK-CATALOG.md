@@ -35,7 +35,7 @@ PR #6 и PR #7 — разные действия. Не объединять их
 | sales.search_companies | n8n workflow-3, manual + daily 09:00; Outscraper Google Maps | Нет на этапе поиска | web.company_search | Endpoint/schema требуют проверки по account docs; schedule остаётся выключенным до live verification; HTTP timeout 30s |
 | sales.analyze_company | n8n workflow-3, GigaChat | Да, GigaChat | llm.company_analyze | Draft PR #3 валидирует обязательные поля и score; untrusted Outscraper data не считается инструкциями; телефон не передаётся модели; timeout 45s |
 | sales.score_lead | n8n workflow-3 + Apps Script | Да | sales.score.calculate | Apps Script принимает только целое 0–100; malformed/missing score не создаёт лид |
-| sales.prepare_outreach | n8n workflow-3 → Telegram card | Да, GigaChat draft fields | llm.outreach_draft, sheets.lead.append, telegram.owner_draft.send | Draft PR #2/#3 сохраняют message_id до появления кнопок, атомарно дедуплицируют компанию/сайт; внешнее сообщение отправляет человек |
+| sales.prepare_outreach | n8n workflow-3 → Telegram card | Да, GigaChat draft fields | llm.outreach_draft, sheets.lead.append, telegram.owner_draft.send | Draft PR #2/#3 валидируют ответы Apps Script, атомарно дедуплицируют компанию/сайт, ограничивают карточку Telegram безопасным бюджетом; ошибки API ведут в alert, внешнее сообщение отправляет человек |
 | sales.approve_lead | n8n workflow-4 callback_query | Нет | telegram.approval_callback.consume, sheets.lead.update, telegram.card.edit | Draft PR #2 проверяет owner ID, private chat, exact message_id и допустимый переход статуса |
 
 ## 4. Capabilities — базовый реестр
@@ -102,9 +102,9 @@ GigaChat можно оставить отдельным Model Adapter candidate;
   POST-only API; atomic Sales Engine dedupe; score validation; bounded external
   fields; GigaChat prompt-injection guard; 30s/45s timeouts; constant-time
   internal token comparison; validated reminder response + failure alert.
-- Latest CI for the latest PR #3 code/test head `cde248dfcebaf767d3810e3fb6684c20a699f7fd` passed:
-  [push #46106188475](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46106188475)
-  and [PR #46106193083](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46106193083).
+- Latest CI for PR #3 code/test head `89514f5fecc7633f51cf42a66dbaf9e9dcc71c27` passed:
+  [push #46106766664](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46106766664)
+  and [PR #46106771446](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46106771446).
   Both Node 24/26 jobs passed Apps Script security/regressions, strict numeric
   score validation, malformed Outscraper filtering, prompt-injection checks,
   all-workflow HTTP timeout checks, graph integrity (unique IDs/names, valid
