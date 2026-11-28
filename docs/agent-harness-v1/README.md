@@ -73,17 +73,14 @@ Harness должен отделять **общие механизмы испол
   Netlify JWS, consent gate, idempotency, атомарная дедупликация, PII
   minimization, POST-only Apps Script operations, GigaChat output validation.
 
-Latest workflow-code CI for PR #3 passed on commit
-`2814c10ea2142bf9fd65d7043369040125fbe3fd`:
-[push #46104285001](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46104285001)
-and [PR #46104289789](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46104289789).
+Latest CI for the current PR #3 head `6d8458d549cdbcbe07ed4cac142303a7d95e382d` passed:
+[push #46104678348](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46104678348)
+and [PR #46104681298](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46104681298).
 Node 24/26 passed Apps Script security/regressions, strict numeric score
 validation, malformed Outscraper filtering, prompt-injection checks, HTTP
 timeouts across four workflows (30s Outscraper / 45s GigaChat), workflow graph
 integrity (unique nodes, valid edges, inactive exports), sender syntax and
-workflow JSON parsing. The later PR #3 head update only corrected the README
-file inventory; workflow source and tests were unchanged. Both PRs remain
-Draft and are not deployed.
+workflow JSON parsing. Both PRs remain Draft and are not deployed.
 
 **Остаётся проверить live runtime:** версия n8n, фактический список и
 active/inactive state workflow, последние executions, credential names/types,
