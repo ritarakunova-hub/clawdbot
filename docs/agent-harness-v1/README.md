@@ -99,10 +99,15 @@ Git имеют `active: false` и placeholders, поэтому production-пов
 default branch.
 
 Отдельные Node.js PR #11/#12 в репозитории `clawdbot` — legacy/reference
-варианты и не должны сливаться или развёртываться как замена выбранным n8n
-workflow. PR #10 относится к отдельной Node.js Content Autopilot/SMMplanner
-ветке и также требует отдельного решения. Ни один PR не является
-production rollout.
+варианты mini-CRM/Sales Engine и не должны развёртываться как замена выбранным
+n8n workflow. PR #10 — отдельная self-contained Content Autopilot/SMMplanner
+handoff-автоматизация, открытая для code review: unit/safety, HTTP smoke,
+npm audit и Docker CI прошли на head `29290b39f55d5759b5fb99c7558fa4d502d92de0`
+([push](https://github.com/ritarakunova-hub/clawdbot/actions/runs/45986601342),
+[PR](https://github.com/ritarakunova-hub/clawdbot/actions/runs/45986608650)).
+Netlify checks for `exquisite-genie-ec7145` failed without a reason in GitHub
+metadata; deploy log review is required. PR #10 does not perform direct social
+publishing and is not an Amvera production rollout.
 
 **Блокер реальных заявок:** проверенная форма
 `clawdbot/taina-site/index.html` пока не содержит явного consent checkbox
