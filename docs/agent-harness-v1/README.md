@@ -103,9 +103,12 @@ npm audit и Docker CI прошли на head `0449e985c4cae3fbecf9a0ecec8620e75
 ([push](https://github.com/ritarakunova-hub/clawdbot/actions/runs/46105157324),
 [PR](https://github.com/ritarakunova-hub/clawdbot/actions/runs/46105161563)).
 Approvals reject non-private Telegram chats and non-positive/group chat IDs.
-Netlify checks for `exquisite-genie-ec7145` failed without a reason in GitHub
-metadata; deploy log review is required. PR #10 does not perform direct social
-publishing and is not an Amvera production rollout.
+The Netlify preview for `exquisite-genie-ec7145` still fails; its deploy
+log must be inspected in the owner's Netlify account. A separate preview for
+`dazzling-jelly-106859` is now ready at
+[deploy-preview-10--dazzling-jelly-106859.netlify.app](https://deploy-preview-10--dazzling-jelly-106859.netlify.app).
+This does not clear the failing project check or authorize production promotion.
+PR #10 does not perform direct social publishing and is not an Amvera production rollout.
 
 **Блокер реальных заявок:** проверенная форма
 `clawdbot/taina-site/index.html` пока не содержит явного consent checkbox
