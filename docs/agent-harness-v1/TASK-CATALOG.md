@@ -101,13 +101,13 @@ GigaChat можно оставить отдельным Model Adapter candidate;
   LockService idempotency; PII minimization; POST-only API; atomic Sales Engine
   dedupe; score validation; bounded external fields; GigaChat prompt-injection
   guard; 30s/45s timeouts; constant-time internal token comparison.
-- Latest CI for the current PR #3 head `651c4c46c9bdf14e77251f120a572284e31d8fd4` passed:
-  [push #46105612992](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46105612992)
-  and [PR #46105617746](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46105617746).
+- Latest CI for the current PR #3 head `c9b56f1939f7be5c4b5dcbb09a53243e4b553030` passed:
+  [push #46105743519](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46105743519)
+  and [PR #46105750631](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46105750631).
   Both Node 24/26 jobs passed Apps Script security/regressions, strict numeric
   score validation, malformed Outscraper filtering, prompt-injection checks,
   all-workflow HTTP timeout checks, graph integrity (unique IDs/names, valid
-  edges, inactive exports), sample-sender syntax and all four workflow JSON parses.
+  edges, inactive exports), sample-sender syntax, all four workflow JSON parses and the manual-runbook check that keeps the documented GET rejection code aligned with Apps Script.
 - Node.js PR #11/#12 in `clawdbot` are legacy/reference variants, not the
   selected n8n implementation; do not merge/deploy as substitutes.
 - Harness Task Router/handlers are not implemented or registered yet.
