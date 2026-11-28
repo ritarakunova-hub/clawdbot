@@ -68,7 +68,7 @@ Sales Engine checks `checkExists(company, site)` before writing, but the check a
 
 ### P1 — Sales Engine can leave orphaned review cards
 
-Workflow 3 writes a lead to the sheet before sending its Telegram card. The Telegram send node has no explicit error output or manual-recovery path. If Telegram delivery fails after the Sheet append, the company is now a duplicate on the next run and is skipped; the owner may never receive a review card.
+Workflow 3 writes a lead to the sheet before sending its Telegram card. PR #3 now sends a PII-free manual-recovery alert with the lead ID if Telegram delivery fails after the Sheet append. It does not automatically retry or delete the orphaned lead: the operator must reconcile the row/card manually before a re-send. This is a controlled manual-recovery path, not exactly-once Telegram delivery.
 
 **Required fix:** use a delivery state machine and store the exact Telegram `message_id`. Send a card without inline buttons, persist the message ID and ready state, then attach buttons. An ambiguous send outcome must transition to manual review rather than trigger a blind resend. Add a protected operator recovery action.
 
@@ -156,14 +156,15 @@ The following implementation work exists in separate Draft PRs in
   and adds 30s/45s timeouts for Outscraper/GigaChat; Apps Script also compares
   the internal bearer token using a constant-time helper and rejects malformed
   or overlong values.
-- Latest PR #3 code/test head `cde248dfcebaf767d3810e3fb6684c20a699f7fd` passed
+- PR #3 code/test head `89514f5fecc7633f51cf42a66dbaf9e9dcc71c27` passed
   Node 24 and Node 26, including Apps Script auth/approval regression tests,
   signed intake, deduplication, GigaChat validation/prompt-injection/timeouts,
   graph integrity, sample sender syntax, JSON parsing for all four exports,
   runbook consistency, formula-safe submission ID fallback + retry deduplication,
-  and workflow-2 response/error routing:
-  [push CI #46106188475](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46106188475)
-  and [PR CI #46106193083](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46106193083).
+  missing-header fail-closed checks, workflow-2/Sales Engine response/error
+  routing, and bounded Telegram card text:
+  [push CI #46106766664](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46106766664)
+  and [PR CI #46106771446](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/46106771446).
 
 ### Remaining blockers
 
