@@ -101,9 +101,12 @@ GigaChat можно оставить отдельным Model Adapter candidate;
   LockService idempotency; PII minimization; POST-only API; atomic Sales Engine
   dedupe; score validation; bounded external fields; GigaChat prompt-injection
   guard; 30s/45s timeouts; constant-time internal token comparison.
-- Latest verified PR #3 CI head is tracked in the PR description; current
-  Node 24/26 checks include Apps Script auth, workflow regressions, GigaChat
-  injection/timeout and sample-sender syntax tests.
+- Latest verified PR #3 CI passed on head
+  `80fd4305ef9a2837c170bbc82cdbb394647bd5f7`: [push #45994281883](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/45994281883)
+  and [PR #45994290934](https://github.com/ritarakunova-hub/clawdbot1/actions/runs/45994290934).
+  Node 24/26 cover Apps Script auth/security/regressions, strict numeric
+  score validation, malformed Outscraper filtering, all-workflow timeouts
+  (30s Outscraper / 45s GigaChat), sender syntax and four workflow JSON parses.
 - Node.js PR #11/#12 in `clawdbot` are legacy/reference variants, not the
   selected n8n implementation; do not merge/deploy as substitutes.
 - Harness Task Router/handlers are not implemented or registered yet.
